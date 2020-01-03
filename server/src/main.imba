@@ -1,4 +1,4 @@
-import createConnection, TextDocuments from 'vscode-languageserver'
+import createConnection, TextDocuments, ProposedFeatures from 'vscode-languageserver'
 import DiagnosticSeverity from 'vscode-languageserver-types'
 import Uri from 'vscode-uri'
 
@@ -52,7 +52,7 @@ class DiagnosticsAdapter
 
 		
 var adapter = DiagnosticsAdapter.new
-var connection = process:argv:length <= 2 ? createConnection(process:stdin, process:stdout) : createConnection()
+var connection = process:argv:length <= 2 ? createConnection(process:stdin, process:stdout) : createConnection(ProposedFeatures:all)
 
 
 # Create a simple text document manager. The text document manager
