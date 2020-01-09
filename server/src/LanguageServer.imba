@@ -5,7 +5,6 @@ import {CompletionItemKind} from 'vscode-languageserver-types'
 
 import {URI} from 'vscode-uri'
 
-import {Program} from './Program'
 import {File} from './File'
 import * as util from './utils'
 
@@ -24,7 +23,7 @@ var tsServiceOptions = {
 	allowNonTsExtensions: true,
 	allowUnreachableCode: true,
 	target: ts.ScriptTarget.Latest,
-	lib: ['lib.es6.d.ts'],
+	lib: ['lib.es6.d.ts',"es2016","dom","node"],
 	moduleResolution: ts.ModuleResolutionKind.NodeJs
 }
 
@@ -194,12 +193,17 @@ export class LanguageServer
 		# console.log pos2
 		if let info = file.getQuickInfoAtPosition(loc)
 			console.log info
-			let contents = ts.displayPartsToString(info.displayParts)
+			let contents = [{
+					value: ts.displayPartsToString(info.displayParts)
+					language: 'typescript'
+				}]
+
+			if info.documentation
+				# contents.push({type: 'text', value: })
+				contents.push(ts.displayPartsToString(info.documentation))
 			return {
 				range: file.textSpanToRange(info.textSpan)
-				contents: 
-					value: contents
-					language: 'typescript'
+				contents: contents
 			}
 
 		# console.log 'quick info',res,file,pos

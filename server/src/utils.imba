@@ -28,6 +28,7 @@ const COMPLETION_KIND_MAP = {
 	module: CompletionItemKind.Module
 	keyword: CompletionItemKind.Keyword
 	alias: CompletionItemKind.Variable
+	warning: CompletionItemKind.Text
 }
 
 export def convertCompletionKind kind, entry
