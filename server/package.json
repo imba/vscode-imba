@@ -9,7 +9,7 @@
     "vls": "./bin/vls"
   },
   "engines": {
-    "node": ">=6"
+    "node": ">=10"
   },
   "files": [
     "dist",
@@ -17,11 +17,16 @@
   ],
   "dependencies": {
     "imba": "^1.5.2",
+    "source-map": "^0.7.3",
+    "typescript": "^3.7.4",
     "vscode-languageserver": "^5.2.1",
-    "vscode-uri": "^1.0.1"
+    "vscode-uri": "^2.1.1"
   },
   "devDependencies": {
     "glob": "^7.1.2",
+    "rollup": "^1.28.0",
+    "rollup-plugin-commonjs": "^10.1.0",
+    "rollup-plugin-node-resolve": "^5.2.0",
     "source-map-support": "^0.4.15"
   }
 }
