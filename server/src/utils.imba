@@ -5,7 +5,7 @@ export def uriToPath uri
 	URI.parse(uri).path
 
 export def rangeFromTextSpan span
-	@rangeFromTextSpan(span.start,span.end)
+	@rangeFromLocations(span.start,span.end)
 	
 export def rangeFromLocations start, end
 	return
@@ -29,8 +29,8 @@ const COMPLETION_KIND_MAP = {
 	keyword: CompletionItemKind.Keyword
 	alias: CompletionItemKind.Variable
 	warning: CompletionItemKind.Text
+	getter: CompletionItemKind.Field
 }
 
 export def convertCompletionKind kind, entry
-	console.log 'kind',kind,entry.name
 	return COMPLETION_KIND_MAP[kind] or CompletionItemKind.Method

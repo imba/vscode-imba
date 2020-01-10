@@ -22,8 +22,15 @@ var server
 var workspaceFolder
 
 documents.onDidOpen do |event|
-	connection.console.log("[Server(${process.pid}) ${workspaceFolder}] Document opened: {event.document.uri}")
-	server.onDidOpen(event)
+	# connection.console.log("[Server(${process.pid}) ${workspaceFolder}] Document opened: {event.document.uri}")
+	server.onDidOpen(event) if server
+
+documents.onDidChangeContent do |change|
+	# console.log "server.onDidChangeContent",change
+	# let doc = change.document
+	server.onDidChangeContent(change) if server
+	return
+
 
 documents.listen(connection)
 
@@ -38,7 +45,7 @@ connection.onInitialize do |params|
 			# TODO(scanf): add support for the remaining below
 			textDocumentSync: documents.syncKind,
 			completionProvider: {
-				resolveProvider: false,
+				resolveProvider: true,
 				triggerCharacters: ['.', ':', '<', '"', '/', '@', '*','%']
 			},
 			signatureHelpProvider: false, # { triggerCharacters: ['('] },
@@ -83,13 +90,10 @@ connection.onCompletion do |event|
 	return res
 
 connection.onCompletionResolve do |item|
-	console.log item
+	console.log 'completion resolve',item
+	console.log 'completion resolve?'
+	return server.doResolve(item)
 	return null
 
-documents.onDidChangeContent do |change|
-	console.log "server.onDidChangeContent",change
-	# let doc = change.document
-	server.onDidChangeContent(change)
-	return
 
 connection.listen()

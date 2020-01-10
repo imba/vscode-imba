@@ -35,7 +35,7 @@ export class LanguageServer
 		@documents = documents
 		@connection = connection
 		@rootUri = util.uriToPath(rootUri)
-		@rootFiles = [@rootUri + '/main.js']
+		@rootFiles = []
 
 		console.log 'start for',@rootUri
 
@@ -63,9 +63,8 @@ export class LanguageServer
 		# create the ts language service that we pipe things through
 		@service = ts.createLanguageService(servicesHost, ts.createDocumentRegistry())
 
-		for file in @rootFiles
-			@emitFile(file)
-
+		# for file in @rootFiles
+		# 	@emitFile(file)
 		self
 
 	def log ...params
@@ -106,7 +105,6 @@ export class LanguageServer
 			fileName = fileName.replace(/\.imba$/,'.js')
 
 		console.log("emitFile " + fileName)
-
 		var output = @service.getEmitOutput(fileName)
 
 	# methods for vscode
@@ -160,10 +158,14 @@ export class LanguageServer
 		let loc2 = file.generatedLocFor(loc)
 		let options = {
 			triggerCharacter: context.triggerCharacter
+			includeCompletionsForModuleExports: true
 		}
 		let res = @service.getCompletionsAtPosition(file.jsPath,loc2,options)
 		console.log 'complete',uri,loc,loc2,!!res
 		if res
+			if res.isMemberCompletion
+				console.log 'completions',res.entries
+
 			let entryFor = do |entry|
 				{
 					uri: uri,
@@ -172,6 +174,8 @@ export class LanguageServer
 					kind: util.convertCompletionKind(entry.kind,entry),
 					sortText: entry.sortText
 					data: {
+						loc: loc2
+						path: file.jsPath
 						origKind: entry.kind
 					}
 				}
@@ -181,6 +185,16 @@ export class LanguageServer
 			}
 			return out
 		return null
+
+	def doResolve item
+		console.log 'resolving',item
+		let details = @service.getCompletionEntryDetails(item.data.path,item.data.loc,item.label)
+		if details
+			console.log details
+			item.detail = ts.displayPartsToString(details.displayParts)
+			item.documentation = ts.displayPartsToString(details.documentation)
+			delete item.data
+		return item
 
 	def getQuickInfoAtPosition uri, pos
 		# force the js imba file for conversion\
@@ -192,7 +206,7 @@ export class LanguageServer
 		let loc2 = file.generatedLocFor(loc)
 		# console.log pos2
 		if let info = file.getQuickInfoAtPosition(loc)
-			console.log info
+
 			let contents = [{
 					value: ts.displayPartsToString(info.displayParts)
 					language: 'typescript'

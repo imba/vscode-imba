@@ -1,3 +1,5 @@
+import {CompletionItemKind,DiagnosticSeverity} from 'vscode-languageserver-types'
+
 var ts = require 'typescript'
 
 var imbac = require 'imba/dist/compiler.js'
@@ -16,25 +18,46 @@ export class File
 		@jsPath = path.replace(/\.imba$/,'.js')
 		@imbaPath = path.replace(/\.js$/,'.imba')
 		@version = 1
+		@diagnostics = []
+		unless program.rootFiles.includes(@jsPath)
+			program.files[@jsPath] = self
+			program.files[@imbaPath] = self
+			program.rootFiles.push(@jsPath)
+			@emit()
+		self
+
 
 	get document
 		let uri = 'file://' + @imbaPath
 		console.log "get {uri}"
 		@program.documents.get(uri)
 
+	get ls
+		@program.service
+
+	get uri
+		'file://' + @imbaPath
+
 	def didChange doc
 		console.log 'did change!',@version,doc.version
+		@doc = doc
 		if doc.version != @version
 			@version = doc.version
 			@content = doc.getText()
 			@invalidate()
+			@compile()
 			@emit()
 
 	def emit
 		@ls.getEmitOutput(@jsPath)
 
+	def sendDiagnostics
+		@program.connection.sendDiagnostics(uri: @uri, diagnostics: @diagnostics)
 
 	def positionAt offset
+		if @doc
+			return @doc.positionAt(offset)
+
 		let loc = @locs and @locs.map[offset]
 		return loc && {line: loc[0], character: loc[1]}
 		# @document && @document.positionAt(offset)
@@ -47,20 +70,38 @@ export class File
 		@result = null
 		self
 
-	get ls
-		@program.service
-
-	get uri
-		'file://' + @imbaPath
-
 	def compile
 		unless @result
 			var body = @content or ts.sys.readFile(@imbaPath)
-			var res = imbac.compile(body,imbaOptions)
+			try
+				var res = imbac.compile(body,imbaOptions)
+			catch e
+				let loc = e.loc && e.loc()
+				let range = loc && {
+					start: @positionAt(loc[0])
+					end: @positionAt(loc[1])
+				}
+
+				let err = {
+					severity: DiagnosticSeverity.Error
+					message: e.message
+					range: range
+				}
+				console.log 'compile error',err
+				@diagnostics = [err]
+				@sendDiagnostics()
+				@result = {error: err}
+				return self
+
 			@result = res
 			# @sourcemap = sm.SourceMapConsumer.new(res.sourcemap)
 			@locs = res.locs
 			@js = res.js # .replace('$CARET$','')
+
+			if @doc && @diagnostics.length
+				@diagnostics = []
+				@sendDiagnostics()
+
 		return self
 
 	def originalLocFor loc

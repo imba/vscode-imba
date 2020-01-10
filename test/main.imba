@@ -1,5 +1,6 @@
 import {Util} from './util'
 Util.bind()
 Util.ping()
-Math
+HTMLElement
 Math.random
+let u = Util.new
