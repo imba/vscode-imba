@@ -45,7 +45,7 @@ export class LanguageServer
 				return @rootFiles
 
 			getScriptVersion: do |fileName|
-				console.log "getScriptVersion",fileName
+				# console.log "getScriptVersion",fileName
 				return @files[fileName] ? @files[fileName].version.toString() : "0"
 
 			getScriptSnapshot: do |fileName|
@@ -87,11 +87,11 @@ export class LanguageServer
 		return false
 
 	def fileExists(fileName) 
-		console.log("fileExists {fileName}")
+		# console.log("fileExists {fileName}")
 		@sourceFileExists(fileName) || ts.sys.fileExists(fileName)
 
 	def readFile(fileName)
-		@log("readFile {fileName}")
+		# @log("readFile {fileName}")
 		var source = @files[fileName]
 
 		if source

@@ -6,7 +6,7 @@ var imbac = require 'imba/dist/compiler.js'
 var sm = require "source-map"
 
 var imbaOptions = {
-	target: 'node'
+	target: 'tsc'
 	imbaPath: null
 	sourceMap: {}
 }
@@ -87,14 +87,13 @@ export class File
 					message: e.message
 					range: range
 				}
-				console.log 'compile error',err
+				# console.log 'compile error',err
 				@diagnostics = [err]
 				@sendDiagnostics()
 				@result = {error: err}
 				return self
 
 			@result = res
-			# @sourcemap = sm.SourceMapConsumer.new(res.sourcemap)
 			@locs = res.locs
 			@js = res.js # .replace('$CARET$','')
 
@@ -119,19 +118,13 @@ export class File
 			let next = locs[i + 1]
 
 			if loc >= iloc and (!next or next[1] >= loc)
-				console.log "found generated loc",loc,[jloc,iloc],next,jloc + (loc - iloc)
+				# continue if next and loc == next[1]
+				console.log "found generated loc",prev,[jloc,iloc],next,loc,jloc + (loc - iloc)
+				if next and next[1] == loc
+					continue
+
 				return jloc + (loc - iloc)
 		return null
-
-	# def originalPositionFor pos
-	# 	@compile()
-	# 	console.log 'originalPositionFor',pos
-	# 	@sourcemap.originalPositionFor(pos)
-
-	# def generatedPositionFor pos
-	# 	@compile()
-	# 	pos.column ||= pos.character
-	# 	@sourcemap.generatedPositionFor(pos)
 
 	def originalSpanFor span
 		return unless span
