@@ -17,12 +17,19 @@ export class File
 		@program = program
 		@jsPath = path.replace(/\.imba$/,'.js')
 		@imbaPath = path.replace(/\.js$/,'.imba')
+		# @registry = program.registry
 		@version = 1
 		@diagnostics = []
+		@invalidate()
+
 		unless program.rootFiles.includes(@jsPath)
 			program.files[@jsPath] = self
 			program.files[@imbaPath] = self
 			program.rootFiles.push(@jsPath)
+			program.version++
+			let snapshot = ts.ScriptSnapshot.fromString("")
+			@jsDoc = program.acquireDocument(@jsPath,snapshot,@version)
+			@ls.getEmitOutput(@jsPath)
 			@emit()
 		self
 
@@ -39,19 +46,60 @@ export class File
 		'file://' + @imbaPath
 
 	def didChange doc
-		console.log 'did change!',@version,doc.version
 		@doc = doc
 		if doc.version != @version
+			console.log 'did change!',@version,doc.version
 			@version = doc.version
 			@content = doc.getText()
+			@dirty = yes
+			@program.version++
 			@invalidate()
 			@compile()
-			@emit()
+			
 
-	def emit
+	def didSave doc
+		@content = doc.getText()
+		# if @dirty
+		# 	@dirty = no
+		@program.version++
+		@invalidate()
+		@ls.getEmitOutput(@jsPath)
+		
+
+	def emitFile
 		@ls.getEmitOutput(@jsPath)
 
+	def emit
+		self
+
+
+	def emitDiagnostics
+		var diagnostics = @ls.getSemanticDiagnostics(@jsPath)
+		if diagnostics and diagnostics.length
+			@diagnostics = diagnostics.map do |entry|
+				let lstart = @originalLocFor(entry.start)
+				# console.log 'converting diagnostic',entry,lstart
+				return {
+					severity: DiagnosticSeverity.Warning
+					message: entry.messageText.messageText or entry.messageText
+					range: {
+						start: @positionAt(lstart)
+						end: @positionAt(@originalLocFor(entry.start + entry.length) or (lstart + entry.length))
+					}
+				}
+			console.log "ts diagnostics",@diagnostics.map do [$1.severity,$1.message,$1.range.start,$1.range.end]
+			@sendDiagnostics()
+		else
+			# @diagnostics.length
+			# just remove the ts-related diagnostics
+			@diagnostics = []
+			@sendDiagnostics()
+
+	def updateDiagnostics entries, group
+		self
+
 	def sendDiagnostics
+		# console.log "sending diagnostics",@diagnostics.map do [$1.severity,$1.message,$1.range.start,$1.range.end]
 		@program.connection.sendDiagnostics(uri: @uri, diagnostics: @diagnostics)
 
 	def positionAt offset
@@ -68,6 +116,11 @@ export class File
 	# remove compiled output etc
 	def invalidate
 		@result = null
+		@cache = {
+			srclocs: {}
+			genlocs: {}
+
+		}
 		self
 
 	def compile
@@ -95,80 +148,55 @@ export class File
 
 			@result = res
 			@locs = res.locs
-			@js = res.js # .replace('$CARET$','')
-
-			if @doc && @diagnostics.length
-				@diagnostics = []
-				@sendDiagnostics()
-
+			@js = res.js.replace('$CARET$','valueOf')
+			setTimeout(&,0) do @emitDiagnostics()
 		return self
 
-	def originalLocFor loc
-		let locs = @locs.generated
-		for [jloc,iloc],i in locs
-			if jloc > loc
-				let pos = locs[i - 1]
-				return pos and pos[1]
-		return null
+	def originalRangesFor jsloc
+		@locs.spans.filter do |pair|
+			jsloc >= pair[0] and pair[1] >= jsloc
+
+	# need a better converter
+	def originalLocFor jsloc
+		let val = @cache.srclocs[jsloc]
+		if val != undefined
+			return val
+
+		let spans = @originalRangesFor(jsloc)
+		let val
+		if let span = spans[0]
+			let into = (jsloc - span[0]) / (span[1] - span[0])
+			let offset = Math.floor(into * (span[3] - span[2]))
+			# console.log 'found originalLocFor',jsloc,spans
+			if span[0] == jsloc
+				val = span[2]
+			elif span[1] == jsloc
+				val = span[3]
+			else
+				val = span[2] + offset
+
+		return @cache.srclocs[jsloc] = val
+
+	def generatedRangesFor loc
+		@locs.spans.filter do |pair|
+			loc >= pair[2] and pair[3] >= loc
 
 	def generatedLocFor loc
-		let locs = @locs.generated
-		for [jloc,iloc],i in locs
-			let prev = locs[i - 1]
-			let next = locs[i + 1]
-
-			if loc >= iloc and (!next or next[1] >= loc)
-				# continue if next and loc == next[1]
-				console.log "found generated loc",prev,[jloc,iloc],next,loc,jloc + (loc - iloc)
-				if next and next[1] == loc
-					continue
-
-				return jloc + (loc - iloc)
+		let spans = @generatedRangesFor(loc)
+		if let span = spans[0]
+			let into = (loc - span[2]) / (span[3] - span[2])
+			let offset = Math.floor(into * (span[1] - span[0]))
+			# console.log 'found generatedLocFor',loc,spans
+			if loc == span[2]
+				return span[0]
+			elif loc == span[3]
+				return span[1]
+			else
+				return span[0] + offset
 		return null
 
-	def originalSpanFor span
-		return unless span
-		let start = @originalLocFor(span.start)
-		let end = @originalLocFor(span.start + span.length)
-		return {
-			start: start
-			length: end - start
-			range: {start: @positionAt(start), end: @positionAt(end)}
-		}
-
-	def locToRange
-		{start: @document.positionAt(loc[0]), end: @document.positionAt(loc[1])}
-
 	def textSpanToRange span
-		let start = @originalLocFor(span.start)
+		let start = @originalLocFor(span.start,0)
 		let end = @originalLocFor(span.start + span.length)
+		# console.log 'textSpanToRange',span,start,end,@locs and @locs.generated
 		{start: @positionAt(start), end: @positionAt(end)}
-
-	def originalDocumentSpanFor orig
-		let res = {
-			fileName: @imbaPath
-			textSpan: @originalSpanFor(orig.textSpan)
-			contextSpan: @originalSpanFor(orig.contextSpan)
-		}
-		console.log('converted',orig,res,@locmap)
-		# orig.converted = res
-		# orig.locmap = @locmap
-
-		for own k,v of res
-			orig[k+'Orig'] = orig[k]
-			orig[k] = v
-
-		# if false
-		# 	orig.fileName = @imbaPath
-		# 	orig.textSpan && (orig.textSpan = @originalSpanFor(orig.textSpan))
-		# 	orig.contextSpan && (orig.contextSpan = @originalSpanFor(orig.contextSpan))
-		return orig
-
-	def getDefinitionAtPosition loc
-		# autoconvert between location and other?
-		let res = @ls.getDefinitionAtPosition(@jsPath, @generatedLocFor(loc))
-		return @program.rewriteDefinitions(res)
-
-	def getQuickInfoAtPosition loc
-		@ls.getQuickInfoAtPosition(@jsPath, @generatedLocFor(loc))
-

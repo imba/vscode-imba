@@ -4,8 +4,16 @@ import {URI} from 'vscode-uri'
 export def uriToPath uri
 	URI.parse(uri).path
 
+export def pathToUri path
+	'file://' + path
+
 export def rangeFromTextSpan span
-	@rangeFromLocations(span.start,span.end)
+	rangeFromLocations(span.start,span.end)
+
+export def textSpanToRange span, filename, service
+	let start = service.toLineColumnOffset(filename,span.start)
+	let end = service.toLineColumnOffset(filename,span.start + span.length)
+	return {start: start, end: end}
 	
 export def rangeFromLocations start, end
 	return

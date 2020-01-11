@@ -31,6 +31,9 @@ documents.onDidChangeContent do |change|
 	server.onDidChangeContent(change) if server
 	return
 
+documents.onDidSave do |event|
+	server.onDidSave(event) if server
+
 
 documents.listen(connection)
 
@@ -51,10 +54,11 @@ connection.onInitialize do |params|
 			signatureHelpProvider: false, # { triggerCharacters: ['('] },
 			documentRangeFormattingProvider: false,
 			hoverProvider: true,
-			documentHighlightProvider: false,
+			documentHighlightProvider: true,
 			documentSymbolProvider: true,
 			definitionProvider: true,
 			referencesProvider: false,
+			selectionRangeProvider: false, # should use ts.getSmartSelectionRange and convert
 			documentOnTypeFormattingProvider: {
 				firstTriggerCharacter: ';',
 				moreTriggerCharacter: ['}', '\n']
@@ -69,16 +73,21 @@ connection.onDocumentSymbol do |documentSymbolParms|
 	let uri = documentSymbolParms.textDocument.uri
 	return []
 
+
 connection.onDefinition do |event,b|
+	console.log 'onDefinition',event
 	let res = server.getDefinitionAtPosition(event.textDocument.uri,event.position)
-	# console.log("onDefinition",event,res)
 	return res
 	# onDefinition(handler: RequestHandler<TextDocumentPositionParams, Definition | DefinitionLink[] | undefined | null, void>): void;	
 
+connection.onTypeDefinition do |event|
+	console.log 'onTypeDefinition',event
+	return
+
 connection.onHover do |event|
-	console.log "onhover",event
+	# console.log "onhover",event
 	let res = server.getQuickInfoAtPosition(event.textDocument.uri,event.position)
-	console.log res
+	# console.log res
 	return res
 
 
@@ -90,10 +99,13 @@ connection.onCompletion do |event|
 	return res
 
 connection.onCompletionResolve do |item|
-	console.log 'completion resolve',item
-	console.log 'completion resolve?'
+	# console.log 'completion resolve',item
+	# console.log 'completion resolve?'
 	return server.doResolve(item)
-	return null
+
+connection.onDocumentHighlight do |event|
+	console.log 'onDocumentHighlight',event
+	return []
 
 
 connection.listen()

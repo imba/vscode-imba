@@ -5,17 +5,22 @@ export class MyComponent
 tag app-item
 
     def hello
-        this
+        "test"
 
 tag app-todo < app-item
-
-    def hello
+    @titles
+    def other
+        @hello().toUpperCase()
+        # @hanimate()
         this
+
+    set kind value
+        #value = value
 
 tag app-link < a
 
     def hello
-        @href = 1
+        @href = '#'
         self
 
 tag app-header < label

@@ -1,4 +1,5 @@
 import { Stream } from "./stream";
+import "./component";
 
 export class Item {
 	title = "untitled";
