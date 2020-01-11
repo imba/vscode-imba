@@ -83,12 +83,12 @@ export class LanguageServer
 			fileExists: @fileExists.bind(self)
 			readFile: @readFile.bind(self)
 			readDirectory: ts.sys.readDirectory
-			writeFile: do |filename,str|
+			writeFile: do |fileName,str|
 				console.log "writeFile {fileName}"
 		}
 
 		@registry = ts.createDocumentRegistry()
-		@service = ts.createLanguageService(servicesHost)
+		@service = ts.createLanguageService(servicesHost,@registry)
 		# console.log "program??",@service.getProgram()
 		console.log @service.getCompilerOptionsDiagnostics()
 		self
@@ -97,14 +97,14 @@ export class LanguageServer
 		console.log(...params)
 
 	def acquireDocument path, source, version
-		source = ts.ScriptSnapshot.fromString(source) if source isa String
+		source = ts.ScriptSnapshot.fromString(source) if typeof source == 'string'
 		@registry.acquireDocument(path,tsServiceOptions,source,version)
 
 	def updateDocument path, source, version
-		source = ts.ScriptSnapshot.fromString(source) if source isa String
+		source = ts.ScriptSnapshot.fromString(source) if typeof source == 'string'
 		@registry.updateDocument(path,tsServiceOptions,source,version)
 
-	def sourceFileExists(fileName)
+	def sourceFileExists fileName
 		if @files[fileName]
 			return true
 
@@ -115,11 +115,11 @@ export class LanguageServer
 			return true
 		return false
 
-	def fileExists(fileName) 
+	def fileExists fileName 
 		console.log("fileExists {fileName}")
 		@sourceFileExists(fileName) || ts.sys.fileExists(fileName)
 
-	def readFile(fileName)
+	def readFile fileName
 		var source = @files[fileName]
 
 		if source

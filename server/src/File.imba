@@ -196,7 +196,7 @@ export class File
 		return null
 
 	def textSpanToRange span
-		let start = @originalLocFor(span.start,0)
+		let start = @originalLocFor(span.start)
 		let end = @originalLocFor(span.start + span.length)
 		# console.log 'textSpanToRange',span,start,end,@locs and @locs.generated
 		{start: @positionAt(start), end: @positionAt(end)}

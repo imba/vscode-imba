@@ -7,11 +7,9 @@ var fs = require 'fs'
 var ts = require 'typescript'
 
 var imbac = require('imba/dist/compiler.js')
-var sm = require("source-map")
 
 var connection = process.argv.length <= 2 ? createConnection(process.stdin, process.stdout) : createConnection()
 
-console.log URI.parse
 # Create a simple text document manager. The text document manager
 # supports full document sync only
 const documents = TextDocuments.new
@@ -22,18 +20,14 @@ var server
 var workspaceFolder
 
 documents.onDidOpen do |event|
-	# connection.console.log("[Server(${process.pid}) ${workspaceFolder}] Document opened: {event.document.uri}")
 	server.onDidOpen(event) if server
 
 documents.onDidChangeContent do |change|
-	# console.log "server.onDidChangeContent",change
-	# let doc = change.document
 	server.onDidChangeContent(change) if server
 	return
 
 documents.onDidSave do |event|
 	server.onDidSave(event) if server
-
 
 documents.listen(connection)
 
@@ -44,8 +38,6 @@ connection.onInitialize do |params|
 
 	return {
 		capabilities: {
-			# Tell the client that the server works in FULL text document sync mode
-			# TODO(scanf): add support for the remaining below
 			textDocumentSync: documents.syncKind,
 			completionProvider: {
 				resolveProvider: true,
