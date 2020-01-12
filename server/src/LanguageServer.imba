@@ -1,7 +1,7 @@
 
 
-import {createConnection, TextDocuments,TextDocument,Location,LocationLink,MarkedString} from 'vscode-languageserver'
-import {CompletionItemKind} from 'vscode-languageserver-types'
+import {createConnection, TextDocuments,TextDocument,Location,LocationLink,MarkedString,DocumentSymbol} from 'vscode-languageserver'
+import {CompletionItemKind,SymbolKind} from 'vscode-languageserver-types'
 
 import {URI} from 'vscode-uri'
 
@@ -13,20 +13,21 @@ var ts = require 'typescript'
 var imbac = require 'imba/dist/compiler.js'
 
 var tsServiceOptions = {
-	allowJs: true,
-	checkJs: true,
-	# declaration: true,
-	# emitDeclarationOnly: true,
-	noEmit: true,
-	allowNonTsExtensions: true,
-	allowUnreachableCode: true,
-	allowUmdGlobalAccess: true,
-	allowUnusedLabels: true,
-	incremental: true,
-	target: ts.ScriptTarget.Latest,
-	lib: ['lib.es6.d.ts'],
-	moduleResolution: ts.ModuleResolutionKind.NodeJs,
-	tsBuildInfoFile: "/Users/sindre/repos/tsbuildinfo"
+	allowJs: true
+	checkJs: true
+	noEmit: true
+	allowUmdGlobalAccess: true
+	allowNonTsExtensions: true
+	allowUnreachableCode: true
+	# allowUmdGlobalAccess: true
+	allowUnusedLabels: true
+	noImplicitUseStrict: true
+	noStrictGenericChecks: true
+	allowSyntheticDefaultImports: true
+	incremental: true
+	target: ts.ScriptTarget.Latest
+	lib: ['lib.es6.d.ts']
+	moduleResolution: ts.ModuleResolutionKind.NodeJs
 }
 
 export class LanguageServer
@@ -37,45 +38,23 @@ export class LanguageServer
 		@documents = documents
 		@connection = connection
 		@rootUri = util.uriToPath(rootUri)
+		# @type {string[]}
 		@rootFiles = []
 		@snapshots = {}
 		@version = 0
 
-		console.log 'start for',@rootUri
-
-		# create the host
+		# @type {ts.LanguageServiceHost}
 		var servicesHost = {
-			getScriptFileNames: do
-				return @rootFiles
-
-			# getScriptKind: do |fileName|
-			# 	if @files[fileName]
-			# 		return 1
-			# 	else
-			# 		return 5
-
-			getProjectVersion: do
-				# console.log 'getProjectVersion',@version
-				return '' + @version
-
-			getTypeRootsVersion: do
-				return '' + 1
-
-			# getLocalizedDiagnosticMessages: do
-			# 	console.log 'getLocalizedDiagnosticMessages'
+			getScriptFileNames: do @rootFiles
+			getProjectVersion: do '' + @version
+			getTypeRootsVersion: do 1
 
 			getScriptVersion: do |fileName|
-				# console.log "getScriptVersion",fileName,@files[fileName] and @files[fileName].version.toString()
-				# if @snapshots[fileName]
-				# 	console.log 'hsas snapshot',@snapshots[fileName]
-				return @files[fileName] ? @files[fileName].version.toString() : "1"
-
+				return @files[fileName] ? String(@files[fileName].version.toString()) : "1"
+			# @param {string} fileName
 			getScriptSnapshot: do |fileName|
 				return undefined if !@fileExists(fileName)
-				# @snapshots[fileName] ||= ts.ScriptSnapshot.fromString(@readFile(fileName).toString())
-				# console.log "get snapshot {fileName}"
 				return ts.ScriptSnapshot.fromString(@readFile(fileName).toString())
-				return @snapshots[fileName] # ts.ScriptSnapshot.fromString(@readFile(fileName).toString())
 			
 			getCurrentDirectory: do @rootUri
 			getCompilationSettings: do tsServiceOptions
@@ -83,14 +62,10 @@ export class LanguageServer
 			fileExists: @fileExists.bind(self)
 			readFile: @readFile.bind(self)
 			readDirectory: ts.sys.readDirectory
-			writeFile: do |fileName,str|
-				console.log "writeFile {fileName}"
 		}
 
 		@registry = ts.createDocumentRegistry()
 		@service = ts.createLanguageService(servicesHost,@registry)
-		# console.log "program??",@service.getProgram()
-		console.log @service.getCompilerOptionsDiagnostics()
 		self
 
 	def log ...params
@@ -111,21 +86,21 @@ export class LanguageServer
 		var alt = fileName.replace(/\.js$/, '.imba')
 
 		if alt != fileName && ts.sys.fileExists(alt)
-			File.new(self,alt)
+			File.new(self,alt,@service)
 			return true
 		return false
 
 	def fileExists fileName 
-		console.log("fileExists {fileName}")
+		# console.log("fileExists {fileName}")
 		@sourceFileExists(fileName) || ts.sys.fileExists(fileName)
 
 	def readFile fileName
 		var source = @files[fileName]
 
 		if source
-			@log("readFile {source.imbaPath}")
+			# @log("readFile {source.imbaPath}")
 			source.compile()
-			return source.js
+			return String(source.js)
 
 		return ts.sys.readFile(fileName)
 
@@ -133,6 +108,9 @@ export class LanguageServer
 	def onDidOpen event
 		let doc = event.document
 		let uri = util.uriToPath(event.document.uri)
+		let file = @getImbaFile(doc)
+		if file
+			file.didOpen(doc)
 		self
 
 	def onDidSave event
@@ -147,7 +125,7 @@ export class LanguageServer
 		self
 
 	def onDidChangeContent event
-		@log "server.onDidChangeContent"
+		# @log "server.onDidChangeContent"
 		let doc = event.document
 		if let file = @getImbaFile(event.document)
 			file.didChange(doc)
@@ -155,18 +133,21 @@ export class LanguageServer
 
 	def getImbaFile file
 		let doc = @documents.get(file.uri or file)
-		let src = util.uriToPath(file.uri or file).replace('.imba','.js')
-		return @files[src] ||= File.new(self,src)
+		let src = util.uriToPath(file.uri or file)
+		return @files[src] ||= File.new(self,src,@service)
 
 	def getDefinitionAtPosition uri, pos
 		let file = @getImbaFile(uri)
 		let loc = @documents.get(uri).offsetAt(pos)
 		let jsloc = file.generatedLocFor(loc)
-		let info = @service.getDefinitionAndBoundSpan(file.jsPath,jsloc)
+		let info = @service.getDefinitionAndBoundSpan(file.lsPath,jsloc)
 
 		if info and info.definitions
-			console.log 'definitions!',info
+			
 			let sourceSpan = file.textSpanToRange(info.textSpan)
+			let sourceText = file.textSpanToText(info.textSpan)
+			let isLink = sourceText and sourceText.indexOf('-') >= 0
+			console.log 'definitions!',info,sourceSpan,sourceText
 
 			var defs = for item,i in info.definitions
 				
@@ -175,40 +156,30 @@ export class LanguageServer
 					console.log 'definition',item
 					let textSpan = ifile.textSpanToRange(item.textSpan)
 					let span = item.contextSpan ? ifile.textSpanToRange(item.contextSpan) : textSpan
-					# Location.create(ifile.uri,item.textSpan.range)
-					# let range = item.textSpan.range
-					# contextSpan = {
-					# 	start: {line: textSpan.start.line, character: 1}
-					# 	end: {line: textSpan.start.line + 5, character: 1}
-					# }
 
 					if item.containerName == 'globalThis' and item.name.indexOf('Component') >= 0
 						span = {
 							start: {line: textSpan.start.line, character: 0}
 							end: {line: textSpan.start.line + 1, character: 0}
 						}
+					if isLink
+						LocationLink.create(ifile.uri,textSpan,span,sourceSpan)
+					else
+						Location.create(ifile.uri,textSpan)
 	
-					let link = LocationLink.create(
-						ifile.uri,
-						textSpan,
-						span,
-						sourceSpan
-					)
-					# console.log 'def map',[item.textSpan,item.contextSpan],[textSpan,span],sourceSpan
-					link
-					# Location.create(ifile.uri,textSpan)
-
 				elif item.name == '__new' and info.definitions.length > 1
 					continue
 				else
 					let span = util.textSpanToRange(item.contextSpan or item.textSpan,item.fileName,@service)
-					LocationLink.create(
-						util.pathToUri(item.fileName),
-						span,
-						span,
-						sourceSpan
-					)
-
+					if isLink
+						LocationLink.create(
+							util.pathToUri(item.fileName),
+							span,
+							span,
+							sourceSpan
+						)
+					else
+						Location.create(util.pathToUri(item.fileName),span)
 			return defs
 		# if let info = file.getDefinitionAtPosition(loc)
 		#	return info
@@ -221,7 +192,7 @@ export class LanguageServer
 			triggerCharacter: context.triggerCharacter
 			includeCompletionsForModuleExports: true
 		}
-		let res = @service.getCompletionsAtPosition(file.jsPath,loc2,options)
+		let res = @service.getCompletionsAtPosition(file.lsPath,loc2,options)
 		
 		if res
 			console.log 'complete',uri,loc,loc2,res.isNewIdentifierLocation,res.isGlobalCompletion
@@ -237,7 +208,7 @@ export class LanguageServer
 					sortText: entry.sortText
 					data: {
 						loc: loc2
-						path: file.jsPath
+						path: file.lsPath
 						origKind: entry.kind
 					}
 				}
@@ -257,7 +228,7 @@ export class LanguageServer
 
 	def doResolve item
 		console.log 'resolving',item
-		let details = @service.getCompletionEntryDetails(item.data.path,item.data.loc,item.label)
+		let details = @service.getCompletionEntryDetails(item.data.path,item.data.loc,item.label,undefined,undefined,undefined)
 		if details
 			console.log details
 			item.detail = ts.displayPartsToString(details.displayParts)
@@ -269,22 +240,52 @@ export class LanguageServer
 		# force the js imba file for conversion\
 		# let path = util.uriToPath(file.url or file).replace('.imba','.js')
 		# console.log "get quick info at pos {path}"
-		
+
 		let file = @getImbaFile(uri)
 		let loc = @documents.get(uri).offsetAt(pos)
+		# @type {number}
 		let loc2 = file.generatedLocFor(loc)
+		let info = @service.getQuickInfoAtPosition(String(file.lsPath), loc2)
 		# console.log pos2
-		if let info = @service.getQuickInfoAtPosition(file.jsPath, loc2) # file.getQuickInfoAtPosition(loc)
-
+		if info
 			let contents = [{
-					value: ts.displayPartsToString(info.displayParts)
-					language: 'typescript'
-				}]
+				value: ts.displayPartsToString(info.displayParts)
+				language: 'typescript'
+			}]
 
 			if info.documentation
 				# contents.push({type: 'text', value: })
-				contents.push(ts.displayPartsToString(info.documentation))
+				contents.push(value: ts.displayPartsToString(info.documentation), language: 'text')
 			return {
 				range: file.textSpanToRange(info.textSpan)
 				contents: contents
 			}
+
+	def getSymbols uri
+		let file = @getImbaFile(uri)
+		let tree = @service.getNavigationTree(file.lsPath)
+		# console.log 'found results',tree
+		let conv = do |item|
+			return unless item.nameSpan
+			return if item.kind == 'alias'
+			console.log "symbol",item.kind,item.text,item.nameSpan
+			let range = file.textSpanToRange(item.nameSpan)
+			let kind = util.convertSymbolKind(item.kind)
+			unless range and range.start and range.start.line
+				return
+
+			let children = item.childItems or []
+
+			if item.kind == 'method' or item.kind == 'function'
+				children = []
+
+			return {
+				kind: kind
+				name: item.text
+				range: range
+				selectionRange: range
+				children: children.map(conv).filter(do !!$1)
+			}
+		let res = tree.childItems.map(conv).filter(do !!$1)
+		# console.log 'found results',res
+		return res

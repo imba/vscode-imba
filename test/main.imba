@@ -1,7 +1,8 @@
 import {Util} from './util'
 import './setup'
 import './component'
-import {Extern} from './extern'
+# /// <reference path="./component.ts" />
+# import {Extern} from './extern'
 Util.bind()
 Util.ping()
 HTMLElement
@@ -10,7 +11,8 @@ Math.random
 # Util.pong()
 let u = Util.new
 u.state = 'test'
-u.sta
+u.add(1,2)
+
 tag app-root
     def setup
         self
@@ -18,7 +20,7 @@ tag app-root
     def render
         <self title='root'>
             <app-todo title='one' kind=1> "Hello"
-            <app-todo titles='two' kind=2> "Hello"
+            <app-todo titl='two' kind=2> "Hello"
             <app-todo title='three'> "Hello"
 
 # let ext = Extern.new

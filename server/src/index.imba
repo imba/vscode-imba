@@ -1,12 +1,5 @@
 import {createConnection, TextDocuments} from 'vscode-languageserver'
-import {DiagnosticSeverity} from 'vscode-languageserver-types'
-import {URI} from 'vscode-uri'
 import {LanguageServer} from './LanguageServer'
-
-var fs = require 'fs'
-var ts = require 'typescript'
-
-var imbac = require('imba/dist/compiler.js')
 
 var connection = process.argv.length <= 2 ? createConnection(process.stdin, process.stdout) : createConnection()
 
@@ -48,21 +41,23 @@ connection.onInitialize do |params|
 			hoverProvider: true,
 			documentHighlightProvider: true,
 			documentSymbolProvider: true,
+			workspaceSymbolProvider: true,
 			definitionProvider: true,
 			referencesProvider: false,
 			selectionRangeProvider: false, # should use ts.getSmartSelectionRange and convert
-			documentOnTypeFormattingProvider: {
-				firstTriggerCharacter: ';',
-				moreTriggerCharacter: ['}', '\n']
-			}
 		}
 	}
 
 connection.onDidChangeConfiguration do |change|
 	console.log "connection.onDidChangeConfiguration"
 
-connection.onDocumentSymbol do |documentSymbolParms|
-	let uri = documentSymbolParms.textDocument.uri
+connection.onDocumentSymbol do |event|
+	let uri = event.textDocument.uri
+	if server
+		return server.getSymbols(event.textDocument.uri)
+	return []
+
+connection.onWorkspaceSymbol do |event|
 	return []
 
 
@@ -73,8 +68,7 @@ connection.onDefinition do |event,b|
 	# onDefinition(handler: RequestHandler<TextDocumentPositionParams, Definition | DefinitionLink[] | undefined | null, void>): void;	
 
 connection.onTypeDefinition do |event|
-	console.log 'onTypeDefinition',event
-	return
+	return undefined
 
 connection.onHover do |event|
 	# console.log "onhover",event
@@ -98,6 +92,5 @@ connection.onCompletionResolve do |item|
 connection.onDocumentHighlight do |event|
 	console.log 'onDocumentHighlight',event
 	return []
-
 
 connection.listen()

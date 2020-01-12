@@ -1,4 +1,4 @@
-import {CompletionItemKind} from 'vscode-languageserver-types'
+import {CompletionItemKind,SymbolKind} from 'vscode-languageserver-types'
 import {URI} from 'vscode-uri'
 
 export def uriToPath uri
@@ -42,3 +42,53 @@ const COMPLETION_KIND_MAP = {
 
 export def convertCompletionKind kind, entry
 	return COMPLETION_KIND_MAP[kind] or CompletionItemKind.Method
+
+
+const SYMBOL_KIND_MAP = {
+	property: SymbolKind.Field
+	method: SymbolKind.Method
+	class: SymbolKind.Class
+	"local class": SymbolKind.Class
+	var: SymbolKind.Variable
+	let: SymbolKind.Variable
+	function: SymbolKind.Function
+	const: SymbolKind.Constant
+	module: SymbolKind.Module
+	alias: SymbolKind.Variable
+	getter: SymbolKind.Field
+}
+
+export def convertSymbolKind kind, entry
+	return SYMBOL_KIND_MAP[kind] or SymbolKind.Field
+
+###
+
+export declare namespace SymbolKind {
+    const File: 1;
+    const Module: 2;
+    const Namespace: 3;
+    const Package: 4;
+    const Class: 5;
+    const Method: 6;
+    const Property: 7;
+    const Field: 8;
+    const Constructor: 9;
+    const Enum: 10;
+    const Interface: 11;
+    const Function: 12;
+    const Variable: 13;
+    const Constant: 14;
+    const String: 15;
+    const Number: 16;
+    const Boolean: 17;
+    const Array: 18;
+    const Object: 19;
+    const Key: 20;
+    const Null: 21;
+    const EnumMember: 22;
+    const Struct: 23;
+    const Event: 24;
+    const Operator: 25;
+    const TypeParameter: 26;
+}
+###

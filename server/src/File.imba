@@ -1,5 +1,5 @@
 import {CompletionItemKind,DiagnosticSeverity} from 'vscode-languageserver-types'
-
+import {ScriptElementKind} from 'typescript'
 var ts = require 'typescript'
 
 var imbac = require 'imba/dist/compiler.js'
@@ -12,25 +12,30 @@ var imbaOptions = {
 }
 
 export class File
-	def constructor program, path
+	# @param {ts.LanguageService} service
+	def constructor program, path, service
 		console.log "created file {path}"
 		@program = program
-		@jsPath = path.replace(/\.imba$/,'.js')
-		@imbaPath = path.replace(/\.js$/,'.imba')
-		# @registry = program.registry
+		@ls = service
+	
+		@jsPath   = path.replace(/\.(imba|js|ts)/,'.js')
+		@tsPath   = path.replace(/\.(imba|js|ts)$/,'.ts')
+		@imbaPath = path.replace(/\.(imba|js|ts)$/,'.imba')
+		@lsPath   = @tsPath
+		@lsPath   = @jsPath
+
 		@version = 1
 		@diagnostics = []
 		@invalidate()
-
-		unless program.rootFiles.includes(@jsPath)
-			program.files[@jsPath] = self
+		unless program.rootFiles.includes(@lsPath)
+			program.files[@lsPath] = self
+			# program.files[@tsPath] = self
 			program.files[@imbaPath] = self
-			program.rootFiles.push(@jsPath)
+			program.rootFiles.push(@lsPath)
 			program.version++
-			let snapshot = ts.ScriptSnapshot.fromString("")
-			@jsDoc = program.acquireDocument(@jsPath,snapshot,@version)
-			@ls.getEmitOutput(@jsPath)
-			@emit()
+			# let snapshot = ts.ScriptSnapshot.fromString("")
+			# @jsDoc = program.acquireDocument(@lsPath,snapshot,@version)
+			@emitFile()
 		self
 
 
@@ -39,11 +44,12 @@ export class File
 		console.log "get {uri}"
 		@program.documents.get(uri)
 
-	get ls
-		@program.service
-
 	get uri
 		'file://' + @imbaPath
+
+	def didOpen doc
+		@doc = doc
+		@content = doc.getText()
 
 	def didChange doc
 		@doc = doc
@@ -63,25 +69,24 @@ export class File
 		# 	@dirty = no
 		@program.version++
 		@invalidate()
-		@ls.getEmitOutput(@jsPath)
+		@ls.getEmitOutput(@lsPath)
 		
 
 	def emitFile
-		@ls.getEmitOutput(@jsPath)
-
-	def emit
-		self
-
+		@ls.getEmitOutput(@lsPath)
 
 	def emitDiagnostics
-		var diagnostics = @ls.getSemanticDiagnostics(@jsPath)
-		if diagnostics and diagnostics.length
+		var diagnostics = @ls.getSemanticDiagnostics(@lsPath)
+
+		if diagnostics.length
 			@diagnostics = diagnostics.map do |entry|
 				let lstart = @originalLocFor(entry.start)
-				# console.log 'converting diagnostic',entry,lstart
+				# @type {?}
+				let msg = entry.messageText
+				console.log 'converting diagnostic',lstart,entry.start,entry.length,entry.messageText
 				return {
 					severity: DiagnosticSeverity.Warning
-					message: entry.messageText.messageText or entry.messageText
+					message: msg.messageText or msg
 					range: {
 						start: @positionAt(lstart)
 						end: @positionAt(@originalLocFor(entry.start + entry.length) or (lstart + entry.length))
@@ -109,6 +114,10 @@ export class File
 		let loc = @locs and @locs.map[offset]
 		return loc && {line: loc[0], character: loc[1]}
 		# @document && @document.positionAt(offset)
+
+	def getSourceContent
+		@content ||= ts.sys.readFile(@imbaPath)
+
 
 	def offsetAt position
 		@document && @document.offsetAt(position)
@@ -200,3 +209,9 @@ export class File
 		let end = @originalLocFor(span.start + span.length)
 		# console.log 'textSpanToRange',span,start,end,@locs and @locs.generated
 		{start: @positionAt(start), end: @positionAt(end)}
+
+	def textSpanToText span
+		let start = @originalLocFor(span.start)
+		let end = @originalLocFor(span.start + span.length)
+		let content = @getSourceContent()
+		return content.slice(start,end)
