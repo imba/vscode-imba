@@ -282,7 +282,7 @@
             "4": {"name": "entity.name.function.imba"},
             "5": {"name": "meta.function.owner.imba"}
         },
-        "begin": "^([ \t]*)(local\\s|export\\s|global\\s|var\\s)*(def)\\s(([A-Za-z][A-Za-z0-9_]*[\\.\\#])?([A-Za-z\\_][A-Za-z0-9_\\-]*[\\=\\?\\!]?))(?=([\\s\t]|$))",
+        "begin": "^([ \t]*)(local\\s|export\\s|global\\s|static\\s|var\\s)*(def|get|set)\\s(([A-Za-z][A-Za-z0-9_]*[\\.\\#])?([A-Za-z\\_][A-Za-z0-9_\\-]*[\\=\\?\\!]?))(?=([\\s\t]|$))",
         "patterns": [{ "include": "$self" }],
         "name": "meta.function.method.imba",
         "end": "($|\\b(do)\\b)",
