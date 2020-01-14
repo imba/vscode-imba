@@ -147,10 +147,10 @@ export class LanguageServer
 			let sourceSpan = file.textSpanToRange(info.textSpan)
 			let sourceText = file.textSpanToText(info.textSpan)
 			let isLink = sourceText and sourceText.indexOf('-') >= 0
-			console.log 'definitions!',info,sourceSpan,sourceText
+			# console.log 'definitions!',info,sourceSpan,sourceText
 
-			var defs = for item,i in info.definitions
-				
+			var defs = for item of info.definitions
+
 				let ifile = @files[item.fileName]
 				if ifile
 					console.log 'definition',item

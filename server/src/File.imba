@@ -76,8 +76,13 @@ export class File
 		@ls.getEmitOutput(@lsPath)
 
 	def emitDiagnostics
+		let t = Date.now()
 		var diagnostics = @ls.getSemanticDiagnostics(@lsPath)
-
+		var syntactic = @ls.getSyntacticDiagnostics(@lsPath)
+		var suggestions = @ls.getSuggestionDiagnostics(@lsPath)
+		console.log(syntactic)
+		suggestions.map do |item|
+			console.log "suggestion",item.start,item.length,item.category,item.messageText,item.reportsUnnecessary
 		if diagnostics.length
 			@diagnostics = diagnostics.map do |entry|
 				let lstart = @originalLocFor(entry.start)
@@ -92,11 +97,9 @@ export class File
 						end: @positionAt(@originalLocFor(entry.start + entry.length) or (lstart + entry.length))
 					}
 				}
-			console.log "ts diagnostics",@diagnostics.map do [$1.severity,$1.message,$1.range.start,$1.range.end]
+			console.log "ts diagnostics",Date.now() - t,@diagnostics.map do [$1.severity,$1.message,$1.range.start,$1.range.end]
 			@sendDiagnostics()
 		else
-			# @diagnostics.length
-			# just remove the ts-related diagnostics
 			@diagnostics = []
 			@sendDiagnostics()
 

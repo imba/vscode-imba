@@ -1,17 +1,17 @@
 import {Util} from './util'
 import './setup'
 import './component'
-# /// <reference path="./component.ts" />
-# import {Extern} from './extern'
+
 Util.bind()
 Util.ping()
 HTMLElement
 Math.random
-# Util.ping(123)
-# Util.pong()
-let u = Util.new
+
+let u = Util.new()
 u.state = 'test'
 u.add(1,2)
+u.add(1,22)
+
 
 tag app-root
     def setup

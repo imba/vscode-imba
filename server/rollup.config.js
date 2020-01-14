@@ -22,23 +22,4 @@ export default [{
         }),
         commonjs()
     ]
-},{
-    input: './src/test.imba',
-    output: {
-        file: './test.js',
-        format: 'cjs',
-        name: 'bundle',
-        sourcemap: 'inline'
-    },
-    external: function(id){
-        return id[0] != '.' && id.indexOf('imba') != 0;
-    },
-    plugins: [
-        imba({target: 'node'}),
-        resolve({
-            extensions: ['.imba','.imba2'],
-            preferBuiltins: true
-        }),
-        commonjs()
-    ]
 }]

@@ -1,12 +1,11 @@
 
-exportz class AppItemComponent extends HTMLElement {
+export class AppItemComponent extends HTMLElement {
 	
 	hello(){
 		return "test";
 	}
 };
 
-declare type AppItemTag = AppItemComponent
 
 class AppTodoComponent extends AppItemComponent {
 	

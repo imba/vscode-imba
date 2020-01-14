@@ -11,6 +11,7 @@ tag app-todo < app-item
 
     set kind value
         # #value = value
+        
         true
 
 tag app-link < a
