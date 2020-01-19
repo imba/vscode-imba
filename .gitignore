@@ -2,5 +2,6 @@
 npm-debug.log
 node_modules/
 server/index.js
+client/index.js
 tmp/
 *.vsix
