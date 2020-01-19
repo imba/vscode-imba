@@ -81,7 +81,7 @@ connection.onCompletion do |event|
 	console.log "oncompletion",event
 	let res = server.getCompletionsAtPosition(event.textDocument.uri,event.position,event.context)
 	console.log res && res.items.slice(0,2)
-	# if res
+
 	return res
 
 connection.onCompletionResolve do |item|

@@ -1,10 +1,14 @@
 tag app-item
-
+    @item = []
+    @category
     def hello
         "test"
 
 tag app-todo < app-item
+    @titl = "10"
+    @todo
     def other
+        @schedule()
         # @hello().toUpperCase()
         # @hanimate()
         this
@@ -13,10 +17,14 @@ tag app-todo < app-item
         # #value = value
         
         true
+    
+    def render
+        <self> @todo.title
 
 tag app-link < a
-
+    
     def hello
+        
         @href = '#'
         self
 

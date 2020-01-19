@@ -1,6 +1,6 @@
 
 
-import {createConnection, TextDocuments,TextDocument,Location,LocationLink,MarkedString,DocumentSymbol} from 'vscode-languageserver'
+import {createConnection, TextDocuments,TextDocument,Location,LocationLink,MarkedString,DocumentSymbol,InsertTextFormat} from 'vscode-languageserver'
 import {CompletionItemKind,SymbolKind} from 'vscode-languageserver-types'
 
 import {URI} from 'vscode-uri'
@@ -190,7 +190,8 @@ export class LanguageServer
 		let loc2 = file.generatedLocFor(loc)
 		let options = {
 			triggerCharacter: context.triggerCharacter
-			includeCompletionsForModuleExports: true
+			includeCompletionsForModuleExports: true,
+			includeCompletionsWithInsertText: true
 		}
 		let res = @service.getCompletionsAtPosition(file.lsPath,loc2,options)
 		
@@ -198,9 +199,9 @@ export class LanguageServer
 			console.log 'complete',uri,loc,loc2,res.isNewIdentifierLocation,res.isGlobalCompletion
 			if res.isMemberCompletion
 				console.log 'completions',res.entries
-
+			console.log 'completions!!',res.entries && res.entries.filter(do $1.kindModifiers).map(do [$1.name,$1.kindModifiers,$1.insertText])
 			let entryFor = do |entry|
-				{
+				let completion = {
 					uri: uri,
 					position: pos,
 					label: entry.name,
@@ -212,6 +213,16 @@ export class LanguageServer
 						origKind: entry.kind
 					}
 				}
+				if entry.kind == 'method'
+					completion.insertText = entry.name + '($1)$0'
+					completion.insertTextFormat = InsertTextFormat.Snippet
+					completion.commitCharacters = ['(']
+				elif entry.insertText
+					completion.insertText = entry.insertText.replace(/^this\./,'@')
+					if completion.insertText[0] == '@'
+						completion.commitCharacters = ['.']
+
+				return completion
 
 			let items = res.entries.map(entryFor)
 
@@ -224,7 +235,10 @@ export class LanguageServer
 				items: items
 			}
 			return out
-		return null
+		return {
+			isIncomplete: false,
+			items: []
+		}
 
 	def doResolve item
 		console.log 'resolving',item

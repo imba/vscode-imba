@@ -71,7 +71,13 @@ export def activate context
 				}
 			
 			editor.setDecorations(type, decorations)
-			
+	
+	languages.registerCompletionItemProvider('imba', {
+		def provideCompletionItems document, position, token
+			console.log('provideCompletionItems')
+			return {items: []}
+			# return new Hover('I am a hover!')
+	})
 	
 	# set language configuration
 	languages.setLanguageConfiguration('imba',{
