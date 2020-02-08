@@ -10,7 +10,7 @@
     "postinstall": "node ./node_modules/vscode/bin/install"
   },
   "dependencies": {
-    "imba": "^2.0.0-alpha.16",
+    "imba": "^2.0.0-alpha.26",
     "vscode-languageclient": "^5.2.1"
   },
   "devDependencies": {

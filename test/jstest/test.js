@@ -14,4 +14,8 @@ class Hello {
         test
         return this.program;
     }
+
+    test(){
+        
+    }
 };

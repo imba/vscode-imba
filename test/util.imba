@@ -1,34 +1,31 @@
 import {Base} from './base'
 import {Stream,RemoteStream} from './stream'
-import {Extern} from './extern'
-
-var hello = 1000
-
 
 export class Util < Base
-    @state = 'test'
-    @sta
-    @plugin\Extern
+	@state = 'test'
+	@sta
+	@plugin
+	# @type {string[]} - List of all the items
+	
+	@items
+	
+	static def ping
+		123
 
-    # @type {string[]} - List of all the items
-    @items
+	static def bind
+		self
 
-    static def ping
-        123
+	@stream = RemoteStream.new
 
-    static def bind
-        self
+	def setup
+		@
+		self
 
-    @stream = RemoteStream.new
+	def incr
+		2
 
-    def setup
-        self
-
-    def incr
-        2
-
-    ###*
-    @param {number} b - The last number you ant here
-    ###
-    def add a,b
-        return a + b
+	###*
+	@param {number} b - The last number you ant here
+	###
+	def add a,b
+		return a + b

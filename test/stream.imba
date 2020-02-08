@@ -1,5 +1,5 @@
 export class Stream
-    @name = 'stream'
+	@name = 'stream'
 
 export class RemoteStream < Stream
-    @name = 'remote-stream'
+	@name = 'remote-stream'

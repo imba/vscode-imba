@@ -8,7 +8,7 @@ var connection = process.argv.length <= 2 ? createConnection(process.stdin, proc
 const documents = TextDocuments.new
 documents.listen(connection)
 
-var server
+var server\LanguageServer
 
 var workspaceFolder
 
@@ -27,6 +27,7 @@ documents.listen(connection)
 connection.onInitialize do |params|
 	workspaceFolder = params.rootUri
 	connection.console.log("[Server({process.pid}) {workspaceFolder}] Started and initialize received")
+	# let {workspaces} = 
 	server = LanguageServer.new(connection,documents,params)
 
 	return {
@@ -36,17 +37,28 @@ connection.onInitialize do |params|
 				resolveProvider: true,
 				triggerCharacters: ['.', ':', '<', '"', '/', '@', '*','%']
 			},
-			signatureHelpProvider: false, # { triggerCharacters: ['('] },
+			signatureHelpProvider: { triggerCharacters: ['('] },
 			documentRangeFormattingProvider: false,
 			hoverProvider: true,
 			documentHighlightProvider: true,
 			documentSymbolProvider: true,
 			workspaceSymbolProvider: true,
 			definitionProvider: true,
-			referencesProvider: false,
-			selectionRangeProvider: false, # should use ts.getSmartSelectionRange and convert
+			referencesProvider: false
 		}
 	}
+
+connection.onInitialized do |params|
+	console.log 'on initialized'
+
+	connection.onNotification('onDidRenameFiles') do |event|
+		server.onDidRenameFiles(event)
+		# console.log 'service.onDidRenameFiles',event
+	connection.onNotification('onDidDeleteFiles') do |event|
+		server.onDidDeleteFiles(event)
+
+	connection.onNotification('onDidCreateFiles') do |event|
+		server.onDidCreateFiles(event)
 
 connection.onDidChangeConfiguration do |change|
 	console.log "connection.onDidChangeConfiguration"
@@ -65,7 +77,6 @@ connection.onDefinition do |event,b|
 	console.log 'onDefinition',event
 	let res = server.getDefinitionAtPosition(event.textDocument.uri,event.position)
 	return res
-	# onDefinition(handler: RequestHandler<TextDocumentPositionParams, Definition | DefinitionLink[] | undefined | null, void>): void;	
 
 connection.onTypeDefinition do |event|
 	return undefined

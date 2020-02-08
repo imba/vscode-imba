@@ -69,11 +69,12 @@
         ]
     },
     "dependencies": {
-        "imba": "^2.0.0-alpha.16",
+        "imba": "^2.0.0-alpha.26",
         "vscode-languageclient": "^5.2.1",
         "vscode-languageserver": "^5.2.1"
     },
     "devDependencies": {
+        "@rollup/plugin-json": "^4.0.2",
         "rollup": "^1.28.0",
         "rollup-plugin-commonjs": "^10.1.0",
         "rollup-plugin-node-resolve": "^5.2.0"

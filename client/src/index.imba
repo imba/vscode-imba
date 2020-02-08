@@ -1,6 +1,6 @@
 var path = require 'path'
 
-import {window, languages, IndentAction} from 'vscode'
+import {window, languages, IndentAction, workspace,SnippetString,Position} from 'vscode'
 import {LanguageClient, TransportKind, RevealOutputChannelOn} from 'vscode-languageclient'
 
 # TODO(scanf): handle workspace folder and multiple client connections
@@ -49,8 +49,27 @@ export def activate context
 	})
 
 	context.subscriptions.push(disposable)
+
 	
 	client.onReady().then do
+
+		workspace.onDidRenameFiles do |ev|
+			console.log 'workspace onDidRenameFiles',ev
+			client.sendNotification('onDidRenameFiles',ev)
+			
+		client.onNotification('closeAngleBracket') do |params|
+			let editor = window.activeTextEditor
+			console.log 'edit!!!',editor,params
+			try
+				false && editor.edit do |edits|
+					let pos = Position.new(params.position.line,params.position.character)
+					console.log 'editBuilder',edits,pos
+					edits.insert(pos,'>')
+				let str = SnippetString.new('$0>')
+				editor.insertSnippet(str,null,{undoStopBefore: false,undoStopAfter: true})
+			catch e
+				console.log "error",e
+
 		client.onNotification('entities') do |uri,version,markers|
 			let editor = adapter.uriToEditor(uri,version)
 			
@@ -72,12 +91,14 @@ export def activate context
 			
 			editor.setDecorations(type, decorations)
 	
-	languages.registerCompletionItemProvider('imba', {
-		def provideCompletionItems document, position, token
-			console.log('provideCompletionItems')
-			return {items: []}
-			# return new Hover('I am a hover!')
-	})
+		languages.registerCompletionItemProvider('imba', {
+			def provideCompletionItems document, position, token
+				console.log('provideCompletionItems',token)
+				let editor = window.activeTextEditor
+				return
+				# return {items: []}
+				# return new Hover('I am a hover!')
+		})
 	
 	# set language configuration
 	languages.setLanguageConfiguration('imba',{

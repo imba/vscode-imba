@@ -1,6 +1,4 @@
-export class Extern {
-	title = "untitled";
-
+export class Other {
 	hello(value){
 		return value.toUpperCase();
 	}

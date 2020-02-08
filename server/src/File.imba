@@ -12,36 +12,35 @@ var imbaOptions = {
 }
 
 export class File
-	# @param {ts.LanguageService} service
+	/**
+	@param {import("./LanguageServer").LanguageServer} program
+	@param {ts.LanguageService} service
+	*/
 	def constructor program, path, service
-		console.log "created file {path}"
 		@program = program
-		@ls = service
-	
-		@jsPath   = path.replace(/\.(imba|js|ts)/,'.js')
-		@tsPath   = path.replace(/\.(imba|js|ts)$/,'.ts')
+		@ls = program.service
+		@jsPath   = path.replace(/\.(imba|js|ts)$/,'.js')
 		@imbaPath = path.replace(/\.(imba|js|ts)$/,'.imba')
-		@lsPath   = @tsPath
 		@lsPath   = @jsPath
 
 		@version = 1
 		@diagnostics = []
+		@emitted = {}
 		@invalidate()
-		unless program.rootFiles.includes(@lsPath)
-			program.files[@lsPath] = self
-			# program.files[@tsPath] = self
-			program.files[@imbaPath] = self
+
+		console.log "created file {path}"
+
+		program.files[@lsPath] = self
+		program.files[@imbaPath] = self
+		program.files.push(self)
+
+		if program && !program.rootFiles.includes(@lsPath)
 			program.rootFiles.push(@lsPath)
-			program.version++
-			# let snapshot = ts.ScriptSnapshot.fromString("")
-			# @jsDoc = program.acquireDocument(@lsPath,snapshot,@version)
-			@emitFile()
 		self
 
 
 	get document
 		let uri = 'file://' + @imbaPath
-		console.log "get {uri}"
 		@program.documents.get(uri)
 
 	get uri
@@ -50,73 +49,78 @@ export class File
 	def didOpen doc
 		@doc = doc
 		@content = doc.getText()
+		# @emitFile()
 
 	def didChange doc
 		@doc = doc
-		if doc.version != @version
-			console.log 'did change!',@version,doc.version
-			@version = doc.version
-			@content = doc.getText()
-			@dirty = yes
-			@program.version++
-			@invalidate()
-			@compile()
-			
+		// if doc.version != @version
+		console.log 'did change!',@version,doc.version
+		@version = doc.version
+		@content = doc.getText()
+		@emitFile()
 
 	def didSave doc
 		@content = doc.getText()
-		# if @dirty
-		# 	@dirty = no
+		@savedContent = @content
+		@emitFile()
+
+	def dispose
+		delete @program.files[@jsPath]
+		delete @program.files[@imbaPath]
+		let idx = @program.files.indexOf(self)
+		@program.files.splice(idx,1) if idx >= 0
+
+		idx = @program.rootFiles.indexOf(@lsPath)
+		@program.rootFiles.splice(idx,1) if idx >= 0
 		@program.version++
-		@invalidate()
-		@ls.getEmitOutput(@lsPath)
-		
+		self
 
 	def emitFile
-		@ls.getEmitOutput(@lsPath)
+		console.log 'emitFile',@imbaPath
+		let content = @getSourceContent()
+		# see if there are changes
+		# this is usually where we should do the compilation?
+		if content != @lastEmitContent
+			@content = content
+			@lastEmitContent = @content
+			@invalidate()
+			@version++
+			@program.version++
 
-	def emitDiagnostics
-		let t = Date.now()
-		var diagnostics = @ls.getSemanticDiagnostics(@lsPath)
-		var syntactic = @ls.getSyntacticDiagnostics(@lsPath)
-		var suggestions = @ls.getSuggestionDiagnostics(@lsPath)
-		console.log(syntactic)
-		suggestions.map do |item|
-			console.log "suggestion",item.start,item.length,item.category,item.messageText,item.reportsUnnecessary
-		if diagnostics.length
-			@diagnostics = diagnostics.map do |entry|
-				let lstart = @originalLocFor(entry.start)
-				# @type {?}
-				let msg = entry.messageText
-				console.log 'converting diagnostic',lstart,entry.start,entry.length,entry.messageText
-				return {
-					severity: DiagnosticSeverity.Warning
-					message: msg.messageText or msg
-					range: {
-						start: @positionAt(lstart)
-						end: @positionAt(@originalLocFor(entry.start + entry.length) or (lstart + entry.length))
-					}
-				}
-			console.log "ts diagnostics",Date.now() - t,@diagnostics.map do [$1.severity,$1.message,$1.range.start,$1.range.end]
-			@sendDiagnostics()
-		else
-			@diagnostics = []
-			@sendDiagnostics()
+		let result = @ls.getEmitOutput(@lsPath)
 
-	def updateDiagnostics entries, group
+	def updateDiagnostics items = []
+		
+		# need to check if they are the same
+		let out = for entry in items
+			let lstart = @originalLocFor(entry.start)
+			let msg = entry.messageText
+			let start = @positionAt(lstart)
+			let end = @positionAt(@originalLocFor(entry.start + entry.length) or (lstart + entry.length))
+			let sev = [DiagnosticSeverity.Warning,DiagnosticSeverity.Error,DiagnosticSeverity.Information][entry.category]
+			console.log 'converting diagnostic',entry.category,entry.messageText
+			{
+				severity: sev
+				message: msg.messageText or msg
+				range: {start: start, end: end }
+			}
+
+		if JSON.stringify(out) != JSON.stringify(@diagnostics)
+			console.log 'update diagnostics',@jsPath,out
+			@diagnostics = out
+			@program.connection.sendDiagnostics(uri: @uri, diagnostics: @diagnostics)
 		self
 
 	def sendDiagnostics
-		# console.log "sending diagnostics",@diagnostics.map do [$1.severity,$1.message,$1.range.start,$1.range.end]
 		@program.connection.sendDiagnostics(uri: @uri, diagnostics: @diagnostics)
 
+	# how is this converting?
 	def positionAt offset
 		if @doc
 			return @doc.positionAt(offset)
 
 		let loc = @locs and @locs.map[offset]
 		return loc && {line: loc[0], character: loc[1]}
-		# @document && @document.positionAt(offset)
 
 	def getSourceContent
 		@content ||= ts.sys.readFile(@imbaPath)
@@ -137,7 +141,9 @@ export class File
 
 	def compile
 		unless @result
-			var body = @content or ts.sys.readFile(@imbaPath)
+			@getSourceContent()
+			var body = @content
+
 			try
 				var res = imbac.compile(body,imbaOptions)
 			catch e
@@ -156,12 +162,22 @@ export class File
 				@diagnostics = [err]
 				@sendDiagnostics()
 				@result = {error: err}
+				@compileErrors = [err]
+				@js ||= "// empty"
+				@jsSnapshot ||= ts.ScriptSnapshot.fromString(@js)
 				return self
+			
+			# clear compile errors if there were any?
+			if @compileErrors
+				@compileErrors = null
+				@diagnostics = []
+				@sendDiagnostics()
 
 			@result = res
 			@locs = res.locs
 			@js = res.js.replace('$CARET$','valueOf')
-			setTimeout(&,0) do @emitDiagnostics()
+			@jsSnapshot = ts.ScriptSnapshot.fromString(@js)
+
 		return self
 
 	def originalRangesFor jsloc
@@ -218,3 +234,87 @@ export class File
 		let end = @originalLocFor(span.start + span.length)
 		let content = @getSourceContent()
 		return content.slice(start,end)
+
+
+	def getContextAtLoc loc
+		let lft = loc
+		let rgt = loc
+		let code = @getSourceContent()
+		let len = code.length
+		let chr
+		let res = {}
+		let lnstart
+
+		while lft and (loc - lft) < 300
+			chr = code[--lft]
+			if chr == '>'
+				break
+
+			if chr == '<'
+				break
+
+		while rgt < (loc + 300)
+			chr = code[rgt++]
+			if chr == '>' or chr == ''
+				break
+				
+		let textBefore = code.slice(0,loc)
+		let textAfter = code.slice(loc)
+		
+		let lnstart = textBefore.lastIndexOf('\n')
+		let lnend = textAfter.indexOf('\n')
+
+		# console.log loc,lft,rgt
+		res.start = lft
+		res.length = rgt - lft
+		res.string = code.slice(lft,rgt)
+		res.precedingText = textBefore.split('\n').pop()
+		# could use the actual lexer to get better info about this?
+		
+		if code[lft] == '<' && code[rgt - 1] == '>' and code.substr(lft,4).match(/^\<[\w\{\[\.\#\>]/)
+			res.context = 'tag'
+			res.string = code.slice(lft,rgt)
+			res.tagName = (res.string.match(/\<([\w\-\:]+)/) or [])[1]
+			res.before = code.slice(lft,loc)
+			res.after = code.slice(loc,rgt)
+			res.pattern = res.before + '˘' + res.after
+			res.prefix = res.before[res.before.length - 1]
+			# should move forward 
+			let i = lft
+			let stack = []
+			let pairs = []
+			while i < loc
+				chr = code[i++]
+
+				if stack[0] == '('
+					if chr == ')'
+						stack.shift()
+						continue
+
+				if stack[0] == '{'
+					if chr == '}'
+						stack.shift()
+						continue 
+
+				if chr == '(' or chr == '{' or chr == '['
+					stack.unshift(chr)
+
+				elif chr == '<'
+					stack.unshift('tag')
+				elif chr == ' '
+					# if stack[0] == 'event'
+					# need to deal with 
+					stack.unshift('attr')
+				elif chr == '='
+					stack.unshift('value')
+				elif chr == ':'
+					stack.unshift('event')
+					# include the name of the event?
+				elif chr == '.'
+					if stack[0] == 'event' or stack[0] == 'modifier'
+						stack[0] = 'modifier'
+					else
+						stack.unshift('flag')
+
+			res.stack = stack
+		return res

@@ -1,4 +1,0 @@
-
-def hello
-    true
-    false

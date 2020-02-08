@@ -2,6 +2,7 @@ import {CompletionItemKind,SymbolKind} from 'vscode-languageserver-types'
 import {URI} from 'vscode-uri'
 
 export def uriToPath uri
+	return uri if uri[0] == '/' or uri.indexOf('://') == -1
 	URI.parse(uri).path
 
 export def pathToUri path
@@ -38,6 +39,9 @@ const COMPLETION_KIND_MAP = {
 	alias: CompletionItemKind.Variable
 	warning: CompletionItemKind.Text
 	getter: CompletionItemKind.Field
+	enum: CompletionItemKind.Enum
+	value: CompletionItemKind.Value
+	export: CompletionItemKind.Field
 }
 
 export def convertCompletionKind kind, entry
