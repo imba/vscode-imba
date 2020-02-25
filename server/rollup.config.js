@@ -15,7 +15,7 @@ export default [{
         return id[0] != '.' && id.indexOf('imba') != 0;
     },
     plugins: [
-        imba({target: 'node'}),
+        imba({target: 'node',format: 'esm'}),
         resolve({
             extensions: ['.imba','.imba2'],
             preferBuiltins: true

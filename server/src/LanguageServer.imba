@@ -1,6 +1,7 @@
 
 
-import {IConnection,InitializeParams,TextDocuments,TextDocument,Location,LocationLink,MarkedString,DocumentSymbol,InsertTextFormat} from 'vscode-languageserver'
+import {IConnection,InitializeParams,TextDocuments,Location,LocationLink,MarkedString,DocumentSymbol,InsertTextFormat} from 'vscode-languageserver'
+import { TextDocument } from 'vscode-languageserver-textdocument'
 import {CompletionItemKind,SymbolKind} from 'vscode-languageserver-types'
 import {CompilerOptions} from 'typescript'
 
@@ -49,6 +50,14 @@ var tsServiceOptions\CompilerOptions = {
 
 export class LanguageServer
 
+	def resolveConfigFile dir
+		return null if !dir or (dir == path.dirname(dir))
+
+		let src = path.resolve(dir,'imbaconfig.json')
+		if fs.existsSync(src)
+			return JSON.parse(fs.readFileSync(src,'utf8'))
+		return @resolveConfigFile(path.dirname(dir))
+
 	def constructor connection\IConnection, documents\TextDocuments, params\InitializeParams, o = {}
 		# {rootUri,rootFiles,debug}
 		@files = []
@@ -57,12 +66,16 @@ export class LanguageServer
 		@connection = connection
 		@entities = Entities.new(self)
 		@rootPath = @rootUri = util.uriToPath(params.rootUri)
-
+		@imbaConfig = @resolveConfigFile(@rootPath)
+		
+		console.log 'found imba config?!',@imbaConfig
+		# find config file
 		# @type {string[]}
 		@rootFiles = o.rootFiles || []
 		@snapshots = {}
 		@version = 0
 		@debug = !!o.debug
+				
 		# @type {ts.LanguageServiceHost}
 		var servicesHost = {
 			getScriptFileNames: do
@@ -94,8 +107,9 @@ export class LanguageServer
 			writeFile: @writeFile.bind(self)
 			readDirectory: ts.sys.readDirectory
 		}
-
+		console.log 'creating registry'
 		@registry = ts.createDocumentRegistry()
+		console.log 'creating service'
 		@service = ts.createLanguageService(servicesHost,@registry)
 
 		self

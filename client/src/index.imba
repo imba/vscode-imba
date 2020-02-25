@@ -42,11 +42,29 @@ export def activate context
 	var client = LanguageClient.new('imba', 'Imba Language Server', serverOptions, clientOptions)
 	var disposable = client.start()
 	
-	var type = window.createTextEditorDecorationType({
-		light: {color: '#509DB5'},
-		dark: {color: '#dbdcb2'},
-		rangeBehavior: 1
-	})
+	
+	var semanticTypes =
+		accessor: window.createTextEditorDecorationType({
+			light: {color: '#509DB5'}
+			dark: {
+				color: '#92b4d6',
+				border: '2px #384450 dashed',
+				borderWidth: '0px 0px 1px 0px'
+				borderSpacing: '2px'
+			}
+			borderRadius: '2px'
+			rangeBehavior: 1
+		})
+		imported: window.createTextEditorDecorationType({
+			light: {color: '#509DB5'}
+			dark: {
+				color: '#82c1f9',
+				border: '2px #384450 dashed',
+				borderWidth: '0px 0px 1px 0px'
+			}
+			borderRadius: '2px'
+			rangeBehavior: 1
+		})
 
 	context.subscriptions.push(disposable)
 
@@ -70,26 +88,27 @@ export def activate context
 			catch e
 				console.log "error",e
 
-		client.onNotification('entities') do |uri,version,markers|
+		client.onNotification('entities') do |{uri,version,markers}|
+
 			let editor = adapter.uriToEditor(uri,version)
+			console.log 'received entities',uri,version,markers,editor
 			
 			return unless editor
-
-			var styles = {
-				RootScope: ["#d6bdce","#509DB5"]
-				"import": ['#91b7ea','#91b7ea']
-			}
-
-			var decorations = for marker in markers
-				let color = styles[marker.type] or styles[marker.scope]
-				
-				{
-					range: marker.range
-					hoverMessage: "variable {marker.name}"
-					renderOptions: color ? {dark: {color: color[0]}, light: {color: color[1]}, rangeBehavior: 1} : null
-				}
 			
-			editor.setDecorations(type, decorations)
+			var decorations = {}
+			
+			for mark in markers
+				let [name,kind,loc,length,start,end] = mark				
+				let range = {start: start, end: end}
+				let group = (decorations[kind] ||= [])
+				group.push(range: {start: start, end: end})
+
+			console.log 'decorations',decorations
+			for own name,items of decorations
+				if let type = semanticTypes[name]
+					editor.setDecorations(type, items)
+			return
+			
 	
 		languages.registerCompletionItemProvider('imba', {
 			def provideCompletionItems document, position, token

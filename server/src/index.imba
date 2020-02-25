@@ -1,16 +1,15 @@
 import {createConnection, TextDocuments} from 'vscode-languageserver'
+import { TextDocument } from 'vscode-languageserver-textdocument'
 import {LanguageServer} from './LanguageServer'
 
 var connection = process.argv.length <= 2 ? createConnection(process.stdin, process.stdout) : createConnection()
 
 # Create a simple text document manager. The text document manager
 # supports full document sync only
-const documents = TextDocuments.new
+const documents = TextDocuments.new(TextDocument)
 documents.listen(connection)
 
 var server\LanguageServer
-
-var workspaceFolder
 
 documents.onDidOpen do |event|
 	server.onDidOpen(event) if server
@@ -25,9 +24,7 @@ documents.onDidSave do |event|
 documents.listen(connection)
 
 connection.onInitialize do |params|
-	workspaceFolder = params.rootUri
-	connection.console.log("[Server({process.pid}) {workspaceFolder}] Started and initialize received")
-	# let {workspaces} = 
+	connection.console.log("[Server({process.pid}) {params.rootUri}] Started and initialize received")
 	server = LanguageServer.new(connection,documents,params)
 
 	return {
@@ -43,6 +40,14 @@ connection.onInitialize do |params|
 			documentHighlightProvider: true,
 			documentSymbolProvider: true,
 			workspaceSymbolProvider: true,
+			semanticTokensProvider: {
+				legend: {
+					tokenTypes: ['variable']
+					tokenModifiers: ['declaration','static']
+				}
+				rangeProvider: false
+				documentProvider: true
+			},
 			definitionProvider: true,
 			referencesProvider: false
 		}
@@ -96,8 +101,6 @@ connection.onCompletion do |event|
 	return res
 
 connection.onCompletionResolve do |item|
-	# console.log 'completion resolve',item
-	# console.log 'completion resolve?'
 	return server.doResolve(item)
 
 connection.onDocumentHighlight do |event|

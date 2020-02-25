@@ -13,7 +13,7 @@
         "url": "git://github.com/somebee/vscode-imba.git"
     },
     "engines": {
-        "vscode": "^1.5.0"
+        "vscode": "^1.42.0"
     },
     "categories": [
         "Programming Languages"
@@ -22,6 +22,38 @@
         "onLanguage:imba"
     ],
     "contributes": {
+        "semanticTokenTypes": [
+            {
+                "id": "testToken",
+                "description": "A test token"
+            }
+        ],
+        "semanticTokenModifiers": [
+            {
+                "id": "testModifier",
+                "description": "A test modifier"
+            }
+        ],
+        "semanticTokenStyleDefaults": [
+            {
+                "selector": "testToken",
+                "scope": [
+                    "entity.name.function.special"
+                ]
+            },
+            {
+                "selector": "*.testModifier",
+                "light": {
+                    "fontStyle": "bold"
+                },
+                "dark": {
+                    "fontStyle": "bold"
+                },
+                "highContrast": {
+                    "fontStyle": "bold"
+                }
+            }
+        ],
         "configuration": {
             "type": "object",
             "title": "Example configuration",
@@ -69,9 +101,9 @@
         ]
     },
     "dependencies": {
-        "imba": "^2.0.0-alpha.26",
-        "vscode-languageclient": "^5.2.1",
-        "vscode-languageserver": "^5.2.1"
+        "imba": "^2.0.0-alpha.33",
+        "vscode-languageclient": "^6.1.1",
+        "vscode-languageserver": "^6.1.1"
     },
     "devDependencies": {
         "@rollup/plugin-json": "^4.0.2",

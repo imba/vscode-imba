@@ -113,6 +113,24 @@ export class File
 
 	def sendDiagnostics
 		@program.connection.sendDiagnostics(uri: @uri, diagnostics: @diagnostics)
+		
+	def sendSemanticTokens tokens
+		try
+			# let doc = @document
+			let items = []
+			for token in tokens
+				let item = [token._value,token._kind,token._loc,token._len]
+				
+				if @doc
+					item.push(@doc.positionAt(token._loc))
+					item.push(@doc.positionAt(token._loc + token._len))
+					
+				items.push(item)
+				# {start: doc.positionAt(loc[0]), end: doc.positionAt(loc[1])}
+			console.log 'sending tokens',items
+			if @doc
+				@program.connection.sendNotification('entities',{uri: @doc.uri,version: @doc.version,markers: items})
+		self
 
 	# how is this converting?
 	def positionAt offset
@@ -143,9 +161,20 @@ export class File
 		unless @result
 			@getSourceContent()
 			var body = @content
+			
+			var opts = Object.assign({},imbaOptions,{
+				filename: @imbaPath
+				sourcePath: @imbaPath
+				# selfless: yes
+				onTraversed: do |root,stack|
+					let tokens = stack.semanticTokens()
+					console.log "DID TRAVERSE!!!",tokens
+					if tokens and tokens.length
+						@sendSemanticTokens(tokens)
+			})
 
 			try
-				var res = imbac.compile(body,imbaOptions)
+				var res = imbac.compile(body,opts)
 			catch e
 				let loc = e.loc && e.loc()
 				let range = loc && {
@@ -191,7 +220,7 @@ export class File
 			return val
 
 		let spans = @originalRangesFor(jsloc)
-		let val
+
 		if let span = spans[0]
 			let into = (jsloc - span[0]) / (span[1] - span[0])
 			let offset = Math.floor(into * (span[3] - span[2]))
@@ -243,7 +272,6 @@ export class File
 		let len = code.length
 		let chr
 		let res = {}
-		let lnstart
 
 		while lft and (loc - lft) < 300
 			chr = code[--lft]
