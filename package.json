@@ -1,8 +1,8 @@
 {
-    "name": "imba",
+    "name": "vscode-imba",
     "displayName": "vscode-imba",
     "description": "Language support for Imba",
-    "version": "0.5.2",
+    "version": "2.0.0",
     "publisher": "scrimba",
     "main": "./client/index.js",
     "icon": "assets/imba.png",
@@ -13,7 +13,7 @@
         "url": "git://github.com/somebee/vscode-imba.git"
     },
     "engines": {
-        "vscode": "^1.5.0"
+        "vscode": "^1.42.0"
     },
     "categories": [
         "Programming Languages"
@@ -22,6 +22,38 @@
         "onLanguage:imba"
     ],
     "contributes": {
+        "semanticTokenTypes": [
+            {
+                "id": "testToken",
+                "description": "A test token"
+            }
+        ],
+        "semanticTokenModifiers": [
+            {
+                "id": "testModifier",
+                "description": "A test modifier"
+            }
+        ],
+        "semanticTokenStyleDefaults": [
+            {
+                "selector": "testToken",
+                "scope": [
+                    "entity.name.function.special"
+                ]
+            },
+            {
+                "selector": "*.testModifier",
+                "light": {
+                    "fontStyle": "bold"
+                },
+                "dark": {
+                    "fontStyle": "bold"
+                },
+                "highContrast": {
+                    "fontStyle": "bold"
+                }
+            }
+        ],
         "configuration": {
             "type": "object",
             "title": "Example configuration",
@@ -30,6 +62,12 @@
                     "type": "number",
                     "default": 100,
                     "description": "Controls the maximum number of problems produced by the server."
+                },
+                "imba.suggest.completeFunctionCalls": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "%configuration.suggest.completeFunctionCalls%",
+                    "scope": "resource"
                 }
             }
         },
@@ -63,11 +101,19 @@
         ]
     },
     "dependencies": {
-        "imba": "^1.5.2",
-        "vscode-languageserver": "^2.6.2"
+        "imba": "^2.0.0-alpha.33",
+        "vscode-languageclient": "^6.1.1",
+        "vscode-languageserver": "^6.1.1"
+    },
+    "devDependencies": {
+        "@rollup/plugin-json": "^4.0.2",
+        "rollup": "^1.28.0",
+        "rollup-plugin-commonjs": "^10.1.0",
+        "rollup-plugin-node-resolve": "^5.2.0"
     },
     "scripts": {
         "dev:bootstrap": "lerna bootstrap",
+        "dev:watch": "rollup -c --watch",
         "prod:version": "lerna version"
     }
 }
