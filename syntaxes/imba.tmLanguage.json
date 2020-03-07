@@ -32,11 +32,13 @@
                 "begin": "\\.\\{",
                 "patterns": [{ "include": "$self" }]
             },{
+                
                 "name": "entity.name.tag.id.evaled.imba",
                 "end": "\\}",
                 "begin": "#\\{",
                 "patterns": [{ "include": "$self" }]
             },{
+   
                 "name": "entity.name.tag.object.imba",
                 "end": "\\]",
                 "begin": "\\[",
@@ -286,7 +288,7 @@
             "7": {"name": "entity.name.type.tag.name.imba"}
         }
     },{
-        "match": "\\s*(prop|attr) (([a-z\\_][\\w\\_]*)(\\-[\\d\\w\\_]+)*)?",
+        "match": "\\s*(prop|attr) (([\\$a-z\\_A-Z][\\w\\_]*)(\\-[\\d\\w\\_\\$]+)*)?",
         "name": "meta.property.imba",
         "captures": {
             "1": {"name": "keyword.control.property.imba"},
@@ -318,18 +320,11 @@
         "match": "(\\$\\d+)",
         "name": "support.variable.imba"
     },{
-        "match": "(\\.)@[A-Z\\_a-z\\d][\\w\\_\\d]*(\\-[A-Z\\_a-z\\d]+)*",
-        "name": "accessor.ivar.imba",
-        "captures": {
-            "0": {"name": "variable.instance.imba"},
-            "1": {"name": "punctuation.access.ivar.imba"}
-        }
-    },{
-        "match": "(\\.)(new|extend)",
+        "match": "(\\.)(new)",
         "name": "accessor.method.special.imba",
         "captures": {
             "0": { "name": "identifier.method.imba"},
-            "1": { "name": "punctuation.access.method.imba"},
+            "1": { "name": "keyword.operator.access.imba"},
             "2": {"name": "keyword.other.special.method.imba"}}
     },{
         "beginCaptures": {
@@ -348,8 +343,20 @@
         "captures": {
             "1": {"name": "keyword.control.block.imba" }}
     },{
-        "match": "@[A-Z\\_a-z\\d]+(\\-[A-Z\\_a-z\\d]+)*",
+        "match": "(\\.\\.\\.)",
+        "name": "keyword.operator.spread.imba"
+    },{
+        "match": "@[A-Z\\_a-z\\d\\$]+(\\-[A-Z\\_a-z\\d\\$]+)*[\\!\\?]?",
         "name": "variable.instance.imba"
+    },{
+        "match": "\\$\\$[\\w\\$]+(\\-[\\w\\$]+)*[\\!\\?]?",
+        "name": "variable.instance.system.imba"
+    },{
+        "match": "(\\.\\.?)([\\w\\$]+(?:\\-[\\w\\$]+)*[\\!\\?]?)",
+        "captures": {
+            "1": {"name": "keyword.operator.access.imba"},
+            "2": {"name": "identifier.basic.imba"}
+        }
     },{
         "match": "self",
         "name": "variable.language.scope.self.imba"
@@ -363,6 +370,7 @@
         "match": "\\b(require|global|super|export|import)\\b",
         "name": "keyword.special.imba"
     },{
+    
         "match": "\\b(var|let|const)\\b",
         "name": "keyword.control.var.imba"
     },{
@@ -376,18 +384,18 @@
         "name": "constant.language.boolean.imba"
     },{
         "match": "\\b(undefined|null|nil)\\b",
-        "name": "constant.language.other.imba"
+        "name": "constant.language.boolean.imba"
     },{
         "match": "\\u03c0",
         "name": "constant.language.math.imba"
     },{
-        "match": "[\\w\\_]+(\\-[\\w\\d\\_]+)*[\\?\\!]?\\:(\\s|\\[|$)",
+        "match": "[\\w\\_\\$]+(\\-[\\w\\d\\_\\$]+)*[\\?\\!]?\\:",
         "name": "meta.object-literal.key.imba"
     },{
         "match": "\\b([A-Z\\_]+)\\b",
         "name": "identifier.const.imba"
     },{
-        "match": "[A-Z]+([A-Za-z\\d]+)?",
+        "match": "[A-Z]+([A-Za-z\\d\\$]+)?",
         "name": "entity.name.type.class.imba"
     },{
         "match": "\\:[\\w\\d\\_]+(\\-[\\w\\d\\_]+)*[\\?\\!\\=]?",
@@ -396,7 +404,7 @@
         "match": "[a-z_A-Z\\$][\\_\\w\\d]*(\\-[_\\d\\w\\$]+)*?",
         "name": "identifier.basic.imba"
     },{
-        "match": "\\bnot\\b| in ",
+        "match": "\\bnot\\b| in |\\s(\\?|\\:)\\s",
         "name": "keyword.operator.expression.imba"
     },{
         "match": "<=>|<(?!<|=)|>(?!<|=|>)|<=|>=| is | isnt | not |===|==|\\?=|=~|!=|!~\\?|\\u2264|\\u2265|\\u2261|\\u2248",
@@ -408,7 +416,7 @@
         "match": "(%|&|\\*\\*|\\*|\\+|\\-|\\/|\\u00d7|\\u00f7|\\u221a)",
         "name": "keyword.operator.arithmetic.imba"
     },{
-        "match": "\\=|\\?\\=|\\&\\&?\\=",
+        "match": "\\=|\\?\\=|\\|\\=|\\&\\&?\\=",
         "name": "keyword.operator.assignment.imba"
     },{
         "match": "\\{|\\}",
@@ -417,7 +425,7 @@
         "match": "\\[|\\]",
         "name": "punctuation.section.array.imba"
     },{
-        "match": "\\(|\\)",
+        "match": "sdfsdfs\\(|sdsds\\)",
         "name": "punctuation.section.function.imba"
     },{
         "match": "^([ \t]+)",

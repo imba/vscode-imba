@@ -1,3 +1,28 @@
+export const globals = {
+	'global': 1
+	'imba': 1
+	'module': 1
+	'window': 1
+	'document': 1
+	'exports': 1
+	'console': 1
+	'process': 1
+	'parseInt': 1
+	'parseFloat': 1
+	'setTimeout': 1
+	'setInterval': 1
+	'setImmediate': 1
+	'clearTimeout': 1
+	'clearInterval': 1
+	'clearImmediate': 1
+	'globalThis': 1
+	'isNaN': 1
+	'isFinite': 1
+	'__dirname': 1
+	'__filename': 1
+	'_': 1
+}
+
 export const TAG_TYPES = {
 	"": [-1,{id: 1,className: 'class',slot: 1,part: 1,elementTiming: 'elementtiming'}]
 	HTML: [-1,{title: 1,lang: 1,translate: 1,dir: 1,accessKey: 'accesskey',draggable: 1,spellcheck: 1,autocapitalize: 1,inputMode: 'inputmode',style: 1,tabIndex: 'tabindex',enterKeyHint: 'enterkeyhint'}]

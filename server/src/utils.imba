@@ -65,6 +65,43 @@ const SYMBOL_KIND_MAP = {
 export def convertSymbolKind kind, entry
 	return SYMBOL_KIND_MAP[kind] or SymbolKind.Field
 
+
+export def tsp2lspCompletions items, {file,jsLoc,meta}
+	items = items.entries or items
+	let results = []
+	for entry in items
+		let name = entry.name
+		let kind = entry.kind
+		let modifiers = (entry.kindModifiers or '').split(/[\,\s]/)
+		console.log entry
+		if name.match(/^is([A-Z])/)
+			name = name[2].toLowerCase() + name.slice(3) + '?'
+		elif name.match(/^do([A-Z])/)
+			name = name[2].toLowerCase() + name.slice(3) + '!'
+			
+		let item = {
+			label: name,
+			kind: convertCompletionKind(kind,entry),
+			sortText: entry.sortText
+			data: {
+				loc: jsLoc
+				path: file.lsPath
+				origKind: kind
+				kindModifiers: entry.kindModifiers
+			}
+		}
+		for mod in modifiers when mod
+			item.data[mod] = true
+		Object.assign(item.data,meta) if meta
+
+		results.push(item)
+	return results
+		
+		
+		
+		
+
+
 ###
 
 export declare namespace SymbolKind {

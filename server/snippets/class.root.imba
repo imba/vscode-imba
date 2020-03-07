@@ -1,0 +1,1 @@
+class ${1:ClassName}$0

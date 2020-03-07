@@ -1,5 +1,6 @@
 
 
+import {snippets} from './snippets'
 import {IConnection,InitializeParams,TextDocuments,Location,LocationLink,MarkedString,DocumentSymbol,InsertTextFormat} from 'vscode-languageserver'
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import {CompletionItemKind,SymbolKind} from 'vscode-languageserver-types'
@@ -45,7 +46,6 @@ var tsServiceOptions\CompilerOptions = {
 	target: ts.ScriptTarget.Latest
 	lib: ['lib.es6.d.ts']
 	moduleResolution: ts.ModuleResolutionKind.NodeJs
-	tsBuildInfoFile: '/Users/sindre/repos/.tsbuildinfo'
 }
 
 export class LanguageServer
@@ -307,13 +307,13 @@ export class LanguageServer
 			let sourceSpan = file.textSpanToRange(info.textSpan)
 			let sourceText = file.textSpanToText(info.textSpan)
 			let isLink = sourceText and sourceText.indexOf('-') >= 0
-			console.log 'definitions!',sourceSpan,sourceText,isLink
+			# console.log 'definitions!',sourceSpan,sourceText,isLink
 
 			var defs = for item of info.definitions
 
 				let ifile = @files[item.fileName]
 				if ifile
-					console.log 'definition',item
+					# console.log 'definition',item
 					let textSpan = ifile.textSpanToRange(item.textSpan)
 					let span = item.contextSpan ? ifile.textSpanToRange(item.contextSpan) : textSpan
 
@@ -343,44 +343,57 @@ export class LanguageServer
 			return defs
 		# if let info = file.getDefinitionAtPosition(loc)
 		#	return info
-
+	
+	# should delegate this through to the file itself
 	def getCompletionsAtPosition uri, pos, context = {}
 		let file = @getImbaFile(uri)
 
 		let loc = typeof pos == 'number' ? pos : @documents.get(uri).offsetAt(pos)
 		let types = {}
 		let ctx = file.getContextAtLoc(loc)
-		let items
+		let items = []
 		let trigger = context.triggerCharacter
 		let TAG_START = /(\> |^\s*|[\[\(])\<$/
-
 		# console.log 'completions at line',ctx
-
-		# if @debug
 		@log('completions context',ctx,loc)
 
 		let options = {
 			triggerCharacter: context.triggerCharacter
-			includeCompletionsForModuleExports: false,
+			includeCompletionsForModuleExports: true,
 			includeCompletionsWithInsertText: true
 		}
-		
-		if ctx.precedingText.match(TAG_START)
+
+
+		if ctx.textBefore.match(TAG_START)
 			console.log 'matching tags!!'
 			
 			if trigger == '<'
-				# add closing brace
-				# no triggers if we have some prefixes here
 				options.autoclose = yes
 				@connection.sendNotification('closeAngleBracket',{location: loc,position: pos, uri: uri})
 
 			let items = @entities.getTagNameCompletions(options)
 			return {isIncomplete: false, items: items}
+
 		elif trigger == '<'
 			return
+			
+			
+		# if the completion is part of an access - we want to
+		# redirect directly to typescript?
 
+		let snippets = @entities.getSnippetsForContext(ctx)
+		let find = ctx.path.replace(/[\w\-]+$/,'')
+		
+		items.push(*snippets)
+
+		let members = file.getMemberCompletionsForPath(find,ctx)
+		items.push(*members)
+		items = @entities.normalizeCompletions(items,ctx)
+		console.log 'return items',items
+		return {isIncomplete: false, items: items}
+		
 		let jsLoc = context.jsLoc or file.generatedLocFor(loc)
-
+	
 		# return custom completions not based on typescript
 		if ctx.context == 'tag'
 			items = @entities.getCompletionsForContext(uri,pos,ctx)
@@ -397,10 +410,8 @@ export class LanguageServer
 				console.log 'added item?',items[0]
 			return {isIncomplete: false, items: items}
 
-		
-
 		if types.tagName
-			console.log 'completion here!'
+			# console.log 'completion here!'
 			let items = for own name,ctor of TAG_NAMES
 				{
 					uri: uri,
@@ -420,15 +431,16 @@ export class LanguageServer
 				console.log 'completions!!',res.entries && res.entries.filter(do $1.kindModifiers).map(do [$1.name,$1.kindModifiers,$1.insertText])
 
 			let entryFor = do |entry|
-				# if types.tagName && !(entry.name.match(/\wComponent$/)
-				#	console.log('skipping',entry.name)
-				#	return null
-				console.log 'completion',entry
-
+				let name = entry.name
+				let m
+				
+				if name.match(/^is([A-Z])/)
+					name = name[2].toLowerCase() + name.slice(3) + '?'
+				elif name.match(/^do([A-Z])/)
+					name = name[2].toLowerCase() + name.slice(3) + '!'
+		
 				let completion = {
-					# uri: uri,
-					# position: pos,
-					label: entry.name,
+					label: name,
 					kind: util.convertCompletionKind(entry.kind,entry),
 					sortText: entry.sortText
 					data: {
@@ -437,14 +449,12 @@ export class LanguageServer
 						origKind: entry.kind
 					}
 				}
-				if entry.kind == 'method'
-					completion.insertText = entry.name + '($1)$0'
+				
+				if entry.kind == 'method' and !name.match(/[\!\/?]$/)
+					completion.insertText = name.replace(/\$/g,'\\$') + '($1)$0'
 					completion.insertTextFormat = InsertTextFormat.Snippet
-					# completion.commitCharacters = ['(']
 				elif entry.insertText
-					completion.insertText = entry.insertText.replace(/^this\./,'@')
-					if completion.insertText[0] == '@'
-						completion.commitCharacters = ['.','=']
+					yes
 						
 				if entry.source
 					completion.sortText = '\uffff' + entry.sortText
@@ -455,16 +465,16 @@ export class LanguageServer
 				return completion
 
 			let items = res.entries.map(entryFor).filter(do $1)
+			
 
 			if res.isMemberCompletion
 				items = items.filter do $1.kind != CompletionItemKind.Text
-				# console.log 'resulting completions',items
 
 			let out = {
 				isIncomplete: false,
 				items: items
 			}
-			# console.log items
+
 			return out
 
 		return {
@@ -517,7 +527,10 @@ export class LanguageServer
 		let file = @getImbaFile(uri)
 		# console.log 'found file?',file.jsPath
 		let tree = @service.getNavigationTree(file.lsPath)
-		# console.log 'found results',tree
+		
+		if file.lsPath.indexOf('LongPromise') >= 0
+			console.log 'found results?',tree
+
 		let conv = do |item|
 			return unless item.nameSpan
 			return if item.kind == 'alias'

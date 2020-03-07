@@ -3,7 +3,7 @@
   "inherit": false,
   "named": {
     "background": "282f33",
-    "foreground": "D4D4D4",
+    "foreground": "ffffff",
     "keyword": "ea9b80",
     "operator": "ea9b80",
     "string": "B7DE95",
@@ -63,7 +63,7 @@
       "name": "identifier",
       "scope": "identifier",
       "settings": {
-        "foreground": "#d4d4d4"
+        "foreground": "#e9e9e9"
       }
     },
     {

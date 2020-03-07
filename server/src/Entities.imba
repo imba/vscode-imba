@@ -3,6 +3,8 @@ import {CompletionItemKind,SymbolKind,InsertTextFormat,CompletionItem} from 'vsc
 import {convertCompletionKind} from './utils'
 
 import {tags,globalAttributes} from './html-data.json'
+import {snippets} from './snippets'
+import {keywords} from './keywords'
 
 var globalEvents = for item in globalAttributes when item.name.match(/^on\w+/)
 	item
@@ -15,6 +17,53 @@ export class Entities
 
 	def constructor program
 		@program = program
+		
+	def getKeywordCompletions o = {}
+		let keywords = ['yes','no','tag']
+		
+		let items\CompletionItem[] = []
+		
+		for kw in keywords
+			items.push
+				label: kw
+				kind: CompletionItemKind.Keyword
+				data: { resolved: true }
+
+		return items
+		
+	def getKeywordsForContext o = {}
+		let matches = []
+		let scope = o.scope
+		for item in keywords
+			matches.push(
+				label: item.name or item
+				insertText: item.name
+				kind: CompletionItemKind.Keyword
+				sortText: item.name
+				data: { resolved: true }
+			)
+		return matches
+		
+	def getSnippetsForContext o = {}
+		let matches = []
+		let scope = o.scope
+		for snippet in snippets
+			continue unless snippet.scopes.length == 0 or snippet.scopes.some(do |key| scope[key])
+			continue if snippet.excludes.length and snippet.excludes.some(do |key| scope[key])
+
+			matches.push(
+				label: snippet.name	
+				insertText: snippet.body
+				insertTextFormat: InsertTextFormat.Snippet
+				kind: CompletionItemKind.Snippet
+				sortText: snippet.name
+				data: { resolved: true }
+			)
+
+		return matches
+
+		# completion.insertText = name + '($1)$0'
+		# completion.insertTextFormat = InsertTextFormat.Snippet
 	
 	def getTagNameCompletions o = {}
 
@@ -33,6 +82,9 @@ export class Entities
 				item.insertTextFormat = InsertTextFormat.Snippet
 
 		return items
+		
+	def rewriteTSCompletions items
+		self
 
 	def getCompletionsForContext uri,pos,ctx
 		let items\CompletionItem[] = []
@@ -96,6 +148,24 @@ export class Entities
 				item.commitCharacters = ['.']
 
 		return items
+		
+	def normalizeCompletions items, ctx
+		let results = for item in items
+			item.sortText ||= '0'
+			let meta = item.data ||= {resolved: true}
+			# sort our own declarations at the top?
+			if meta.origKind == 'property' and !meta.declare and item.label != 'prototype'
+				# console.log 'resulrt item',item
+				item.sortText = '_' + item.label
+			
+			# item.sortText = item.label
+			item
+		
+		# results = results.sort do |a,b|
+		# 	# a.sortText.localeCompare(b.sortText)
+		# 	b.label.localeCompare(a.label)
+
+		return results
 
 
 	def registerTag

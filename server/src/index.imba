@@ -1,6 +1,8 @@
-import {createConnection, TextDocuments} from 'vscode-languageserver'
+import {createConnection, TextDocuments, TextDocumentSyncKind} from 'vscode-languageserver'
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import {LanguageServer} from './LanguageServer'
+
+import {snippets} from './snippets'
 
 var connection = process.argv.length <= 2 ? createConnection(process.stdin, process.stdout) : createConnection()
 
@@ -15,6 +17,7 @@ documents.onDidOpen do |event|
 	server.onDidOpen(event) if server
 
 documents.onDidChangeContent do |change|
+	# console.log 'changed content',change.contentChanges
 	server.onDidChangeContent(change) if server
 	return
 
@@ -29,7 +32,7 @@ connection.onInitialize do |params|
 
 	return {
 		capabilities: {
-			textDocumentSync: documents.syncKind,
+			textDocumentSync: documents.syncKind # TextDocumentSyncKind.Incremental
 			completionProvider: {
 				resolveProvider: true,
 				triggerCharacters: ['.', ':', '<', '"', '/', '@', '*','%']
@@ -64,6 +67,9 @@ connection.onInitialized do |params|
 
 	connection.onNotification('onDidCreateFiles') do |event|
 		server.onDidCreateFiles(event)
+		
+	# connection.onDidChangeTextDocument do |event|
+	# 	console.log 'onDidChangeTextDocument',event
 
 connection.onDidChangeConfiguration do |change|
 	console.log "connection.onDidChangeConfiguration"

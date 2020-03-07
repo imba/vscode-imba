@@ -48,7 +48,19 @@ if false
 # console.log ls.getCompletionsAtPosition('util.imba',184,jsLoc: 215)
 # console.log ls.getCompletionsAtPosition('util.imba',184)
 # console.log
-console.log ls.getCompletionsAtPosition('completion.imba',89)
+
+if true
+	let file = ls.getImbaFile('completion.imba')
+	let content = file.getSourceContent()
+	let last = 0
+	let idx = 0
+	while (idx = content.indexOf('# |',last)) > -1
+		console.log 'found index',idx
+		last = idx + 2
+		console.log file.getContextAtLoc(idx)
+	console.log file.getContextAtLoc(301)
+	# console.log ls.getCompletionsAtPosition('completion.imba',89)
+	
 # ls.getCompletionsAtPosition('completion.imba',88)
 # console.log ls.getImbaFile('completion.imba').getContextAtLoc(89)
 # ls.emitDiagnostics()

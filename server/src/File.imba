@@ -1,6 +1,8 @@
 import {CompletionItemKind,DiagnosticSeverity} from 'vscode-languageserver-types'
 import {ScriptElementKind} from 'typescript'
+import * as util from './utils'
 var ts = require 'typescript'
+
 
 var imbac = require 'imba/dist/compiler.js'
 var sm = require "source-map"
@@ -50,6 +52,8 @@ export class File
 		@doc = doc
 		@content = doc.getText()
 		# @emitFile()
+		if @semanticTokens
+			@sendSemanticTokens(@semanticTokens)
 
 	def didChange doc
 		@doc = doc
@@ -63,6 +67,7 @@ export class File
 		@content = doc.getText()
 		@savedContent = @content
 		@emitFile()
+		# resave semantic tokens etc?
 
 	def dispose
 		delete @program.files[@jsPath]
@@ -115,6 +120,8 @@ export class File
 		@program.connection.sendDiagnostics(uri: @uri, diagnostics: @diagnostics)
 		
 	def sendSemanticTokens tokens
+		@semanticTokens = tokens
+
 		try
 			# let doc = @document
 			let items = []
@@ -127,8 +134,9 @@ export class File
 					
 				items.push(item)
 				# {start: doc.positionAt(loc[0]), end: doc.positionAt(loc[1])}
-			console.log 'sending tokens',items
 			if @doc
+				console.log 'sending tokens',@uri
+				@sentTokens = items
 				@program.connection.sendNotification('entities',{uri: @doc.uri,version: @doc.version,markers: items})
 		self
 
@@ -168,9 +176,8 @@ export class File
 				# selfless: yes
 				onTraversed: do |root,stack|
 					let tokens = stack.semanticTokens()
-					console.log "DID TRAVERSE!!!",tokens
 					if tokens and tokens.length
-						@sendSemanticTokens(tokens)
+						setTimeout(&,10) do @sendSemanticTokens(tokens)
 			})
 
 			try
@@ -263,6 +270,27 @@ export class File
 		let end = @originalLocFor(span.start + span.length)
 		let content = @getSourceContent()
 		return content.slice(start,end)
+	
+	
+	def getMemberCompletionsForPath ref
+		# ref could be like ClassName.prototype
+		
+		# remove the last part
+		ref = ref.replace(/[\w\-]+$/,'')
+		
+		if @js
+			let typ = ref.slice(-1)
+			let cls = ref.slice(0,-1)
+			let comment = "/*¡{cls}*/"
+			let loc = @js.indexOf(comment)
+			
+			if loc and loc > 0
+				if typ == '#'
+					loc = loc + (comment + 'prototype.').length
+
+				let result = @ls.getCompletionsAtPosition(@lsPath,loc,{})
+				# console.log 'found member completion pos',ref,loc,result
+				return util.tsp2lspCompletions(result,file: self, jsLoc: loc, meta: {member: yes})
 
 
 	def getContextAtLoc loc
@@ -271,7 +299,11 @@ export class File
 		let code = @getSourceContent()
 		let len = code.length
 		let chr
-		let res = {}
+		let res = {
+			loc: loc
+		}
+		
+		# first find the line and indentation 
 
 		while lft and (loc - lft) < 300
 			chr = code[--lft]
@@ -291,12 +323,61 @@ export class File
 		
 		let lnstart = textBefore.lastIndexOf('\n')
 		let lnend = textAfter.indexOf('\n')
-
+		let linesBefore = textBefore.split('\n')
+		# find the indentation of the current line
 		# console.log loc,lft,rgt
 		res.start = lft
 		res.length = rgt - lft
-		res.string = code.slice(lft,rgt)
-		res.precedingText = textBefore.split('\n').pop()
+		# res.string = code.slice(lft,rgt)
+		res.textBefore = linesBefore[linesBefore.length - 1]
+		res.textAfter = textAfter.split('\n')[0]
+		
+		
+		let currIndent = res.textBefore.match(/^\t*/)[0].length
+		let indents = [res.textBefore.slice(currIndent)]
+		res.indent = currIndent
+		let ln = linesBefore.length
+		while ln > 0
+			let line = linesBefore[--ln]
+			continue if line.match(/^[\t\s]*$/)
+			let ind = line.match(/^\t*/)[0].length
+			if ind < currIndent
+				currIndent = ind
+				indents.unshift(line.slice(ind))
+		
+		res.indents = indents
+		@compile()
+		res.scope = {type: 'root',root: yes,body: yes}
+		res.tagtree = []
+		res.tokens = @result && !!@result.tokens
+		res.path = ""
+		
+		# find variables before this position?
+		for line in indents
+			let scope
+			if let m = line.match(/^(export )?(tag|class) ([\w\-]+)/)
+				scope = {type: m[2], name: m[3]}
+				scope[m[2]] = m[3]
+				res.className = m[3]
+				res.path += res.className
+				
+			elif let m = line.match(/^(static )?(def|get|set) ([\w\-]+)/)
+				scope = {type: m[2], name: m[3],body: yes}
+				scope[m[2]] = m[3]
+				res.methodName = m[3]
+				res.static = !!m[1]
+				res.path += (m[1] ? '.' : '#') + m[3]
+
+			elif let m = line.match(/^\<([\w\-]+)/)
+				res.tagtree.push(m[1])
+				res.scope.html = yes
+				# scope = {type: m[2], name: m[3]}
+				
+			if scope
+				scope.parent = res.scope
+				res.scope = scope
+			
+		
 		# could use the actual lexer to get better info about this?
 		
 		if code[lft] == '<' && code[rgt - 1] == '>' and code.substr(lft,4).match(/^\<[\w\{\[\.\#\>]/)

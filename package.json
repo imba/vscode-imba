@@ -56,7 +56,7 @@
         ],
         "configuration": {
             "type": "object",
-            "title": "Example configuration",
+            "title": "Imba Configuration",
             "properties": {
                 "imba.maxNumberOfProblems": {
                     "type": "number",

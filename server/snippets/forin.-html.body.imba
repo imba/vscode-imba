@@ -1,0 +1,1 @@
+for ${1:item} in ${2:source}$0

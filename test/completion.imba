@@ -8,3 +8,21 @@ export class Util
 
 	def hello 
 		yes
+# |
+tag test-here
+	prop test
+	prop other # |
+
+	# |
+
+	def render
+		# |
+		<self>
+			<div> "hello" # |
+			if true
+				hello # |
+			<div
+				.ok=Math.random()
+				:click.test > # |
+
+			
