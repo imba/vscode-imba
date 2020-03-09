@@ -272,6 +272,11 @@ export class File
 		return content.slice(start,end)
 	
 	
+	def tspGetCompletionsAtPosition loc, ctx, options
+		let tsploc = @generatedLocFor(loc)
+		let result = @ls.getCompletionsAtPosition(@lsPath,tsploc,options)
+		return util.tsp2lspCompletions(result,file: self, jsLoc: tsploc)
+	
 	def getMemberCompletionsForPath ref
 		# ref could be like ClassName.prototype
 		

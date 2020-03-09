@@ -377,19 +377,23 @@ export class LanguageServer
 		elif trigger == '<'
 			return
 			
-			
-		# if the completion is part of an access - we want to
-		# redirect directly to typescript?
-
-		let snippets = @entities.getSnippetsForContext(ctx)
-		let find = ctx.path.replace(/[\w\-]+$/,'')
+		if trigger == '.' or ctx.textBefore.match(/\.[\w\$\-]*$/)
+			let tspitems = file.tspGetCompletionsAtPosition(loc,ctx,options)
+			items.push(*tspitems)
 		
-		items.push(*snippets)
+		else
+			# if the completion is part of an access - we want to
+			# redirect directly to typescript?
+			let snippets = @entities.getSnippetsForContext(ctx)
+			items.push(*snippets)
+			
+			let find = ctx.path.replace(/[\w\-]+$/,'')
+			let members = file.getMemberCompletionsForPath(find,ctx)
+			items.push(*members)
 
-		let members = file.getMemberCompletionsForPath(find,ctx)
-		items.push(*members)
 		items = @entities.normalizeCompletions(items,ctx)
 		console.log 'return items',items
+
 		return {isIncomplete: false, items: items}
 		
 		let jsLoc = context.jsLoc or file.generatedLocFor(loc)
