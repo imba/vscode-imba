@@ -89,7 +89,7 @@
             {
                 "language": "imba",
                 "scopeName": "source.imba",
-                "path": "./syntaxes/imba.tmLanguage.json"
+                "path": "./syntaxes/imba.tmLanguage"
             }
         ],
         "themes": [

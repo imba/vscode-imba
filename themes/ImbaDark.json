@@ -60,6 +60,20 @@
       }
     },
     {
+      "name": "variable.language",
+      "scope": "variable.language",
+      "settings": {
+        "foreground": "#ea9b80"
+      }
+    },
+    {
+      "name": "invalid",
+      "scope": "invalid",
+      "settings": {
+        "foreground": "#f44747"
+      }
+    },
+    {
       "name": "identifier",
       "scope": "identifier",
       "settings": {
@@ -67,8 +81,8 @@
       }
     },
     {
-      "name": "identifier.const",
-      "scope": "identifier.const",
+      "name": "constant",
+      "scope": "support.constant,support.class",
       "settings": {
         "foreground": "#BD9AC2"
       }
@@ -143,6 +157,21 @@
         "foreground": "#D9BB72"
       }
     },
+    {
+      "name": "storage.type",
+      "scope": "storage.type",
+      "settings": {
+        "foreground": "#ea9b80"
+      }
+    },
+    {
+      "name": "storage.modifier",
+      "scope": "storage.modifier",
+      "settings": {
+        "foreground": "#ea9b80"
+      }
+    },
+    
     {
       "name": "storage.type.function",
       "scope": "storage.type.function",
