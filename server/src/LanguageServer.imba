@@ -211,12 +211,7 @@ export class LanguageServer
 			[$1.file.fileName,$1.messageText,$1.start,$1.length,$1.relatedInformation,$1]
 		# let decl = @service.getProgram().getDeclarationDiagnostics()
 		console.log 'got diagnostics',Date.now() - t,info
-
 		return
-		# fileName = path.resolve(@rootPath,fileName)
-		# if let file = @files[fileName]
-		#	file.emitDiagnostics()
-		#	# @service.getSemanticDiagnostics(file.lsPath)
 
 	def inspectProgram
 		let program = @service.getProgram()
@@ -234,9 +229,6 @@ export class LanguageServer
 
 	# methods for vscode
 	def onDidOpen event
-		# emit this file only if it has not yet been requested
-		# by anyone
-
 		let doc = event.document
 		let src = util.uriToPath(event.document.uri)
 		@log('onDidOpen',src)
@@ -363,7 +355,6 @@ export class LanguageServer
 			includeCompletionsWithInsertText: true
 		}
 
-
 		if ctx.textBefore.match(TAG_START)
 			console.log 'matching tags!!'
 			
@@ -378,18 +369,20 @@ export class LanguageServer
 			return
 			
 		if trigger == '.' or ctx.textBefore.match(/\.[\w\$\-]*$/)
+			console.log 'get completions directly',loc,options
 			let tspitems = file.tspGetCompletionsAtPosition(loc,ctx,options)
-			items.push(*tspitems)
+			console.log('tspitems',tspitems.length)
+			items.push(...tspitems)
 		
 		else
 			# if the completion is part of an access - we want to
 			# redirect directly to typescript?
 			let snippets = @entities.getSnippetsForContext(ctx)
-			items.push(*snippets)
-			
+			items.push(...snippets)
+
 			let find = ctx.path.replace(/[\w\-]+$/,'')
 			let members = file.getMemberCompletionsForPath(find,ctx)
-			items.push(*members)
+			items.push(...members)
 
 		items = @entities.normalizeCompletions(items,ctx)
 		console.log 'return items',items
@@ -526,6 +519,10 @@ export class LanguageServer
 				range: file.textSpanToRange(info.textSpan)
 				contents: contents
 			}
+			
+	def getWorkspaceSymbols {query}
+		console.log 'getWorkspaceSymbols',query
+		return @entities.getWorkspaceSymbols(query)
 
 	def getSymbols uri
 		let file = @getImbaFile(uri)
@@ -537,10 +534,12 @@ export class LanguageServer
 
 		let conv = do |item|
 			return unless item.nameSpan
-			return if item.kind == 'alias'
-			# console.log "symbol",item.kind,item.text,item.nameSpan
+			return if item.kind == 'alias' or item.text == 'meta$'
+			
+			let name = util.tsp2lspSymbolName(item.text)
 			let range = file.textSpanToRange(item.nameSpan)
 			let kind = util.convertSymbolKind(item.kind)
+
 			unless range and range.start and range.start.line
 				return
 
@@ -551,11 +550,12 @@ export class LanguageServer
 
 			return {
 				kind: kind
-				name: item.text
+				name: name
 				range: range
 				selectionRange: range
 				children: children.map(conv).filter(do !!$1)
 			}
+
 		let res = tree.childItems.map(conv).filter(do !!$1)
 		# console.log 'found results',res
 		return res

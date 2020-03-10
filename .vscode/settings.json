@@ -1,5 +1,10 @@
 {
     "search.exclude": {
         "**/node_modules": true
-    }
+    },
+    "[imba]": {
+        "editor.insertSpaces": false,
+        "editor.tabSize": 4,
+        "editor.autoIndent": "advanced"
+      },
 }

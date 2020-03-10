@@ -75,13 +75,10 @@ connection.onDidChangeConfiguration do |change|
 	console.log "connection.onDidChangeConfiguration"
 
 connection.onDocumentSymbol do |event|
-	let uri = event.textDocument.uri
-	if server
-		return server.getSymbols(event.textDocument.uri)
-	return []
+	return server ? server.getSymbols(event.textDocument.uri) : []
 
 connection.onWorkspaceSymbol do |event|
-	return []
+	return server ? server.getWorkspaceSymbols(event) : []
 
 
 connection.onDefinition do |event,b|

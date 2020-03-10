@@ -1,4 +1,5 @@
-import {CompletionItemKind,DiagnosticSeverity} from 'vscode-languageserver-types'
+import {CompletionItemKind,DiagnosticSeverity,SymbolKind} from 'vscode-languageserver-types'
+import {Location} from 'vscode-languageserver'
 import {ScriptElementKind} from 'typescript'
 import * as util from './utils'
 var ts = require 'typescript'
@@ -14,6 +15,9 @@ var imbaOptions = {
 }
 
 export class File
+	prop symbols = []
+	prop program
+
 	/**
 	@param {import("./LanguageServer").LanguageServer} program
 	@param {ts.LanguageService} service
@@ -58,6 +62,7 @@ export class File
 	def didChange doc
 		@doc = doc
 		// if doc.version != @version
+		
 		console.log 'did change!',@version,doc.version
 		@version = doc.version
 		@content = doc.getText()
@@ -120,6 +125,8 @@ export class File
 		@program.connection.sendDiagnostics(uri: @uri, diagnostics: @diagnostics)
 		
 	def sendSemanticTokens tokens
+		return self
+
 		@semanticTokens = tokens
 
 		try
@@ -202,7 +209,7 @@ export class File
 				@js ||= "// empty"
 				@jsSnapshot ||= ts.ScriptSnapshot.fromString(@js)
 				return self
-			
+
 			# clear compile errors if there were any?
 			if @compileErrors
 				@compileErrors = null
@@ -213,8 +220,33 @@ export class File
 			@locs = res.locs
 			@js = res.js.replace('$CARET$','valueOf')
 			@jsSnapshot = ts.ScriptSnapshot.fromString(@js)
+			$indexWorkspaceSymbols()
 
 		return self
+		
+	def $indexWorkspaceSymbols
+		@symbols = []
+		# now jump through the symbols to find them
+		let text = @content
+		let lines = text.split(/\n/)
+		let m
+		# we do want the location as well for sure
+		# add methods as well?
+		for line,i in lines
+
+			if m = line.match(/^(.*(class|tag) )([\w\-]+)/)
+				let span = {
+					start: {line: i + 1, character: m[1].length}
+					end: {line: i + 1, character: m[0].length}
+				}
+				let symbol = {
+					kind: SymbolKind.Class
+					name: m[3]
+					location: Location.create(@uri,span)
+					containerName: m[2] == 'tag' ? 'tag' : undefined
+				}
+				@symbols.push(symbol)
+		self
 
 	def originalRangesFor jsloc
 		@locs.spans.filter do |pair|
@@ -274,8 +306,10 @@ export class File
 	
 	def tspGetCompletionsAtPosition loc, ctx, options
 		let tsploc = @generatedLocFor(loc)
-		let result = @ls.getCompletionsAtPosition(@lsPath,tsploc,options)
-		return util.tsp2lspCompletions(result,file: self, jsLoc: tsploc)
+		console.log 'get tsp completions',loc,tsploc
+		if let result = @ls.getCompletionsAtPosition(@lsPath,tsploc,options)
+			return util.tsp2lspCompletions(result.entries,file: self, jsLoc: tsploc)
+		return []
 	
 	def getMemberCompletionsForPath ref
 		# ref could be like ClassName.prototype
@@ -293,9 +327,10 @@ export class File
 				if typ == '#'
 					loc = loc + (comment + 'prototype.').length
 
-				let result = @ls.getCompletionsAtPosition(@lsPath,loc,{})
-				# console.log 'found member completion pos',ref,loc,result
-				return util.tsp2lspCompletions(result,file: self, jsLoc: loc, meta: {member: yes})
+				if let result = @ls.getCompletionsAtPosition(@lsPath,loc,{})
+					return util.tsp2lspCompletions(result.entries,file: self, jsLoc: loc, meta: {member: yes})
+
+		return []
 
 
 	def getContextAtLoc loc
@@ -361,13 +396,13 @@ export class File
 		for line in indents
 			let scope
 			if let m = line.match(/^(export )?(tag|class) ([\w\-]+)/)
-				scope = {type: m[2], name: m[3]}
+				scope = {type: m[2], name: m[3],parent: res.scope}
 				scope[m[2]] = m[3]
 				res.className = m[3]
 				res.path += res.className
 				
 			elif let m = line.match(/^(static )?(def|get|set) ([\w\-]+)/)
-				scope = {type: m[2], name: m[3],body: yes}
+				scope = {type: m[2], name: m[3],body: yes,parent: res.scope}
 				scope[m[2]] = m[3]
 				res.methodName = m[3]
 				res.static = !!m[1]
@@ -379,7 +414,6 @@ export class File
 				# scope = {type: m[2], name: m[3]}
 				
 			if scope
-				scope.parent = res.scope
 				res.scope = scope
 			
 		

@@ -62,12 +62,25 @@ const SYMBOL_KIND_MAP = {
 	getter: SymbolKind.Field
 }
 
+export def matchFuzzyString query,string
+	let i = 0
+	let k = 0
+	let s = string.toLowerCase()
+	while i < query.length
+		let chr = query[i++]
+		k = s.indexOf(chr,k) + 1
+		return no if k == 0
+	return yes
+
 export def convertSymbolKind kind, entry
 	return SYMBOL_KIND_MAP[kind] or SymbolKind.Field
 
+export def tsp2lspSymbolName name
+	if let m = name.match(/([A-Z][\w\-]+)Component$/)
+		return kebabCase(name.slice(0,-9))
+	return name
 
-export def tsp2lspCompletions items, {file,jsLoc,meta}
-	items = items.entries or items
+export def tsp2lspCompletions items, {file,jsLoc,meta=null}
 	let results = []
 	for entry in items
 		let name = entry.name
@@ -93,43 +106,26 @@ export def tsp2lspCompletions items, {file,jsLoc,meta}
 		for mod in modifiers when mod
 			item.data[mod] = true
 		Object.assign(item.data,meta) if meta
-
 		results.push(item)
+
 	return results
-		
-		
-		
-		
 
 
-###
+export def pascalCase str
+	str.replace(/(^|[\-\_\s])(\w)/g) do |m,v,l| l.toUpperCase
 
-export declare namespace SymbolKind {
-    const File: 1;
-    const Module: 2;
-    const Namespace: 3;
-    const Package: 4;
-    const Class: 5;
-    const Method: 6;
-    const Property: 7;
-    const Field: 8;
-    const Constructor: 9;
-    const Enum: 10;
-    const Interface: 11;
-    const Function: 12;
-    const Variable: 13;
-    const Constant: 14;
-    const String: 15;
-    const Number: 16;
-    const Boolean: 17;
-    const Array: 18;
-    const Object: 19;
-    const Key: 20;
-    const Null: 21;
-    const EnumMember: 22;
-    const Struct: 23;
-    const Event: 24;
-    const Operator: 25;
-    const TypeParameter: 26;
-}
-###
+export def camelCase str
+	str = String(str)
+	# should add shortcut out
+	str.replace(/([\-\_\s])(\w)/g) do |m,v,l| l.toUpperCase
+
+export def dashToCamelCase str
+	str = String(str)
+	if str.indexOf('-') >= 0
+		# should add shortcut out
+		str = str.replace(/([\-\s])(\w)/g) do |m,v,l| l.toUpperCase
+	return str
+
+export def kebabCase str
+	let out = str.replace(/([A-Z])/g) do |m,l| '-' + l.toLowerCase()
+	out[0] == '-' ? out.slice(1) : out

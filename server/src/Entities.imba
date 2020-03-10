@@ -1,6 +1,6 @@
 import {TAG_NAMES,TAG_TYPES,EVENT_MODIFIERS} from './constants'
 import {CompletionItemKind,SymbolKind,InsertTextFormat,CompletionItem} from 'vscode-languageserver-types'
-import {convertCompletionKind} from './utils'
+import {convertCompletionKind,matchFuzzyString} from './utils'
 
 import {tags,globalAttributes} from './html-data.json'
 import {snippets} from './snippets'
@@ -9,7 +9,6 @@ import {keywords} from './keywords'
 var globalEvents = for item in globalAttributes when item.name.match(/^on\w+/)
 	item
 
-
 for tagItem in tags
 	tags[tagItem.name] = tagItem
 
@@ -17,6 +16,19 @@ export class Entities
 
 	def constructor program
 		@program = program
+		@symbols = {}
+		$cache = {}
+
+	# cache based on project version
+	def getWorkspaceSymbols query
+		# only recollect if program has updated
+		let files = @program.files
+		let symbols = []
+		for file in files
+			for symbol in file.symbols
+				if !query or matchFuzzyString(query,symbol.name)
+					symbols.push(symbol)
+		return symbols
 		
 	def getKeywordCompletions o = {}
 		let keywords = ['yes','no','tag']
@@ -31,19 +43,6 @@ export class Entities
 
 		return items
 		
-	def getKeywordsForContext o = {}
-		let matches = []
-		let scope = o.scope
-		for item in keywords
-			matches.push(
-				label: item.name or item
-				insertText: item.name
-				kind: CompletionItemKind.Keyword
-				sortText: item.name
-				data: { resolved: true }
-			)
-		return matches
-		
 	def getSnippetsForContext o = {}
 		let matches = []
 		let scope = o.scope
@@ -51,14 +50,14 @@ export class Entities
 			continue unless snippet.scopes.length == 0 or snippet.scopes.some(do |key| scope[key])
 			continue if snippet.excludes.length and snippet.excludes.some(do |key| scope[key])
 
-			matches.push(
+			matches.push({
 				label: snippet.name	
 				insertText: snippet.body
 				insertTextFormat: InsertTextFormat.Snippet
 				kind: CompletionItemKind.Snippet
 				sortText: snippet.name
 				data: { resolved: true }
-			)
+			})
 
 		return matches
 
@@ -75,7 +74,19 @@ export class Entities
 				sortText: name
 				data: { resolved: true }
 			}
-			
+
+		$cache.components = for item in @getWorkspaceSymbols()
+			continue unless item.containerName == 'tag'
+			item
+		
+		for item in $cache.components
+			items.push {
+				label: item.name
+				kind: CompletionItemKind.Field,
+				sortText: item.name
+				data: {resolved: true}
+			}
+
 		for item in items
 			if o.autoclose
 				item.insertText = item.label + '$1>$0'

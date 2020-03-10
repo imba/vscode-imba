@@ -1,9 +1,9 @@
 {
     "name": "vscode-imba",
-    "displayName": "vscode-imba",
+    "displayName": "imba",
     "description": "Language support for Imba",
     "version": "2.0.0",
-    "publisher": "scrimba",
+    "publisher": "imba",
     "main": "./client/index.js",
     "icon": "assets/imba.png",
     "license": "MIT",
@@ -89,7 +89,10 @@
             {
                 "language": "imba",
                 "scopeName": "source.imba",
-                "path": "./syntaxes/imba.tmLanguage"
+                "path": "./syntaxes/imba.tmLanguage",
+                "embeddedLanguages": {
+                  "meta.embedded.block.css": "css"
+                }
             }
         ],
         "themes": [
@@ -97,6 +100,11 @@
                 "label": "Imba Dark",
                 "uiTheme": "vs-dark",
                 "path": "./themes/ImbaDark.json"
+            },
+            {
+                "label": "Imba Dark Old",
+                "uiTheme": "vs-dark",
+                "path": "./themes/ImbaDarkOld.json"
             }
         ]
     },
