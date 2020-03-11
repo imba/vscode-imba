@@ -529,36 +529,4 @@ export class LanguageServer < Component
 
 	def getSymbols uri
 		let file = @getImbaFile(uri)
-		# console.log 'found file?',file.jsPath
-		let tree = @service.getNavigationTree(file.lsPath)
-		
-		if file.lsPath.indexOf('LongPromise') >= 0
-			console.log 'found results?',tree
-
-		let conv = do |item|
-			return unless item.nameSpan
-			return if item.kind == 'alias' or item.text == 'meta$'
-			
-			let name = util.tsp2lspSymbolName(item.text)
-			let range = file.textSpanToRange(item.nameSpan)
-			let kind = util.convertSymbolKind(item.kind)
-
-			unless range and range.start and range.start.line
-				return
-
-			let children = item.childItems or []
-
-			if item.kind == 'method' or item.kind == 'function'
-				children = []
-
-			return {
-				kind: kind
-				name: name
-				range: range
-				selectionRange: range
-				children: children.map(conv).filter(do !!$1)
-			}
-
-		let res = tree.childItems.map(conv).filter(do !!$1)
-		# console.log 'found results',res
-		return res
+		return file.getSymbols()

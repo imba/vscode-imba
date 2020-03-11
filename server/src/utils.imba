@@ -50,7 +50,10 @@ export def convertCompletionKind kind, entry
 
 const SYMBOL_KIND_MAP = {
 	property: SymbolKind.Field
+	prop: SymbolKind.Field
 	method: SymbolKind.Method
+	def: SymbolKind.Method
+	constructor: SymbolKind.Constructor
 	class: SymbolKind.Class
 	"local class": SymbolKind.Class
 	var: SymbolKind.Variable
@@ -60,6 +63,10 @@ const SYMBOL_KIND_MAP = {
 	module: SymbolKind.Module
 	alias: SymbolKind.Variable
 	getter: SymbolKind.Field
+	get: SymbolKind.Field
+	set: SymbolKind.Field
+	setter: SymbolKind.Field
+	tag: SymbolKind.Class
 }
 
 export def matchFuzzyString query,string
@@ -129,3 +136,54 @@ export def dashToCamelCase str
 export def kebabCase str
 	let out = str.replace(/([A-Z])/g) do |m,l| '-' + l.toLowerCase()
 	out[0] == '-' ? out.slice(1) : out
+
+
+export def fastExtractSymbols text
+	let lines = text.split(/\n/)
+	let symbols = []
+	let scope = {indent: -1,children: []}
+	let m
+
+	for line,i in lines
+		if line.match(/^\s*$/)
+			continue
+
+		let indent = line.match(/^\t*/)[0].length
+
+		while scope.indent >= indent
+			scope = scope.parent
+
+		m = line.match(/^(\t*((?:export )?(?:static )?)(class|tag|def|get|set|prop|attr) )([\w\-\$]+)/)
+		# m ||= line.match(/^(.*(def|get|set|prop|attr) )([\w\-\$]+)/)
+
+		if m
+			let kind = m[3]
+			let name = m[4]
+			let ns = scope.name ? scope.name + '.' : ''
+			let mods = m[2].trim().split(/\s+/)
+
+			let span = {
+				start: {line: i + 1, character: m[1].length}
+				end: {line: i + 1, character: m[0].length}
+			}
+			let symbol = {
+				kind: SYMBOL_KIND_MAP[kind]
+				name: ns + name
+				span: span
+				indent: indent
+				modifiers: mods
+				children: []
+				parent: scope
+			}
+
+			if mods.indexOf('static') >= 0
+				symbol.containerName = 'static'
+
+			scope.children.push(symbol)
+			scope = symbol
+
+			symbols.push(symbol)
+	
+	return symbols
+
+

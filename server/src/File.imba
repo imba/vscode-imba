@@ -5,7 +5,6 @@ import {ScriptElementKind} from 'typescript'
 import * as util from './utils'
 var ts = require 'typescript'
 
-
 var imbac = require 'imba/dist/compiler.js'
 var sm = require "source-map"
 
@@ -37,7 +36,6 @@ export class File < Component
 		@invalidate()
 
 		console.log "created file {path}"
-		
 
 		program.files[@lsPath] = self
 		program.files[@imbaPath] = self
@@ -52,6 +50,12 @@ export class File < Component
 		let uri = 'file://' + @imbaPath
 		@program.documents.get(uri)
 
+	get $tsp
+		@program.service
+	
+	get $lsp
+		@program
+
 	get uri
 		'file://' + @imbaPath
 
@@ -60,6 +64,7 @@ export class File < Component
 		@content = doc.getText()
 		# @emitFile()
 		if @semanticTokens
+			console.log 'resending semantic tokens'
 			@sendSemanticTokens(@semanticTokens)
 
 	def didChange doc, event = null
@@ -72,14 +77,14 @@ export class File < Component
 
 		# when we introduce partial updates we only want
 		# to hide errors that are close to this
-		$clearSyntacticErrors()
+		$clearSyntacticErrors!
 		# if test
 		# @emitFile()
 
 	def didSave doc
-		@content = doc.getText()
+		@content = doc.getText!
 		@savedContent = @content
-		@emitFile()
+		@emitFile!
 		# resave semantic tokens etc?
 
 	def dispose
@@ -96,13 +101,13 @@ export class File < Component
 	def emitFile
 		$cancel('emitFile')
 		console.log 'emitFile',@imbaPath
-		let content = @getSourceContent()
+		let content = @getSourceContent!
 		# see if there are changes
 		# this is usually where we should do the compilation?
 		if content != @lastEmitContent
 			@content = content
 			@lastEmitContent = @content
-			@invalidate()
+			@invalidate!
 			@version++
 			@program.version++
 
@@ -139,24 +144,28 @@ export class File < Component
 		@updateDiagnostics([])
 		
 	def sendSemanticTokens tokens
-		return self
-
+		# return self
 		@semanticTokens = tokens
 
 		try
 			# let doc = @document
 			let items = []
 			for token in tokens
-				let item = [token._value,token._kind,token._loc,token._len]
-				
+				let item = [token._value,token._scope,token._kind,token._loc,token._len]
+				continue if token._kind == 'accessor'
+				# if token._level != undefined
+				#	item[1] = `var{token._level}`
+
 				if @doc
 					item.push(@doc.positionAt(token._loc))
 					item.push(@doc.positionAt(token._loc + token._len))
 					
 				items.push(item)
 				# {start: doc.positionAt(loc[0]), end: doc.positionAt(loc[1])}
+			$decorations = items
+
 			if @doc
-				console.log 'sending tokens',@uri
+				# console.log 'sending tokens',@uri,items
 				@sentTokens = items
 				@program.connection.sendNotification('entities',{uri: @doc.uri,version: @doc.version,markers: items})
 		self
@@ -198,7 +207,8 @@ export class File < Component
 				onTraversed: do |root,stack|
 					let tokens = stack.semanticTokens()
 					if tokens and tokens.length
-						setTimeout(&,10) do @sendSemanticTokens(tokens)
+						@sendSemanticTokens(tokens)
+						# setTimeout(&,10) do @sendSemanticTokens(tokens)
 			})
 
 			try
@@ -239,32 +249,29 @@ export class File < Component
 		return self
 		
 	def $indexWorkspaceSymbols
-		@symbols = []
-		# now jump through the symbols to find them
-		let text = @content
-		let lines = text.split(/\n/)
-		let m
-		# we do want the location as well for sure
-		# add methods as well?
-		for line,i in lines
-
-			if m = line.match(/^(.*(class|tag) )([\w\-]+)/)
-				let span = {
-					start: {line: i + 1, character: m[1].length}
-					end: {line: i + 1, character: m[0].length}
-				}
-				let symbol = {
-					kind: SymbolKind.Class
-					name: m[3]
-					location: Location.create(@uri,span)
-					containerName: m[2] == 'tag' ? 'tag' : undefined
-				}
-				@symbols.push(symbol)
-		self
+		@symbols = util.fastExtractSymbols(@content).map do |sym|
+			{
+				kind: sym.kind
+				location: Location.create(@uri,sym.span)
+				name: sym.name
+				containerName: sym.containerName
+			}
+	
+		return self
 
 	def originalRangesFor jsloc
 		@locs.spans.filter do |pair|
 			jsloc >= pair[0] and pair[1] >= jsloc
+
+	def originalRangeFor {start,length}
+		let spans = @originalRangesFor(start)
+		if spans.length > 0
+			for span in spans
+				let loff = start - span[0]
+				let roff = (start + length) - span[1]
+				if loff == 0 and roff == 0
+					return {start: span[2],length: span[3] - span[2], end: span[3]}
+		return null
 
 	# need a better converter
 	def originalLocFor jsloc
@@ -306,10 +313,12 @@ export class File < Component
 		return null
 
 	def textSpanToRange span
-		let start = @originalLocFor(span.start)
-		let end = @originalLocFor(span.start + span.length)
-		# console.log 'textSpanToRange',span,start,end,@locs and @locs.generated
-		{start: @positionAt(start), end: @positionAt(end)}
+		let range = @originalRangeFor(span)
+		if range
+			# let start = @originalLocFor(span.start)
+			# let end = @originalLocFor(span.start + span.length)
+			# console.log 'textSpanToRange',span,start,end,@locs and @locs.generated
+			{start: @positionAt(range.start), end: @positionAt(range.end)}
 
 	def textSpanToText span
 		let start = @originalLocFor(span.start)
@@ -321,12 +330,12 @@ export class File < Component
 	def tspGetCompletionsAtPosition loc, ctx, options
 		$flush('emitFile')
 		let tsploc = @generatedLocFor(loc)
-		console.log 'get tsp completions',loc,tsploc
+		# console.log 'get tsp completions',loc,tsploc
 		if let result = @ls.getCompletionsAtPosition(@lsPath,tsploc,options)
 			return util.tsp2lspCompletions(result.entries,file: self, jsLoc: tsploc)
 		return []
 	
-	def getMemberCompletionsForPath ref
+	def getMemberCompletionsForPath ref, context
 		# ref could be like ClassName.prototype
 		
 		# remove the last part
@@ -346,6 +355,39 @@ export class File < Component
 					return util.tsp2lspCompletions(result.entries,file: self, jsLoc: loc, meta: {member: yes})
 
 		return []
+
+
+	def getSymbols
+		let tree = $tsp.getNavigationTree(@lsPath)
+
+		let conv = do |item|
+			return if item.kind == 'alias' or item.text == 'meta$'
+			
+			let span = item.nameSpan
+
+			if item.kind == 'constructor'
+				span = {start: item.spans[0].start, length: 11}
+
+			let name = util.tsp2lspSymbolName(item.text)
+			let range = @textSpanToRange(span)
+			let kind = util.convertSymbolKind(item.kind)
+
+			return unless range and range.start
+
+			let children = item.childItems or []
+
+			if item.kind == 'method' or item.kind == 'function'
+				children = []
+
+			return {
+				kind: kind
+				name: name
+				range: range
+				selectionRange: range
+				children: children.map(conv).filter(do !!$1)
+			}
+
+		return tree.childItems.map(conv).filter(do !!$1)
 
 
 	def getContextAtLoc loc

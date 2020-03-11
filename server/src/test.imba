@@ -1,8 +1,9 @@
 var content = `<div.one.two title=10 :click.test>`
 import {File} from './File'
 import {LanguageServer} from './LanguageServer'
+import * as util from './utils'
 
-var tests = [
+var tests  = [
 	[`<div.one.two title=10 :click.test>`,4]
 	[`<div >`,5]
 	[`<div :click.stop .test=10>\n`,12,18,23]
@@ -59,6 +60,12 @@ if true
 		last = idx + 2
 		console.log file.getContextAtLoc(idx)
 	console.log file.getContextAtLoc(301)
+	console.dir file.getSymbols(), { depth: 6 }
+	console.log file.textSpanToRange({ start: 229, length: 11 })
+	console.log util.fastExtractSymbols(content)
+
+	console.log file.$decorations
+
 	# console.log ls.getCompletionsAtPosition('completion.imba',89)
 	
 # ls.getCompletionsAtPosition('completion.imba',88)

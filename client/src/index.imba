@@ -1,7 +1,8 @@
 var path = require 'path'
 
-import {window, languages, IndentAction, workspace,SnippetString,Position} from 'vscode'
+import {window, languages, IndentAction, workspace,SnippetString,Position,TextDocument,CancellationToken} from 'vscode'
 import {LanguageClient, TransportKind, RevealOutputChannelOn} from 'vscode-languageclient'
+import { SemanticTokensFeature, DocumentSemanticsTokensSignature } from 'vscode-languageclient/lib/semanticTokens.proposed'
 
 # TODO(scanf): handle workspace folder and multiple client connections
 
@@ -17,6 +18,17 @@ class ClientAdapter
 		return null
 
 var adapter = ClientAdapter.new
+
+languages.setLanguageConfiguration('imba',{
+	wordPattern: /(-?\d*\.\d\w*)|([^\`\~\!\@\#%\^\&\*\(\)\=\-\+\[\{\]\}\\\|\;\:\'\"\,\.\<\>\/\?\s]+)/g,
+	onEnterRules: [{
+		beforeText: /^\s*(?:export def|def|(export (default )?)?(static )?(def|get|set)|(export (default )?)?(class|tag)|for|if|elif|else|while|try|with|finally|except|async).*?$/,
+		action: { indentAction: IndentAction.Indent }
+	},{
+		beforeText: /\s*(?:do)\s*(\|.*\|\s*)?$/,
+		action: { indentAction: IndentAction.Indent }
+	}]
+})
 
 export def activate context
 	var serverModule = context.asAbsolutePath(path.join('server', 'index.js'))
@@ -37,9 +49,20 @@ export def activate context
 			something: 1
 			other: 100
 		}
+		###
+		middleware: {
+			# Workaround for https://github.com/microsoft/vscode-languageserver-node/issues/576
+			def provideDocumentSemanticTokens(document\TextDocument, token\CancellationToken, next\DocumentSemanticsTokensSignature) 
+				let res = await next(document, token)
+				if (res === undefined) then throw Error.new('busy')
+				return res;
+		}
+		###
 	}
 	
 	var client = LanguageClient.new('imba', 'Imba Language Server', serverOptions, clientOptions)
+	# client.registerFeature(SemanticTokensFeature.new(client))
+
 	var disposable = client.start()
 	
 	var styler = do |dark,light|
@@ -47,32 +70,57 @@ export def activate context
 			light: {color: '#509DB5'}
 			dark: {
 				color: dark.color or undefined
-				border: "1px {dark.border or dark.color}40 solid",
+				border: "1px {dark.border or dark.color}20 solid",
 				borderWidth: dark.border ? '0px 0px 1px 0px' : '0px'
 			}
 			borderRadius: '1px'
 			rangeBehavior: 1
 		})
 	
-	var colors =
+	var colors = {
 		yellow: '#e8e6cb'
 		pink: '#e8b8e5'
 		indigo: '#BD9AC2'
+		purple: '#c5badc'
 		blue: '#a1bcd9'
+	}
 		
-	let styles =
-		var: {color: colors.yellow}
-		
-	var semanticTypes =
-		accessor: styler(color: colors.blue)
-		imported:  styler(color: colors.indigo)
-		var:       styler(styles.var)
+	let styles = {
+		var:  {color: colors.yellow,border: colors.yellow}
+		var0: {color: colors.indigo,border: colors.yellow}
+		var1: {color: colors.yellow,border: colors.yellow}
+		var2: {color: colors.pink,border: colors.pink}
+		var3: {color: colors.blue,border: colors.indigo}
+
+		root: {color: colors.purple}
+		method: {color: colors.yellow, border: colors.yellow}
+		flow:   {color: colors.pink, border: colors.pink}
+		class:  {color: colors.blue, border: colors.blue}
+	}
+	# should fetch colors from supplied theme?
+
+	var semanticTypes = {
+		# accessor: styler(color: colors.blue)
+		imported: styler(color: colors.indigo)
+		var:      styler(styles.var)
 		let:       styler(styles.var)
 		param:     styler(styles.var)
+		var0:      styler(styles.var0)
+		var1:      styler(styles.var1)
+		var2:      styler(styles.var2)
+		var3:      styler(styles.var3)
+
 		global:    styler(color: colors.indigo)
+		root: styler(styles.root)
+		class: styler(styles.class)
+		tag: styler(styles.class)
+		method: styler(styles.method)
+		lambda: styler(styles.method)
+		if: styler(styles.flow)
+		for: styler(styles.flow)
+	}
 
 	context.subscriptions.push(disposable)
-
 	
 	client.onReady().then do
 
@@ -97,15 +145,18 @@ export def activate context
 
 			let editor = adapter.uriToEditor(uri,version)
 			# console.log 'received entities',uri,version,markers,editor
-			return unless editor
+			unless editor
+				console.log 'could not find editor for entities',uri
+				return
 			
 			var decorations = {}
 			
 			for mark in markers
-				let [name,kind,loc,length,start,end] = mark				
+				let [name,scope,kind,loc,length,start,end] = mark				
 				let range = {start: start, end: end}
-				let group = (decorations[kind] ||= [])
+				let group = (decorations[scope] ||= [])
 				group.push(range: {start: start, end: end})
+
 			# console.log 'decorations',decorations
 			for own name,items of decorations
 				if let type = semanticTypes[name]
@@ -121,15 +172,3 @@ export def activate context
 		# 		# return {items: []}
 		# 		# return new Hover('I am a hover!')
 		# })
-	
-	# set language configuration
-	languages.setLanguageConfiguration('imba',{
-		wordPattern: /(-?\d*\.\d\w*)|([^\`\~\!\@\#%\^\&\*\(\)\=\-\+\[\{\]\}\\\|\;\:\'\"\,\.\<\>\/\?\s]+)/g,
-		onEnterRules: [{
-			beforeText: /^\s*(?:export def|def|(export (default )?)?(static )?(def|get|set)|(export (default )?)?(class|tag)|for|if|elif|else|while|try|with|finally|except|async).*?$/,
-			action: { indentAction: IndentAction.Indent }
-		},{
-			beforeText: /\s*(?:do)\s*(\|.*\|\s*)?$/,
-			action: { indentAction: IndentAction.Indent }
-		}]
-	})

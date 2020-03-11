@@ -71,6 +71,13 @@
                 }
             }
         },
+        "configurationDefaults": {
+            "[imba]": {
+                "editor.insertSpaces": false,
+                "editor.tabSize": 4,
+                "editor.autoIndent": "advanced"
+            }
+        },
         "languages": [
             {
                 "id": "imba",
@@ -100,11 +107,6 @@
                 "label": "Imba Dark",
                 "uiTheme": "vs-dark",
                 "path": "./themes/ImbaDark.json"
-            },
-            {
-                "label": "Imba Dark Old",
-                "uiTheme": "vs-dark",
-                "path": "./themes/ImbaDarkOld.json"
             }
         ]
     },
