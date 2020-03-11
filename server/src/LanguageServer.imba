@@ -1,5 +1,5 @@
 
-
+import {Component} from './Component'
 import {snippets} from './snippets'
 import {IConnection,InitializeParams,TextDocuments,Location,LocationLink,MarkedString,DocumentSymbol,InsertTextFormat} from 'vscode-languageserver'
 import { TextDocument } from 'vscode-languageserver-textdocument'
@@ -48,7 +48,7 @@ var tsServiceOptions\CompilerOptions = {
 	moduleResolution: ts.ModuleResolutionKind.NodeJs
 }
 
-export class LanguageServer
+export class LanguageServer < Component
 
 	def resolveConfigFile dir
 		return null if !dir or (dir == path.dirname(dir))
@@ -58,8 +58,9 @@ export class LanguageServer
 			return JSON.parse(fs.readFileSync(src,'utf8'))
 		return @resolveConfigFile(path.dirname(dir))
 
-	def constructor connection\IConnection, documents\TextDocuments, params\InitializeParams, o = {}
-		# {rootUri,rootFiles,debug}
+	def constructor(connection\IConnection, documents\TextDocuments, params\InitializeParams, o = {})
+		super
+
 		@files = []
 		@documents = documents
 
@@ -162,8 +163,10 @@ export class LanguageServer
 		@log "writeFile",fileName
 		return
 
-	def updateFile fileName, append
+	// Used for testing mainly
+	def $updateFile fileName, append
 		fileName = path.resolve(@rootPath,fileName)
+
 		if let file = @files[fileName]
 			let t = Date.now()
 			@log 'found file!',fileName,file.version
@@ -275,16 +278,16 @@ export class LanguageServer
 		# @log "server.onDidChangeContent"
 		let doc = event.document
 		if let file = @getImbaFile(doc.uri)
-			file.didChange(doc)
-
+			file.didChange(doc,event)
 
 	def getImbaFile src
 		# let doc = @documents && @documents.get(file.uri or file)
 		src = util.uriToPath(src)
 		src = path.resolve(@rootPath,src).replace(/\.(imba|js|ts)$/,'.imba')
 		# what if it is a local file?
+		let file\File = @files[src] ||= File.new(self,src,@service)
 
-		return @files[src] ||= File.new(self,src,@service)
+		return file
 
 	def getDefinitionAtPosition uri, pos
 		let file = @getImbaFile(uri)
@@ -373,7 +376,7 @@ export class LanguageServer
 			let tspitems = file.tspGetCompletionsAtPosition(loc,ctx,options)
 			console.log('tspitems',tspitems.length)
 			items.push(...tspitems)
-		
+
 		else
 			# if the completion is part of an access - we want to
 			# redirect directly to typescript?

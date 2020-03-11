@@ -1,3 +1,4 @@
+import {Component} from './Component'
 import {TAG_NAMES,TAG_TYPES,EVENT_MODIFIERS} from './constants'
 import {CompletionItemKind,SymbolKind,InsertTextFormat,CompletionItem} from 'vscode-languageserver-types'
 import {convertCompletionKind,matchFuzzyString} from './utils'
@@ -12,9 +13,10 @@ var globalEvents = for item in globalAttributes when item.name.match(/^on\w+/)
 for tagItem in tags
 	tags[tagItem.name] = tagItem
 
-export class Entities
+export class Entities < Component
 
 	def constructor program
+		super
 		@program = program
 		@symbols = {}
 		$cache = {}
@@ -89,7 +91,7 @@ export class Entities
 
 		for item in items
 			if o.autoclose
-				item.insertText = item.label + '$1>$0'
+				item.insertText = item.label + '$0>'
 				item.insertTextFormat = InsertTextFormat.Snippet
 
 		return items

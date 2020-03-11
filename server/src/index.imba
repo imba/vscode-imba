@@ -107,7 +107,7 @@ connection.onCompletionResolve do |item|
 	return server.doResolve(item)
 
 connection.onDocumentHighlight do |event|
-	console.log 'onDocumentHighlight',event
+	# console.log 'onDocumentHighlight',event
 	return []
 
 connection.listen()

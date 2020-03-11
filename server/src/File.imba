@@ -1,3 +1,4 @@
+import {Component} from './Component'
 import {CompletionItemKind,DiagnosticSeverity,SymbolKind} from 'vscode-languageserver-types'
 import {Location} from 'vscode-languageserver'
 import {ScriptElementKind} from 'typescript'
@@ -14,7 +15,7 @@ var imbaOptions = {
 	sourceMap: {}
 }
 
-export class File
+export class File < Component
 	prop symbols = []
 	prop program
 
@@ -23,18 +24,20 @@ export class File
 	@param {ts.LanguageService} service
 	*/
 	def constructor program, path, service
+		super
 		@program = program
 		@ls = program.service
 		@jsPath   = path.replace(/\.(imba|js|ts)$/,'.js')
 		@imbaPath = path.replace(/\.(imba|js|ts)$/,'.imba')
 		@lsPath   = @jsPath
-
+		
 		@version = 1
 		@diagnostics = []
 		@emitted = {}
 		@invalidate()
 
 		console.log "created file {path}"
+		
 
 		program.files[@lsPath] = self
 		program.files[@imbaPath] = self
@@ -59,14 +62,19 @@ export class File
 		if @semanticTokens
 			@sendSemanticTokens(@semanticTokens)
 
-	def didChange doc
+	def didChange doc, event = null
 		@doc = doc
-		// if doc.version != @version
-		
+
 		console.log 'did change!',@version,doc.version
 		@version = doc.version
 		@content = doc.getText()
-		@emitFile()
+		$delay('emitFile',500)
+
+		# when we introduce partial updates we only want
+		# to hide errors that are close to this
+		$clearSyntacticErrors()
+		# if test
+		# @emitFile()
 
 	def didSave doc
 		@content = doc.getText()
@@ -86,6 +94,7 @@ export class File
 		self
 
 	def emitFile
+		$cancel('emitFile')
 		console.log 'emitFile',@imbaPath
 		let content = @getSourceContent()
 		# see if there are changes
@@ -121,8 +130,13 @@ export class File
 			@program.connection.sendDiagnostics(uri: @uri, diagnostics: @diagnostics)
 		self
 
+	
+
 	def sendDiagnostics
 		@program.connection.sendDiagnostics(uri: @uri, diagnostics: @diagnostics)
+
+	def $clearSyntacticErrors
+		@updateDiagnostics([])
 		
 	def sendSemanticTokens tokens
 		return self
@@ -305,6 +319,7 @@ export class File
 	
 	
 	def tspGetCompletionsAtPosition loc, ctx, options
+		$flush('emitFile')
 		let tsploc = @generatedLocFor(loc)
 		console.log 'get tsp completions',loc,tsploc
 		if let result = @ls.getCompletionsAtPosition(@lsPath,tsploc,options)

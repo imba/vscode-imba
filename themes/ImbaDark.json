@@ -8,7 +8,7 @@
       "name": "source.imba",
       "scope": "source.imba",
       "settings": {
-        "foreground": "#F8F8F8"
+        "foreground": "#dedde3"
       }
     },
     {
@@ -71,7 +71,7 @@
       "name": "entity.name.type",
       "scope": "entity.name.type",
       "settings": {
-        "foreground": "#63b3ed"
+        "foreground": "#8ab9ff"
       }
     },
     {
@@ -85,7 +85,7 @@
       "name": "support.function",
       "scope": "support.function",
       "settings": {
-        "foreground": "#F8F8F8"
+        "foreground": "#dedde3"
       }
     },
     {
@@ -99,21 +99,28 @@
       "name": "variable.parameter",
       "scope": "variable.parameter",
       "settings": {
-        "foreground": "#dfe9dc"
+        "foreground": "#cbd0c3"
+      }
+    },
+    {
+      "name": "variable.special",
+      "scope": "variable.special",
+      "settings": {
+        "foreground": "#faf089"
       }
     },
     {
       "name": "variable.other.readwrite",
       "scope": "variable.other.readwrite",
       "settings": {
-        "foreground": "#dfe9dc"
+        "foreground": "#cbd0c3"
       }
     },
     {
       "name": "variable.other.object",
       "scope": "variable.other.object",
       "settings": {
-        "foreground": "#dfe9dc"
+        "foreground": "#cbd0c3"
       }
     },
     {
@@ -148,14 +155,14 @@
       "name": "variable.other.class",
       "scope": "variable.other.class",
       "settings": {
-        "foreground": "#ccb2f0"
+        "foreground": "#c5badc"
       }
     },
     {
       "name": "variable.other.constant",
       "scope": "variable.other.constant",
       "settings": {
-        "foreground": "#ccb2f0"
+        "foreground": "#c5badc"
       }
     },
     {
@@ -176,7 +183,7 @@
       "name": "meta.import variable.other",
       "scope": "meta.import variable.other",
       "settings": {
-        "foreground": "#ccb2f0"
+        "foreground": "#c5badc"
       }
     },
     {
@@ -190,28 +197,28 @@
       "name": "meta.definition.function entity.name.function",
       "scope": "meta.definition.function entity.name.function",
       "settings": {
-        "foreground": "#90cdf4"
+        "foreground": "#8ab9ff"
       }
     },
     {
       "name": "meta.definition entity.name.function",
       "scope": "meta.definition entity.name.function",
       "settings": {
-        "foreground": "#90cdf4"
+        "foreground": "#8ab9ff"
       }
     },
     {
       "name": "meta.definition.property variable.object.property",
       "scope": "meta.definition.property variable.object.property",
       "settings": {
-        "foreground": "#90cdf4"
+        "foreground": "#8ab9ff"
       }
     },
     {
       "name": "meta.object-literal.key",
       "scope": "meta.object-literal.key",
       "settings": {
-        "foreground": "#90cdf4"
+        "foreground": "#8ab9ff"
       }
     },
     {
@@ -246,21 +253,28 @@
       "name": "support.class",
       "scope": "support.class",
       "settings": {
-        "foreground": "#ccb2f0"
+        "foreground": "#c5badc"
       }
     },
     {
       "name": "support.variable -support.variable.property",
       "scope": "support.variable -support.variable.property",
       "settings": {
-        "foreground": "#ccb2f0"
+        "foreground": "#c5badc"
       }
     },
     {
       "name": "support.constant",
       "scope": "support.constant",
       "settings": {
-        "foreground": "#ccb2f0"
+        "foreground": "#c5badc"
+      }
+    },
+    {
+      "name": "support.type.property-name",
+      "scope": "support.type.property-name",
+      "settings": {
+        "foreground": "#8ab9ff"
       }
     },
     {
@@ -327,7 +341,5 @@
       }
     }
   ],
-  "colors": {
-    "editor.background": "#111111"
-  }
+  "colors": {}
 }
