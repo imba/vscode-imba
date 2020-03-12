@@ -50,6 +50,8 @@ var tsServiceOptions\CompilerOptions = {
 
 export class LanguageServer < Component
 
+	prop rootFiles\string[]
+
 	def resolveConfigFile dir
 		return null if !dir or (dir == path.dirname(dir))
 
@@ -61,63 +63,57 @@ export class LanguageServer < Component
 	def constructor(connection\IConnection, documents\TextDocuments, params\InitializeParams, o = {})
 		super
 
-		@files = []
-		@documents = documents
+		self.files = []
+		self.documents = documents
+		self.connection = connection
+		self.entities = Entities.new(self)
+		self.rootPath = self.rootUri = util.uriToPath(params.rootUri)
+		self.imbaConfig = self.resolveConfigFile(self.rootPath)
+		self.rootFiles = o.rootFiles || []
+		self.snapshots = {}
+		self.version = 0
+		self.debug = !!o.debug
 
-		@connection = connection
-		@entities = Entities.new(self)
-		@rootPath = @rootUri = util.uriToPath(params.rootUri)
-		@imbaConfig = @resolveConfigFile(@rootPath)
-		
-		console.log 'found imba config?!',@imbaConfig
-		# find config file
-		# @type {string[]}
-		@rootFiles = o.rootFiles || []
-		@snapshots = {}
-		@version = 0
-		@debug = !!o.debug
-				
 		# @type {ts.LanguageServiceHost}
 		var servicesHost = {
 			getScriptFileNames: do
 				@log('getScriptFileNames')
 				@rootFiles
-			getProjectVersion: do '' + @version
+			getProjectVersion: do '' + self.version
 			getTypeRootsVersion: do 1
 
 			getScriptVersion: do |fileName|
-				let version = @files[fileName] ? String(@files[fileName].version.toString()) : "1"
+				let version = @files[fileName] ? String(self.files[fileName].version.toString()) : "1"
 				# console.log 'get script version',fileName,version,@version
 				return version
 			# @param {string} fileName
 			getScriptSnapshot: do |fileName|
-				return undefined if !@fileExists(fileName)
-				if let file = @files[fileName]
+				return undefined if !self.fileExists(fileName)
+				if let file = self.files[fileName]
 					# console.log 'get script snapshot',fileName
 					file.compile()
 					return file.jsSnapshot
 
-				let snapshot = @snapshots[fileName] ||= ts.ScriptSnapshot.fromString(@readFile(fileName).toString())
+				let snapshot = @snapshots[fileName] ||= ts.ScriptSnapshot.fromString(self.readFile(fileName).toString())
 				return snapshot
 			
-			getCurrentDirectory: do @rootPath
+			getCurrentDirectory: do self.rootPath
 			getCompilationSettings: do tsServiceOptions
 			getDefaultLibFileName: do |options| ts.getDefaultLibFilePath(options)
-			fileExists: @fileExists.bind(self)
-			readFile: @readFile.bind(self)
-			writeFile: @writeFile.bind(self)
+			fileExists: self.fileExists.bind(self)
+			readFile: self.readFile.bind(self)
+			writeFile: self.writeFile.bind(self)
 			readDirectory: ts.sys.readDirectory
 		}
 		console.log 'creating registry'
-		@registry = ts.createDocumentRegistry()
+		self.registry = ts.createDocumentRegistry()
 		console.log 'creating service'
-		@service = ts.createLanguageService(servicesHost,@registry)
-
+		self.service = ts.createLanguageService(servicesHost,self.registry)
 		self
 
 	def emitRootFiles
-		for file in @rootFiles
-			@service.getEmitOutput(file)
+		for file in self.rootFiles
+			self.service.getEmitOutput(file)
 
 	def addFile fileName
 		fileName = path.resolve(@rootPath,fileName)
