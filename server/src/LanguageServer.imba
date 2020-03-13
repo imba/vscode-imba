@@ -1,3 +1,4 @@
+# imba$selfless=1
 
 import {Component} from './Component'
 import {snippets} from './snippets'
@@ -77,24 +78,27 @@ export class LanguageServer < Component
 		# @type {ts.LanguageServiceHost}
 		var servicesHost = {
 			getScriptFileNames: do
-				@log('getScriptFileNames')
-				@rootFiles
+				self.log('getScriptFileNames')
+				self.rootFiles
 			getProjectVersion: do '' + self.version
 			getTypeRootsVersion: do 1
 
 			getScriptVersion: do |fileName|
-				let version = @files[fileName] ? String(self.files[fileName].version.toString()) : "1"
+				let version = self.files[fileName] ? String(self.files[fileName].version.toString()) : "1"
 				# console.log 'get script version',fileName,version,@version
 				return version
+
 			# @param {string} fileName
 			getScriptSnapshot: do |fileName|
-				return undefined if !self.fileExists(fileName)
+				if !self.fileExists(fileName)
+					return undefined
+
 				if let file = self.files[fileName]
 					# console.log 'get script snapshot',fileName
 					file.compile()
 					return file.jsSnapshot
 
-				let snapshot = @snapshots[fileName] ||= ts.ScriptSnapshot.fromString(self.readFile(fileName).toString())
+				let snapshot = self.snapshots[fileName] ||= ts.ScriptSnapshot.fromString(self.readFile(fileName).toString())
 				return snapshot
 			
 			getCurrentDirectory: do self.rootPath
@@ -116,56 +120,56 @@ export class LanguageServer < Component
 			self.service.getEmitOutput(file)
 
 	def addFile fileName
-		fileName = path.resolve(@rootPath,fileName)
-		if @sourceFileExists(fileName)
-			@files[fileName].emitFile()
+		fileName = path.resolve(self.rootPath,fileName)
+		if self.sourceFileExists(fileName)
+			self.files[fileName].emitFile()
 			# @service.getEmitOutput(@files[fileName].jsPath)
 
 	def getProgram
-		@service.getProgram()
+		self.service.getProgram()
 
 	def log ...params
 		console.log(...params)
 
 	# comment about the source file?
 	def sourceFileExists fileName\string
-		if let file = @files[fileName]
+		if let file = self.files[fileName]
 			# What if it has been deleted?
 			return file.removed ? false : true
 
 		var alt = fileName.replace(/\.js$/, '.imba')
 
 		if ((alt != fileName) or fileName.match(/\.imba$/)) && ts.sys.fileExists(alt)
-			@log "created {fileName} / {alt}"
-			File.new(self,alt,@service)
+			# self.log "created {fileName} / {alt}"
+			File.new(self,alt,self.service)
 			return true
 		return false
 
 	def fileExists fileName 
-		let res = @sourceFileExists(fileName) || ts.sys.fileExists(fileName)
+		let res = self.sourceFileExists(fileName) || ts.sys.fileExists(fileName)
 		return res
 
 	def readFile fileName
-		var source = @files[fileName]
+		var source = self.files[fileName]
 
 		if source
-			@log("compile file {source.imbaPath}")
+			self.log("compile file {source.imbaPath}")
 			source.compile()
 			return String(source.js)
 
 		return ts.sys.readFile(fileName)
 
 	def writeFile fileName, contents
-		@log "writeFile",fileName
+		self.log "writeFile",fileName
 		return
 
 	// Used for testing mainly
 	def $updateFile fileName, append
-		fileName = path.resolve(@rootPath,fileName)
+		fileName = path.resolve(self.rootPath,fileName)
 
-		if let file = @files[fileName]
+		if let file = self.files[fileName]
 			let t = Date.now()
-			@log 'found file!',fileName,file.version
+			self.log 'found file!',fileName,file.version
 			file.getSourceContent()
 			if append isa Function
 				file.content = append(file.content)
@@ -174,37 +178,37 @@ export class LanguageServer < Component
 
 			file.version++
 			file.invalidate()
-			@version++
+			self.version++
 			file.emitFile()
-			@log 'updatedFile',fileName,Date.now() - t
+			self.log 'updatedFile',fileName,Date.now() - t
 		return
 
 	def removeFile fileName
-		fileName = path.resolve(@rootPath,fileName)
-		if let file = @files[fileName]
+		fileName = path.resolve(self.rootPath,fileName)
+		if let file = self.files[fileName]
 			file.removed = true
-			@version++
+			self.version++
 
 	def scheduleEmitDiagnostics
-		@emitDiagnostics()
+		self.emitDiagnostics()
 
 	def emitDiagnostics
-		let entries = @service.getProgram().getSemanticDiagnostics()
+		let entries = self.service.getProgram!.getSemanticDiagnostics!
 		let map = {}
 
 		for entry in entries
-			if let file = @files[entry.file.fileName]
+			if let file = self.files[entry.file.fileName]
 				let items = map[file.jsPath] ||= []
 				items.push(entry)
 
-		for file in @files
+		for file in self.files
 			file.updateDiagnostics(map[file.jsPath])
 
 		self
 
 	def getSemanticDiagnostics
 		let t = Date.now()
-		let entries = @service.getProgram().getSemanticDiagnostics()
+		let entries = self.service.getProgram().getSemanticDiagnostics()
 
 		let info = entries.map do
 			[$1.file.fileName,$1.messageText,$1.start,$1.length,$1.relatedInformation,$1]
@@ -213,15 +217,15 @@ export class LanguageServer < Component
 		return
 
 	def inspectProgram
-		let program = @service.getProgram()
+		let program = self.service.getProgram()
 		let files = program.getSourceFiles().map do
 			$1.fileName
 		let file 
 		console.log files
 
 	def inspectFile fileName
-		fileName = path.resolve(@rootPath,fileName)
-		let program = @service.getProgram()
+		fileName = path.resolve(self.rootPath,fileName)
+		let program = self.service.getProgram()
 		let sourceFile = program.getSourceFile(fileName)
 		# let deps = program.getAllDependencies(sourceFile)
 		console.log sourceFile,sourceFile.referencedFiles
@@ -230,9 +234,9 @@ export class LanguageServer < Component
 	def onDidOpen event
 		let doc = event.document
 		let src = util.uriToPath(event.document.uri)
-		@log('onDidOpen',src)
+		self.log('onDidOpen',src)
 		let existing = @files[src]
-		let file = @getImbaFile(src)
+		let file = self.getImbaFile(src)
 
 		file.didOpen(doc)
 		if !existing and file
@@ -243,25 +247,25 @@ export class LanguageServer < Component
 		let doc = event.document
 		let src = util.uriToPath(doc.uri)
 
-		let file = @getImbaFile(src)
+		let file = self.getImbaFile(src)
 		if file
 			file.didSave(doc)
-			@emitDiagnostics()
+			self.emitDiagnostics()
 		else
-			@version++
+			self.version++
 		self
 
 	def onDidRenameFiles event
-		let version = @version
+		let version = self.version
 		
 		for entry in event.files
 			console.log 'renamed file?',entry.oldUri.path
-			if let file = @files[entry.oldUri.path]
+			if let file = self.files[entry.oldUri.path]
 				console.log 'found renamed file!',file.imbaPath
 				file.dispose()
 
-		if @version != version
-			@scheduleEmitDiagnostics()
+		if self.version != version
+			self.scheduleEmitDiagnostics()
 		self
 
 	def onDidCreateFiles event
@@ -273,25 +277,24 @@ export class LanguageServer < Component
 	def onDidChangeContent event
 		# @log "server.onDidChangeContent"
 		let doc = event.document
-		if let file = @getImbaFile(doc.uri)
+		if let file = self.getImbaFile(doc.uri)
 			file.didChange(doc,event)
 
 	def getImbaFile src
 		# let doc = @documents && @documents.get(file.uri or file)
 		src = util.uriToPath(src)
-		src = path.resolve(@rootPath,src).replace(/\.(imba|js|ts)$/,'.imba')
+		src = path.resolve(self.rootPath,src).replace(/\.(imba|js|ts)$/,'.imba')
 		# what if it is a local file?
-		let file\File = @files[src] ||= File.new(self,src,@service)
+		let file\File = self.files[src] ||= File.new(self,src,self.service)
 
 		return file
 
 	def getDefinitionAtPosition uri, pos
-		let file = @getImbaFile(uri)
-		let loc = @documents.get(uri).offsetAt(pos)
+		let file = self.getImbaFile(uri)
+		let loc = self.documents.get(uri).offsetAt(pos)
 
-		
 		let jsloc = file.generatedLocFor(loc)
-		let info = @service.getDefinitionAndBoundSpan(file.lsPath,jsloc)
+		let info = self.service.getDefinitionAndBoundSpan(file.lsPath,jsloc)
 
 		if info and info.definitions
 
@@ -301,7 +304,7 @@ export class LanguageServer < Component
 			# console.log 'definitions!',sourceSpan,sourceText,isLink
 
 			var defs = for item of info.definitions
-
+				console.log 'get definition',item
 				let ifile = @files[item.fileName]
 				if ifile
 					# console.log 'definition',item
@@ -337,16 +340,16 @@ export class LanguageServer < Component
 	
 	# should delegate this through to the file itself
 	def getCompletionsAtPosition uri, pos, context = {}
-		let file = @getImbaFile(uri)
+		let file = self.getImbaFile(uri)
 
-		let loc = typeof pos == 'number' ? pos : @documents.get(uri).offsetAt(pos)
+		let loc = typeof pos == 'number' ? pos : self.documents.get(uri).offsetAt(pos)
 		let types = {}
 		let ctx = file.getContextAtLoc(loc)
 		let items = []
 		let trigger = context.triggerCharacter
 		let TAG_START = /(\> |^\s*|[\[\(])\<$/
 		# console.log 'completions at line',ctx
-		@log('completions context',ctx,loc)
+		self.log('completions context',ctx,loc)
 
 		let options = {
 			triggerCharacter: context.triggerCharacter
@@ -359,9 +362,9 @@ export class LanguageServer < Component
 			
 			if trigger == '<'
 				options.autoclose = yes
-				@connection.sendNotification('closeAngleBracket',{location: loc,position: pos, uri: uri})
+				self.connection.sendNotification('closeAngleBracket',{location: loc,position: pos, uri: uri})
 
-			let items = @entities.getTagNameCompletions(options)
+			let items = self.entities.getTagNameCompletions(options)
 			return {isIncomplete: false, items: items}
 
 		elif trigger == '<'
@@ -376,14 +379,14 @@ export class LanguageServer < Component
 		else
 			# if the completion is part of an access - we want to
 			# redirect directly to typescript?
-			let snippets = @entities.getSnippetsForContext(ctx)
+			let snippets = self.entities.getSnippetsForContext(ctx)
 			items.push(...snippets)
 
 			let find = ctx.path.replace(/[\w\-]+$/,'')
 			let members = file.getMemberCompletionsForPath(find,ctx)
 			items.push(...members)
 
-		items = @entities.normalizeCompletions(items,ctx)
+		items = self.entities.normalizeCompletions(items,ctx)
 		console.log 'return items',items
 
 		return {isIncomplete: false, items: items}
@@ -392,7 +395,7 @@ export class LanguageServer < Component
 	
 		# return custom completions not based on typescript
 		if ctx.context == 'tag'
-			items = @entities.getCompletionsForContext(uri,pos,ctx)
+			items = self.entities.getCompletionsForContext(uri,pos,ctx)
 			if trigger == '<'
 				items.unshift(
 					label: 'none'
@@ -419,10 +422,10 @@ export class LanguageServer < Component
 				}
 			return {isIncomplete: false, items: items}
 
-		let res = @service.getCompletionsAtPosition(file.lsPath,jsLoc,options)
+		let res = self.service.getCompletionsAtPosition(file.lsPath,jsLoc,options)
 		
 		if res
-			if @debug
+			if self.debug
 				console.log 'complete',uri,loc,jsLoc,res.isNewIdentifierLocation,res.isGlobalCompletion
 				console.log 'completions!!',res.entries && res.entries.filter(do $1.kindModifiers).map(do [$1.name,$1.kindModifiers,$1.insertText])
 
@@ -486,7 +489,7 @@ export class LanguageServer < Component
 		let prefs = {
 			includeCompletionsWithInsertText: true
 		}
-		let details = @service.getCompletionEntryDetails(item.data.path,item.data.loc,item.label,undefined,source,prefs)
+		let details = self.service.getCompletionEntryDetails(item.data.path,item.data.loc,item.label,undefined,source,prefs)
 		if details
 			console.log details
 			item.detail = ts.displayPartsToString(details.displayParts)
@@ -499,11 +502,11 @@ export class LanguageServer < Component
 		# let path = util.uriToPath(file.url or file).replace('.imba','.js')
 		# console.log "get quick info at pos {path}"
 
-		let file = @getImbaFile(uri)
-		let loc = @documents.get(uri).offsetAt(pos)
+		let file = self.getImbaFile(uri)
+		let loc = self.documents.get(uri).offsetAt(pos)
 		# @type {number}
 		let loc2 = file.generatedLocFor(loc)
-		let info = @service.getQuickInfoAtPosition(String(file.lsPath), loc2)
+		let info = self.service.getQuickInfoAtPosition(String(file.lsPath), loc2)
 		# console.log pos2
 		if info
 			let contents = [{
@@ -521,8 +524,8 @@ export class LanguageServer < Component
 			
 	def getWorkspaceSymbols {query}
 		console.log 'getWorkspaceSymbols',query
-		return @entities.getWorkspaceSymbols(query)
+		return self.entities.getWorkspaceSymbols(query)
 
 	def getSymbols uri
-		let file = @getImbaFile(uri)
+		let file = self.getImbaFile(uri)
 		return file.getSymbols()

@@ -113,28 +113,7 @@
       "name": "variable.other",
       "scope": "variable.other",
       "settings": {
-        "foreground": "#f0f0f0"
-      }
-    },
-    {
-      "name": "variable.other.object",
-      "scope": "variable.other.object",
-      "settings": {
-        "foreground": "#f0f0f0"
-      }
-    },
-    {
-      "name": "variable.other.instance",
-      "scope": "variable.other.instance",
-      "settings": {
         "foreground": "#9dcbeb"
-      }
-    },
-    {
-      "name": "variable.other.internal",
-      "scope": "variable.other.internal",
-      "settings": {
-        "foreground": "#f0f0f0"
       }
     },
     {
