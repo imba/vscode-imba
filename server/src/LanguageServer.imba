@@ -59,7 +59,7 @@ export class LanguageServer < Component
 		let src = path.resolve(dir,'imbaconfig.json')
 		if fs.existsSync(src)
 			return JSON.parse(fs.readFileSync(src,'utf8'))
-		return @resolveConfigFile(path.dirname(dir))
+		return self.resolveConfigFile(path.dirname(dir))
 
 	def constructor(connection\IConnection, documents\TextDocuments, params\InitializeParams, o = {})
 		super
@@ -77,9 +77,7 @@ export class LanguageServer < Component
 
 		# @type {ts.LanguageServiceHost}
 		var servicesHost = {
-			getScriptFileNames: do
-				self.log('getScriptFileNames')
-				self.rootFiles
+			getScriptFileNames: do self.rootFiles
 			getProjectVersion: do '' + self.version
 			getTypeRootsVersion: do 1
 
@@ -140,7 +138,6 @@ export class LanguageServer < Component
 		var alt = fileName.replace(/\.js$/, '.imba')
 
 		if ((alt != fileName) or fileName.match(/\.imba$/)) && ts.sys.fileExists(alt)
-			# self.log "created {fileName} / {alt}"
 			File.new(self,alt,self.service)
 			return true
 		return false
@@ -190,18 +187,18 @@ export class LanguageServer < Component
 			self.version++
 
 	def scheduleEmitDiagnostics
-		self.emitDiagnostics()
+		emitDiagnostics!
 
 	def emitDiagnostics
-		let entries = self.service.getProgram!.getSemanticDiagnostics!
+		let entries = service.getProgram!.getSemanticDiagnostics!
 		let map = {}
 
 		for entry in entries
-			if let file = self.files[entry.file.fileName]
+			if let file = files[entry.file.fileName]
 				let items = map[file.jsPath] ||= []
 				items.push(entry)
 
-		for file in self.files
+		for file in files
 			file.updateDiagnostics(map[file.jsPath])
 
 		self
@@ -235,7 +232,7 @@ export class LanguageServer < Component
 		let doc = event.document
 		let src = util.uriToPath(event.document.uri)
 		self.log('onDidOpen',src)
-		let existing = @files[src]
+		let existing = self.files[src]
 		let file = self.getImbaFile(src)
 
 		file.didOpen(doc)
@@ -305,7 +302,7 @@ export class LanguageServer < Component
 
 			var defs = for item of info.definitions
 				console.log 'get definition',item
-				let ifile = @files[item.fileName]
+				let ifile = self.files[item.fileName]
 				if ifile
 					# console.log 'definition',item
 					let textSpan = ifile.textSpanToRange(item.textSpan)
@@ -324,7 +321,7 @@ export class LanguageServer < Component
 				elif item.name == '__new' and info.definitions.length > 1
 					continue
 				else
-					let span = util.textSpanToRange(item.contextSpan or item.textSpan,item.fileName,@service)
+					let span = util.textSpanToRange(item.contextSpan or item.textSpan,item.fileName,self.service)
 					if isLink
 						LocationLink.create(
 							util.pathToUri(item.fileName),
@@ -358,7 +355,6 @@ export class LanguageServer < Component
 		}
 
 		if ctx.textBefore.match(TAG_START)
-			console.log 'matching tags!!'
 			
 			if trigger == '<'
 				options.autoclose = yes
@@ -385,6 +381,8 @@ export class LanguageServer < Component
 			let find = ctx.path.replace(/[\w\-]+$/,'')
 			let members = file.getMemberCompletionsForPath(find,ctx)
 			items.push(...members)
+
+			# add tag completions as well?
 
 		items = self.entities.normalizeCompletions(items,ctx)
 		console.log 'return items',items

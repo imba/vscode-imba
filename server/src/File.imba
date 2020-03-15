@@ -1,3 +1,5 @@
+# imba$selfless=1
+
 import {Component} from './Component'
 import {CompletionItemKind,DiagnosticSeverity,SymbolKind} from 'vscode-languageserver-types'
 import {Location} from 'vscode-languageserver'
@@ -32,6 +34,7 @@ export class File < Component
 		
 		@version = 1
 		@diagnostics = []
+		@syntaxDiagnostics = []
 		@emitted = {}
 		@invalidate()
 
@@ -117,10 +120,10 @@ export class File < Component
 		
 		# need to check if they are the same
 		let out = for entry in items
-			let lstart = @originalLocFor(entry.start)
+			let lstart = originalLocFor(entry.start)
 			let msg = entry.messageText
-			let start = @positionAt(lstart)
-			let end = @positionAt(@originalLocFor(entry.start + entry.length) or (lstart + entry.length))
+			let start = positionAt(lstart)
+			let end = positionAt(originalLocFor(entry.start + entry.length) or (lstart + entry.length))
 			let sev = [DiagnosticSeverity.Warning,DiagnosticSeverity.Error,DiagnosticSeverity.Information][entry.category]
 			console.log 'converting diagnostic',entry.category,entry.messageText
 			{
@@ -129,19 +132,23 @@ export class File < Component
 				range: {start: start, end: end }
 			}
 
-		if JSON.stringify(out) != JSON.stringify(@diagnostics)
+		if JSON.stringify(out) != JSON.stringify(diagnostics)
 			console.log 'update diagnostics',@jsPath,out
 			@diagnostics = out
-			@program.connection.sendDiagnostics(uri: @uri, diagnostics: @diagnostics)
+			sendDiagnostics!
 		self
 
-	
+	def updateSyntaxDiagnostics items
+		if JSON.stringify(items) != JSON.stringify(syntaxDiagnostics)
+			syntaxDiagnostics = items
+			sendDiagnostics!
 
 	def sendDiagnostics
-		@program.connection.sendDiagnostics(uri: @uri, diagnostics: @diagnostics)
+		let items = diagnostics.concat(syntaxDiagnostics)
+		program.connection.sendDiagnostics(uri: uri, diagnostics: items)
 
 	def $clearSyntacticErrors
-		@updateDiagnostics([])
+		updateSyntaxDiagnostics([])
 		
 	def sendSemanticTokens tokens
 		# return self
@@ -226,8 +233,7 @@ export class File < Component
 					range: range
 				}
 				# console.log 'compile error',err
-				@diagnostics = [err]
-				@sendDiagnostics()
+				updateSyntaxDiagnostics([err])
 				@result = {error: err}
 				@compileErrors = [err]
 				@js ||= "// empty"
@@ -235,11 +241,7 @@ export class File < Component
 				return self
 
 			# clear compile errors if there were any?
-			if @compileErrors
-				@compileErrors = null
-				@diagnostics = []
-				@sendDiagnostics()
-
+			updateSyntaxDiagnostics([])
 			@result = res
 			@locs = res.locs
 			@js = res.js.replace('$CARET$','valueOf')
@@ -255,6 +257,7 @@ export class File < Component
 				location: Location.create(@uri,sym.span)
 				name: sym.name
 				containerName: sym.containerName
+				type: sym.type
 			}
 	
 		return self

@@ -78,7 +78,8 @@ export class Entities < Component
 			}
 
 		$cache.components = for item in @getWorkspaceSymbols()
-			continue unless item.containerName == 'tag'
+			console.log 'workspace item',item
+			continue unless item.type == 'tag'
 			item
 		
 		for item in $cache.components

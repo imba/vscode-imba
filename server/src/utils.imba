@@ -174,6 +174,7 @@ export def fastExtractSymbols text
 				modifiers: mods
 				children: []
 				parent: scope
+				type: kind
 			}
 
 			if mods.indexOf('static') >= 0

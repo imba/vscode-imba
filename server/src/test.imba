@@ -42,13 +42,9 @@ if false
 	ls.$updateFile('component.imba') do |content| content.replace(/@titls\b/,'@titl')
 	ls.getSemanticDiagnostics()
 	ls.inspectProgram()
-	# ls.inspectFile('data.js')
-	# ls.removeFile('data.imba')
+
 	ls.getSemanticDiagnostics()
 	console.log ls.getSymbols('util.imba')
-# console.log ls.getCompletionsAtPosition('util.imba',184,jsLoc: 215)
-# console.log ls.getCompletionsAtPosition('util.imba',184)
-# console.log
 
 if true
 	let file = ls.getImbaFile('completion.imba')

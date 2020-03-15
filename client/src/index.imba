@@ -1,3 +1,5 @@
+# imba$selfless=1
+
 var path = require 'path'
 
 import {window, languages, IndentAction, workspace,SnippetString,Position,TextDocument,CancellationToken,DocumentSemanticTokensProvider,SemanticTokensLegend} from 'vscode'
@@ -24,7 +26,6 @@ class ClientAdapter
 					# border: "1px {dark.color}40 dashed",
 					# borderWidth: '0px 0px 1px 0px'
 					color: dark.color
-					
 				}
 				borderRadius: '2px'
 				rangeBehavior: 1
@@ -132,7 +133,7 @@ export def activate context
 			something: 1
 			other: 100
 		}
-		###
+		/*
 		middleware: {
 			# Workaround for https://github.com/microsoft/vscode-languageserver-node/issues/576
 			def provideDocumentSemanticTokens(document\TextDocument, token\CancellationToken, next\DocumentSemanticsTokensSignature) 
@@ -140,17 +141,15 @@ export def activate context
 				if (res === undefined) then throw Error.new('busy')
 				return res;
 		}
-		###
+		*/
 	}
 	
 	var client = LanguageClient.new('imba', 'Imba Language Server', serverOptions, clientOptions)
-	# let sematicLegend = SemanticTokensLegend.new(SemanticTokenTypes,SemanticTokenModifiers)
-	# let semanticProvider = languages.registerDocumentSemanticTokensProvider({language: 'imba'},SemanticTokensProvider.new,sematicLegend)
-	# client.registerFeature(SemanticTokensFeature.new(client))
+	// let sematicLegend = SemanticTokensLegend.new(SemanticTokenTypes,SemanticTokenModifiers)
+	// let semanticProvider = languages.registerDocumentSemanticTokensProvider({language: 'imba'},SemanticTokensProvider.new,sematicLegend)
+	// client.registerFeature(SemanticTokensFeature.new(client))
 
 	var disposable = client.start()
-	
-	
 
 	context.subscriptions.push(disposable)
 	

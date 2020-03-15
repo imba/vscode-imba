@@ -22,14 +22,14 @@
       "name": "keyword",
       "scope": "keyword",
       "settings": {
-        "foreground": "#e88f76"
+        "foreground": "#e88376"
       }
     },
     {
       "name": "storage",
       "scope": "storage",
       "settings": {
-        "foreground": "#e88f76"
+        "foreground": "#e88376"
       }
     },
     {
@@ -64,7 +64,7 @@
       "name": "constant.language.super",
       "scope": "constant.language.super",
       "settings": {
-        "foreground": "#e88f76"
+        "foreground": "#e88376"
       }
     },
     {
@@ -92,7 +92,7 @@
       "name": "support.function.require",
       "scope": "support.function.require",
       "settings": {
-        "foreground": "#e88f76"
+        "foreground": "#e88376"
       }
     },
     {
@@ -155,7 +155,7 @@
       "name": "variable.language.super",
       "scope": "variable.language.super",
       "settings": {
-        "foreground": "#e88f76"
+        "foreground": "#e88376"
       }
     },
     {
@@ -344,14 +344,21 @@
       "name": "punctuation.accessor",
       "scope": "punctuation.accessor",
       "settings": {
-        "foreground": "#e88f76"
+        "foreground": "#e88376"
       }
     },
     {
       "name": "punctuation.definition.parameters",
       "scope": "punctuation.definition.parameters",
       "settings": {
-        "foreground": "#e88f76"
+        "foreground": "#e88376"
+      }
+    },
+    {
+      "name": "punctuation.definition.comment",
+      "scope": "punctuation.definition.comment",
+      "settings": {
+        "foreground": "#718096"
       }
     }
   ],
