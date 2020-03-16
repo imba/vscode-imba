@@ -1,5 +1,3 @@
-# imba$selfless=1
-
 import {Component} from './Component'
 import {snippets} from './snippets'
 import {IConnection,InitializeParams,TextDocuments,Location,LocationLink,MarkedString,DocumentSymbol,InsertTextFormat} from 'vscode-languageserver'
@@ -135,7 +133,7 @@ export class LanguageServer < Component
 			
 	def indexFiles
 		# let t = Date.now!
-		allFiles ||= glob.sync(path.resolve(self.rootPath,'**','*.imba')).map do getImbaFile($1)
+		allFiles ||= glob.sync(path.resolve(self.rootPath,'**','*.imba'),ignore: 'node_modules').map do getImbaFile($1)
 		self
 
 	def getProgram

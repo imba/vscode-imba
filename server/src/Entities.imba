@@ -76,13 +76,14 @@ export class Entities < Component
 				sortText: name
 				data: { resolved: true }
 			}
-
-		$cache.components = for item in @getWorkspaceSymbols()
-			console.log 'workspace item',item
-			continue unless item.type == 'tag'
-			item
 		
-		for item in $cache.components
+		let components = @program.getWorkspaceSymbols(type: 'tag')
+		# $cache.components = for item in @getWorkspaceSymbols()
+		# 	console.log 'workspace item',item
+		# 	continue unless item.type == 'tag'
+		# 	item
+		
+		for item in components # $cache.components
 			items.push {
 				label: item.name
 				kind: CompletionItemKind.Field,
