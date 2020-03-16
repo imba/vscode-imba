@@ -500,11 +500,12 @@ export class LanguageServer < Component
 		# let path = util.uriToPath(file.url or file).replace('.imba','.js')
 		# console.log "get quick info at pos {path}"
 
-		let file = self.getImbaFile(uri)
-		let loc = self.documents.get(uri).offsetAt(pos)
+		let file = getImbaFile(uri)
+		let loc = documents.get(uri).offsetAt(pos)
 		# @type {number}
 		let loc2 = file.generatedLocFor(loc)
-		let info = self.service.getQuickInfoAtPosition(String(file.lsPath), loc2)
+		let info = loc2 and service.getQuickInfoAtPosition(String(file.lsPath), loc2)
+
 		# console.log pos2
 		if info
 			let contents = [{
@@ -513,7 +514,6 @@ export class LanguageServer < Component
 			}]
 
 			if info.documentation
-				# contents.push({type: 'text', value: })
 				contents.push(value: ts.displayPartsToString(info.documentation), language: 'text')
 			return {
 				range: file.textSpanToRange(info.textSpan)

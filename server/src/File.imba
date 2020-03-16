@@ -26,26 +26,26 @@ export class File < Component
 	*/
 	def constructor program, path, service
 		super
-		@program = program
-		@ls = program.service
-		@jsPath   = path.replace(/\.(imba|js|ts)$/,'.js')
-		@imbaPath = path.replace(/\.(imba|js|ts)$/,'.imba')
-		@lsPath   = @jsPath
+		self.program = program
+		self.ls = program.service
+		jsPath   = path.replace(/\.(imba|js|ts)$/,'.js')
+		imbaPath = path.replace(/\.(imba|js|ts)$/,'.imba')
+		lsPath   = jsPath
 		
-		@version = 1
-		@diagnostics = []
-		@syntaxDiagnostics = []
-		@emitted = {}
-		@invalidate()
+		version = 1
+		diagnostics = []
+		syntaxDiagnostics = []
+		emitted = {}
+		invalidate!
 
 		console.log "created file {path}"
 
-		program.files[@lsPath] = self
-		program.files[@imbaPath] = self
+		program.files[lsPath] = self
+		program.files[imbaPath] = self
 		program.files.push(self)
 
-		if program && !program.rootFiles.includes(@lsPath)
-			program.rootFiles.push(@lsPath)
+		if program && !program.rootFiles.includes(lsPath)
+			program.rootFiles.push(lsPath)
 		self
 
 
@@ -63,58 +63,52 @@ export class File < Component
 		'file://' + @imbaPath
 
 	def didOpen doc
-		@doc = doc
-		@content = doc.getText()
+		self.doc = doc
+		content = doc.getText!
 		# @emitFile()
-		if @semanticTokens
+		if semanticTokens
 			console.log 'resending semantic tokens'
-			@sendSemanticTokens(@semanticTokens)
+			sendSemanticTokens(semanticTokens)
 
 	def didChange doc, event = null
-		@doc = doc
+		self.doc = doc
 
-		console.log 'did change!',@version,doc.version
-		@version = doc.version
-		@content = doc.getText()
+		console.log 'did change!',version,doc.version
+		version = doc.version
+		content = doc.getText!
 		$delay('emitFile',500)
-
-		# when we introduce partial updates we only want
-		# to hide errors that are close to this
 		$clearSyntacticErrors!
-		# if test
-		# @emitFile()
 
 	def didSave doc
-		@content = doc.getText!
-		@savedContent = @content
-		@emitFile!
-		# resave semantic tokens etc?
+		content = doc.getText!
+		savedContent = content
+		emitFile!
 
 	def dispose
-		delete @program.files[@jsPath]
-		delete @program.files[@imbaPath]
-		let idx = @program.files.indexOf(self)
-		@program.files.splice(idx,1) if idx >= 0
+		delete program.files[jsPath]
+		delete program.files[imbaPath]
+		let idx = program.files.indexOf(self)
+		program.files.splice(idx,1) if idx >= 0
 
-		idx = @program.rootFiles.indexOf(@lsPath)
-		@program.rootFiles.splice(idx,1) if idx >= 0
-		@program.version++
+		idx = program.rootFiles.indexOf(lsPath)
+		program.rootFiles.splice(idx,1) if idx >= 0
+		program.version++
 		self
 
 	def emitFile
 		$cancel('emitFile')
-		console.log 'emitFile',@imbaPath
-		let content = @getSourceContent!
+		console.log 'emitFile',imbaPath
+		let content = getSourceContent!
 		# see if there are changes
 		# this is usually where we should do the compilation?
-		if content != @lastEmitContent
-			@content = content
-			@lastEmitContent = @content
-			@invalidate!
-			@version++
-			@program.version++
+		if content != lastEmitContent
+			self.content = content
+			lastEmitContent = content
+			invalidate!
+			version++
+			program.version++
 
-		let result = @ls.getEmitOutput(@lsPath)
+		let result = ls.getEmitOutput(lsPath)
 
 	def updateDiagnostics items = []
 		
@@ -133,8 +127,7 @@ export class File < Component
 			}
 
 		if JSON.stringify(out) != JSON.stringify(diagnostics)
-			console.log 'update diagnostics',@jsPath,out
-			@diagnostics = out
+			diagnostics = out
 			sendDiagnostics!
 		self
 
@@ -152,70 +145,64 @@ export class File < Component
 		
 	def sendSemanticTokens tokens
 		# return self
-		@semanticTokens = tokens
+		semanticTokens = tokens
 
 		try
-			# let doc = @document
+			let doc = doc
 			let items = []
 			for token in tokens
 				let item = [token._value,token._scope,token._kind,token._loc,token._len]
 				continue if token._kind == 'accessor'
-				# if token._level != undefined
-				#	item[1] = `var{token._level}`
 
-				if @doc
-					item.push(@doc.positionAt(token._loc))
-					item.push(@doc.positionAt(token._loc + token._len))
+				if doc
+					item.push(doc.positionAt(token._loc))
+					item.push(doc.positionAt(token._loc + token._len))
 					
 				items.push(item)
-				# {start: doc.positionAt(loc[0]), end: doc.positionAt(loc[1])}
 			$decorations = items
 
-			if @doc
-				# console.log 'sending tokens',@uri,items
-				@sentTokens = items
-				@program.connection.sendNotification('entities',{uri: @doc.uri,version: @doc.version,markers: items})
+			if doc
+				sentTokens = items
+				program.connection.sendNotification('entities',{uri: doc.uri,version: doc.version,markers: items})
 		self
 
 	# how is this converting?
 	def positionAt offset
-		if @doc
-			return @doc.positionAt(offset)
+		if doc
+			return doc.positionAt(offset)
 
-		let loc = @locs and @locs.map[offset]
+		let loc = locs and locs.map[offset]
 		return loc && {line: loc[0], character: loc[1]}
 
 	def getSourceContent
-		@content ||= ts.sys.readFile(@imbaPath)
+		content ||= ts.sys.readFile(imbaPath)
 
 
 	def offsetAt position
-		@document && @document.offsetAt(position)
+		self.document && self.document.offsetAt(position)
 
 	# remove compiled output etc
 	def invalidate
-		@result = null
-		@cache = {
+		result = null
+		cache = {
 			srclocs: {}
 			genlocs: {}
-
 		}
 		self
 
 	def compile
-		unless @result
-			@getSourceContent()
-			var body = @content
+		unless result
+			getSourceContent!
+			var body = content
 			
 			var opts = Object.assign({},imbaOptions,{
-				filename: @imbaPath
-				sourcePath: @imbaPath
+				filename: imbaPath
+				sourcePath: imbaPath
 				# selfless: yes
 				onTraversed: do |root,stack|
 					let tokens = stack.semanticTokens()
 					if tokens and tokens.length
-						@sendSemanticTokens(tokens)
-						# setTimeout(&,10) do @sendSemanticTokens(tokens)
+						sendSemanticTokens(tokens)
 			})
 
 			try
@@ -223,8 +210,8 @@ export class File < Component
 			catch e
 				let loc = e.loc && e.loc()
 				let range = loc && {
-					start: @positionAt(loc[0])
-					end: @positionAt(loc[1])
+					start: positionAt(loc[0])
+					end: positionAt(loc[1])
 				}
 
 				let err = {
@@ -234,27 +221,26 @@ export class File < Component
 				}
 				# console.log 'compile error',err
 				updateSyntaxDiagnostics([err])
-				@result = {error: err}
-				@compileErrors = [err]
-				@js ||= "// empty"
-				@jsSnapshot ||= ts.ScriptSnapshot.fromString(@js)
+				result = {error: err}
+				js ||= "// empty"
+				jsSnapshot ||= ts.ScriptSnapshot.fromString(js)
 				return self
 
 			# clear compile errors if there were any?
 			updateSyntaxDiagnostics([])
-			@result = res
-			@locs = res.locs
-			@js = res.js.replace('$CARET$','valueOf')
-			@jsSnapshot = ts.ScriptSnapshot.fromString(@js)
+			result = res
+			locs = res.locs
+			js = res.js.replace('$CARET$','valueOf')
+			jsSnapshot = ts.ScriptSnapshot.fromString(js)
 			$indexWorkspaceSymbols()
 
 		return self
 		
 	def $indexWorkspaceSymbols
-		@symbols = util.fastExtractSymbols(@content).map do |sym|
+		symbols = util.fastExtractSymbols(content).map do |sym|
 			{
 				kind: sym.kind
-				location: Location.create(@uri,sym.span)
+				location: Location.create(uri,sym.span)
 				name: sym.name
 				containerName: sym.containerName
 				type: sym.type
@@ -263,11 +249,11 @@ export class File < Component
 		return self
 
 	def originalRangesFor jsloc
-		@locs.spans.filter do |pair|
+		locs.spans.filter do |pair|
 			jsloc >= pair[0] and pair[1] >= jsloc
 
 	def originalRangeFor {start,length}
-		let spans = @originalRangesFor(start)
+		let spans = originalRangesFor(start)
 		if spans.length > 0
 			for span in spans
 				let loff = start - span[0]
@@ -278,11 +264,11 @@ export class File < Component
 
 	# need a better converter
 	def originalLocFor jsloc
-		let val = @cache.srclocs[jsloc]
+		let val = cache.srclocs[jsloc]
 		if val != undefined
 			return val
 
-		let spans = @originalRangesFor(jsloc)
+		let spans = originalRangesFor(jsloc)
 
 		if let span = spans[0]
 			let into = (jsloc - span[0]) / (span[1] - span[0])
@@ -295,14 +281,16 @@ export class File < Component
 			else
 				val = span[2] + offset
 
-		return @cache.srclocs[jsloc] = val
+		return cache.srclocs[jsloc] = val
 
 	def generatedRangesFor loc
-		@locs.spans.filter do |pair|
+		return [] unless locs and locs.spans
+
+		locs.spans.filter do |pair|
 			loc >= pair[2] and pair[3] >= loc
 
 	def generatedLocFor loc
-		let spans = @generatedRangesFor(loc)
+		let spans = generatedRangesFor(loc)
 		if let span = spans[0]
 			let into = (loc - span[2]) / (span[3] - span[2])
 			let offset = Math.floor(into * (span[1] - span[0]))
@@ -316,25 +304,25 @@ export class File < Component
 		return null
 
 	def textSpanToRange span
-		let range = @originalRangeFor(span)
+		let range = originalRangeFor(span)
 		if range
 			# let start = @originalLocFor(span.start)
 			# let end = @originalLocFor(span.start + span.length)
 			# console.log 'textSpanToRange',span,start,end,@locs and @locs.generated
-			{start: @positionAt(range.start), end: @positionAt(range.end)}
+			{start: positionAt(range.start), end: positionAt(range.end)}
 
 	def textSpanToText span
-		let start = @originalLocFor(span.start)
-		let end = @originalLocFor(span.start + span.length)
-		let content = @getSourceContent()
+		let start = originalLocFor(span.start)
+		let end = originalLocFor(span.start + span.length)
+		let content = getSourceContent!
 		return content.slice(start,end)
 	
 	
 	def tspGetCompletionsAtPosition loc, ctx, options
 		$flush('emitFile')
-		let tsploc = @generatedLocFor(loc)
+		let tsploc = generatedLocFor(loc)
 		# console.log 'get tsp completions',loc,tsploc
-		if let result = @ls.getCompletionsAtPosition(@lsPath,tsploc,options)
+		if let result = $tsp.getCompletionsAtPosition(lsPath,tsploc,options)
 			return util.tsp2lspCompletions(result.entries,file: self, jsLoc: tsploc)
 		return []
 	
@@ -344,24 +332,24 @@ export class File < Component
 		# remove the last part
 		ref = ref.replace(/[\w\-]+$/,'')
 		
-		if @js
+		if js
 			let typ = ref.slice(-1)
 			let cls = ref.slice(0,-1)
 			let comment = "/*¡{cls}*/"
-			let loc = @js.indexOf(comment)
+			let loc = js.indexOf(comment)
 			
 			if loc and loc > 0
 				if typ == '#'
 					loc = loc + (comment + 'prototype.').length
 
-				if let result = @ls.getCompletionsAtPosition(@lsPath,loc,{})
+				if let result = $tsp.getCompletionsAtPosition(lsPath,loc,{})
 					return util.tsp2lspCompletions(result.entries,file: self, jsLoc: loc, meta: {member: yes})
 
 		return []
 
 
 	def getSymbols
-		let tree = $tsp.getNavigationTree(@lsPath)
+		let tree = $tsp.getNavigationTree(lsPath)
 
 		let conv = do |item|
 			return if item.kind == 'alias' or item.text == 'meta$'
@@ -372,7 +360,7 @@ export class File < Component
 				span = {start: item.spans[0].start, length: 11}
 
 			let name = util.tsp2lspSymbolName(item.text)
-			let range = @textSpanToRange(span)
+			let range = textSpanToRange(span)
 			let kind = util.convertSymbolKind(item.kind)
 
 			return unless range and range.start
@@ -389,14 +377,16 @@ export class File < Component
 				selectionRange: range
 				children: children.map(conv).filter(do !!$1)
 			}
-
-		return tree.childItems.map(conv).filter(do !!$1)
+		try
+			return tree.childItems.map(conv).filter(do !!$1)
+		catch e
+			return []
 
 
 	def getContextAtLoc loc
 		let lft = loc
 		let rgt = loc
-		let code = @getSourceContent()
+		let code = getSourceContent!
 		let len = code.length
 		let chr
 		let res = {
@@ -446,10 +436,10 @@ export class File < Component
 				indents.unshift(line.slice(ind))
 		
 		res.indents = indents
-		@compile()
+		compile!
 		res.scope = {type: 'root',root: yes,body: yes}
 		res.tagtree = []
-		res.tokens = @result && !!@result.tokens
+		res.tokens = result && !!result.tokens
 		res.path = ""
 		
 		# find variables before this position?
