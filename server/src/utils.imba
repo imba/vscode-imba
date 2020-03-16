@@ -51,6 +51,7 @@ export def convertCompletionKind kind, entry
 const SYMBOL_KIND_MAP = {
 	property: SymbolKind.Field
 	prop: SymbolKind.Field
+	attr: SymbolKind.Field
 	method: SymbolKind.Method
 	def: SymbolKind.Method
 	constructor: SymbolKind.Constructor
@@ -142,6 +143,8 @@ export def fastExtractSymbols text
 	let lines = text.split(/\n/)
 	let symbols = []
 	let scope = {indent: -1,children: []}
+	let root = scope
+	# symbols.root = scope
 	let m
 
 	for line,i in lines
@@ -151,9 +154,9 @@ export def fastExtractSymbols text
 		let indent = line.match(/^\t*/)[0].length
 
 		while scope.indent >= indent
-			scope = scope.parent
+			scope = scope.parent or root 
 
-		m = line.match(/^(\t*((?:export )?(?:static )?)(class|tag|def|get|set|prop|attr) )([\w\-\$]+)/)
+		m = line.match(/^(\t*((?:export )?(?:static )?)(class|tag|def|get|set|prop|attr) )([\w\-\$\:]+)/)
 		# m ||= line.match(/^(.*(def|get|set|prop|attr) )([\w\-\$]+)/)
 
 		if m
@@ -163,17 +166,18 @@ export def fastExtractSymbols text
 			let mods = m[2].trim().split(/\s+/)
 
 			let span = {
-				start: {line: i + 1, character: m[1].length}
-				end: {line: i + 1, character: m[0].length}
+				start: {line: i, character: m[1].length}
+				end: {line: i, character: m[0].length}
 			}
 			let symbol = {
 				kind: SYMBOL_KIND_MAP[kind]
+				ownName: name
 				name: ns + name
 				span: span
 				indent: indent
 				modifiers: mods
 				children: []
-				parent: scope
+				parent: scope == root ? null : scope
 				type: kind
 			}
 
@@ -187,4 +191,130 @@ export def fastExtractSymbols text
 	
 	return symbols
 
+export def fastExtractContext code, loc
+	let lft = loc
+	let rgt = loc
+	let len = code.length
+	let chr
+	let res = {
+		loc: loc
+	}
+	
+	# first find the line and indentation 
+	while lft and (loc - lft) < 300
+		chr = code[--lft]
+		if chr == '>'
+			break
 
+		if chr == '<'
+			break
+
+	while rgt < (loc + 300)
+		chr = code[rgt++]
+		if chr == '>' or chr == ''
+			break
+			
+	let textBefore = code.slice(0,loc)
+	let textAfter = code.slice(loc)
+	
+	let lnstart = textBefore.lastIndexOf('\n')
+	let lnend = textAfter.indexOf('\n')
+	let linesBefore = textBefore.split('\n')
+	# find the indentation of the current line
+	# console.log loc,lft,rgt
+	res.start = lft
+	res.length = rgt - lft
+	# res.string = code.slice(lft,rgt)
+	res.textBefore = linesBefore[linesBefore.length - 1]
+	res.textAfter = textAfter.split('\n')[0]
+	
+	let currIndent = res.textBefore.match(/^\t*/)[0].length
+	let indents = [res.textBefore.slice(currIndent)]
+	res.indent = currIndent
+	
+	let ln = linesBefore.length
+	while ln > 0
+		let line = linesBefore[--ln]
+		continue if line.match(/^[\t\s]*$/)
+		let ind = line.match(/^\t*/)[0].length
+		if ind < currIndent
+			currIndent = ind
+			indents.unshift(line.slice(ind))
+	
+	res.indents = indents
+	res.scope = {type: 'root',root: yes,body: yes}
+	res.tagtree = []
+	res.path = ""
+	
+	# find variables before this position?
+	for line in indents
+		let scope
+		if let m = line.match(/^(export )?(tag|class) ([\w\-\:]+)/)
+			scope = {type: m[2], name: m[3],parent: res.scope}
+			scope[m[2]] = m[3]
+			res.className = m[3]
+			res.path += res.className
+			
+		elif let m = line.match(/^(static )?(def|get|set|prop) ([\w\-\$]+)/)
+			scope = {type: m[2], name: m[3],body: yes,parent: res.scope}
+			scope[m[2]] = m[3]
+			res.methodName = m[3]
+			res.static = !!m[1]
+			res.path += (m[1] ? '.' : '#') + m[3]
+
+		elif let m = line.match(/^\<([\w\-]+)/)
+			res.tagtree.push(m[1])
+			res.scope.html = yes
+			
+		if scope
+			res.scope = scope
+	
+	# could use the actual lexer to get better info about this?
+	
+	if code[lft] == '<' && code[rgt - 1] == '>' and code.substr(lft,4).match(/^\<[\w\{\[\.\#\>]/)
+		res.context = 'tag'
+		res.string = code.slice(lft,rgt)
+		res.tagName = (res.string.match(/\<([\w\-\:]+)/) or [])[1]
+		res.before = code.slice(lft,loc)
+		res.after = code.slice(loc,rgt)
+		res.pattern = res.before + '˘' + res.after
+		res.prefix = res.before[res.before.length - 1]
+		# should move forward 
+		let i = lft
+		let stack = []
+		let pairs = []
+		while i < loc
+			chr = code[i++]
+
+			if stack[0] == '('
+				if chr == ')'
+					stack.shift()
+					continue
+
+			if stack[0] == '{'
+				if chr == '}'
+					stack.shift()
+					continue 
+
+			if chr == '(' or chr == '{' or chr == '['
+				stack.unshift(chr)
+
+			elif chr == '<'
+				stack.unshift('tag')
+			elif chr == ' '
+				# if stack[0] == 'event'
+				# need to deal with 
+				stack.unshift('attr')
+			elif chr == '='
+				stack.unshift('value')
+			elif chr == ':'
+				stack.unshift('event')
+				# include the name of the event?
+			elif chr == '.'
+				if stack[0] == 'event' or stack[0] == 'modifier'
+					stack[0] = 'modifier'
+				else
+					stack.unshift('flag')
+
+		res.stack = stack
+	return res

@@ -24,7 +24,7 @@
     "vscode-uri": "^2.1.1"
   },
   "devDependencies": {
-    "glob": "^7.1.2",
+    "glob": "^7.1.6",
     "rollup": "^1.28.0",
     "rollup-plugin-commonjs": "^10.1.0",
     "rollup-plugin-node-resolve": "^5.2.0",

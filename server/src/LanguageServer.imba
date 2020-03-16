@@ -5,7 +5,7 @@ import {snippets} from './snippets'
 import {IConnection,InitializeParams,TextDocuments,Location,LocationLink,MarkedString,DocumentSymbol,InsertTextFormat} from 'vscode-languageserver'
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import {CompletionItemKind,SymbolKind} from 'vscode-languageserver-types'
-import {CompilerOptions} from 'typescript'
+import {CompilerOptions,LanguageService} from 'typescript'
 
 import {URI} from 'vscode-uri'
 
@@ -18,6 +18,7 @@ import {TAG_NAMES,TAG_TYPES} from './constants'
 var path = require 'path'
 var fs = require 'fs'
 var ts = require 'typescript'
+var glob = require 'glob'
 var imbac = require 'imba/dist/compiler.js'
 import htmlData from './html-data.json'
 
@@ -51,7 +52,9 @@ var tsServiceOptions\CompilerOptions = {
 
 export class LanguageServer < Component
 
+	prop allFiles\File[]
 	prop rootFiles\string[]
+	prop service\LanguageService
 
 	def resolveConfigFile dir
 		return null if !dir or (dir == path.dirname(dir))
@@ -69,21 +72,27 @@ export class LanguageServer < Component
 		self.connection = connection
 		self.entities = Entities.new(self)
 		self.rootPath = self.rootUri = util.uriToPath(params.rootUri)
-		self.imbaConfig = self.resolveConfigFile(self.rootPath)
+		self.imbaConfig = self.resolveConfigFile(self.rootPath) or {}
 		self.rootFiles = o.rootFiles || []
 		self.snapshots = {}
 		self.version = 0
 		self.debug = !!o.debug
+		self.cache = {}
 
+		createTypeScriptService!
+		self
+		
+	def createTypeScriptService
+		return if imbaConfig.legacy
+		
 		# @type {ts.LanguageServiceHost}
 		var servicesHost = {
-			getScriptFileNames: do self.rootFiles
-			getProjectVersion: do '' + self.version
+			getScriptFileNames:  do self.rootFiles
+			getProjectVersion:   do '' + self.version
 			getTypeRootsVersion: do 1
 
 			getScriptVersion: do |fileName|
 				let version = self.files[fileName] ? String(self.files[fileName].version.toString()) : "1"
-				# console.log 'get script version',fileName,version,@version
 				return version
 
 			# @param {string} fileName
@@ -107,11 +116,12 @@ export class LanguageServer < Component
 			writeFile: self.writeFile.bind(self)
 			readDirectory: ts.sys.readDirectory
 		}
-		console.log 'creating registry'
-		self.registry = ts.createDocumentRegistry()
-		console.log 'creating service'
-		self.service = ts.createLanguageService(servicesHost,self.registry)
-		self
+		self.service = ts.createLanguageService(servicesHost,ts.createDocumentRegistry!)
+		
+		
+	def invalidate
+		version++
+		cache = {}
 
 	def emitRootFiles
 		for file in self.rootFiles
@@ -122,6 +132,11 @@ export class LanguageServer < Component
 		if self.sourceFileExists(fileName)
 			self.files[fileName].emitFile()
 			# @service.getEmitOutput(@files[fileName].jsPath)
+			
+	def indexFiles
+		# let t = Date.now!
+		allFiles ||= glob.sync(path.resolve(self.rootPath,'**','*.imba')).map do getImbaFile($1)
+		self
 
 	def getProgram
 		self.service.getProgram()
@@ -289,6 +304,9 @@ export class LanguageServer < Component
 	def getDefinitionAtPosition uri, pos
 		let file = self.getImbaFile(uri)
 		let loc = self.documents.get(uri).offsetAt(pos)
+		
+		unless service
+			return []
 
 		let jsloc = file.generatedLocFor(loc)
 		let info = self.service.getDefinitionAndBoundSpan(file.lsPath,jsloc)
@@ -520,10 +538,38 @@ export class LanguageServer < Component
 				contents: contents
 			}
 			
-	def getWorkspaceSymbols {query}
-		console.log 'getWorkspaceSymbols',query
+	def getWorkspaceSymbols {query,type} = {}
+		indexFiles! # not after simple changes
+		let symbols = cache.symbols ||= files.reduce(&,[]) do $1.concat($2.workspaceSymbols)
+		
+		if query
+			symbols = symbols.filter do util.matchFuzzyString(query,$1.name)
+
+		if (type instanceof Array)
+			symbols = symbols.filter do type.indexOf($1.type) >= 0
+		elif type
+			symbols = symbols.filter do $1.type == type
+		
+		return symbols
+
 		return self.entities.getWorkspaceSymbols(query)
 
 	def getSymbols uri
 		let file = self.getImbaFile(uri)
+		return unless file
+
+		unless service
+			file.$indexWorkspaceSymbols!
+			let conv = do |sym|
+				{
+					kind: sym.kind
+					name: sym.ownName
+					range: sym.span
+					selectionRange: sym.span	
+					children: sym.children.map(conv)
+				}
+
+			let results = file.cache.symbols.filter(do !$1.parent).map(conv)
+			return results
+
 		return file.getSymbols()

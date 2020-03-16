@@ -24,10 +24,9 @@ export class File < Component
 	@param {import("./LanguageServer").LanguageServer} program
 	@param {ts.LanguageService} service
 	*/
-	def constructor program, path, service
+	def constructor program, path
 		super
 		self.program = program
-		self.ls = program.service
 		jsPath   = path.replace(/\.(imba|js|ts)$/,'.js')
 		imbaPath = path.replace(/\.(imba|js|ts)$/,'.imba')
 		lsPath   = jsPath
@@ -38,7 +37,7 @@ export class File < Component
 		emitted = {}
 		invalidate!
 
-		console.log "created file {path}"
+		# console.log "created file {path}"
 
 		program.files[lsPath] = self
 		program.files[imbaPath] = self
@@ -58,6 +57,9 @@ export class File < Component
 	
 	get $lsp
 		@program
+		
+	get ls
+		@program.service
 
 	get uri
 		'file://' + @imbaPath
@@ -67,13 +69,13 @@ export class File < Component
 		content = doc.getText!
 		# @emitFile()
 		if semanticTokens
-			console.log 'resending semantic tokens'
+			# console.log 'resending semantic tokens'
 			sendSemanticTokens(semanticTokens)
 
 	def didChange doc, event = null
 		self.doc = doc
 
-		console.log 'did change!',version,doc.version
+		# console.log 'did change!',version,doc.version
 		version = doc.version
 		content = doc.getText!
 		$delay('emitFile',500)
@@ -92,12 +94,12 @@ export class File < Component
 
 		idx = program.rootFiles.indexOf(lsPath)
 		program.rootFiles.splice(idx,1) if idx >= 0
-		program.version++
+		program.invalidate!
 		self
 
 	def emitFile
 		$cancel('emitFile')
-		console.log 'emitFile',imbaPath
+		# console.log 'emitFile',imbaPath
 		let content = getSourceContent!
 		# see if there are changes
 		# this is usually where we should do the compilation?
@@ -106,9 +108,10 @@ export class File < Component
 			lastEmitContent = content
 			invalidate!
 			version++
-			program.version++
+			program.invalidate!
+		
+		ls.getEmitOutput(lsPath) if ls
 
-		let result = ls.getEmitOutput(lsPath)
 
 	def updateDiagnostics items = []
 		
@@ -119,7 +122,7 @@ export class File < Component
 			let start = positionAt(lstart)
 			let end = positionAt(originalLocFor(entry.start + entry.length) or (lstart + entry.length))
 			let sev = [DiagnosticSeverity.Warning,DiagnosticSeverity.Error,DiagnosticSeverity.Information][entry.category]
-			console.log 'converting diagnostic',entry.category,entry.messageText
+			# console.log 'converting diagnostic',entry.category,entry.messageText
 			{
 				severity: sev
 				message: msg.messageText or msg
@@ -187,6 +190,7 @@ export class File < Component
 		cache = {
 			srclocs: {}
 			genlocs: {}
+			symbols: null
 		}
 		self
 
@@ -237,16 +241,21 @@ export class File < Component
 		return self
 		
 	def $indexWorkspaceSymbols
-		symbols = util.fastExtractSymbols(content).map do |sym|
+		cache.symbols ||= util.fastExtractSymbols(getSourceContent!)
+		cache.workspaceSymbols ||= cache.symbols.map do |sym|
 			{
 				kind: sym.kind
 				location: Location.create(uri,sym.span)
 				name: sym.name
 				containerName: sym.containerName
 				type: sym.type
+				ownName: sym.ownName
 			}
-	
 		return self
+	
+	get workspaceSymbols
+		$indexWorkspaceSymbols!
+		return cache.workspaceSymbols
 
 	def originalRangesFor jsloc
 		locs.spans.filter do |pair|
@@ -382,137 +391,5 @@ export class File < Component
 		catch e
 			return []
 
-
 	def getContextAtLoc loc
-		let lft = loc
-		let rgt = loc
-		let code = getSourceContent!
-		let len = code.length
-		let chr
-		let res = {
-			loc: loc
-		}
-		
-		# first find the line and indentation 
-
-		while lft and (loc - lft) < 300
-			chr = code[--lft]
-			if chr == '>'
-				break
-
-			if chr == '<'
-				break
-
-		while rgt < (loc + 300)
-			chr = code[rgt++]
-			if chr == '>' or chr == ''
-				break
-				
-		let textBefore = code.slice(0,loc)
-		let textAfter = code.slice(loc)
-		
-		let lnstart = textBefore.lastIndexOf('\n')
-		let lnend = textAfter.indexOf('\n')
-		let linesBefore = textBefore.split('\n')
-		# find the indentation of the current line
-		# console.log loc,lft,rgt
-		res.start = lft
-		res.length = rgt - lft
-		# res.string = code.slice(lft,rgt)
-		res.textBefore = linesBefore[linesBefore.length - 1]
-		res.textAfter = textAfter.split('\n')[0]
-		
-		
-		let currIndent = res.textBefore.match(/^\t*/)[0].length
-		let indents = [res.textBefore.slice(currIndent)]
-		res.indent = currIndent
-		let ln = linesBefore.length
-		while ln > 0
-			let line = linesBefore[--ln]
-			continue if line.match(/^[\t\s]*$/)
-			let ind = line.match(/^\t*/)[0].length
-			if ind < currIndent
-				currIndent = ind
-				indents.unshift(line.slice(ind))
-		
-		res.indents = indents
-		compile!
-		res.scope = {type: 'root',root: yes,body: yes}
-		res.tagtree = []
-		res.tokens = result && !!result.tokens
-		res.path = ""
-		
-		# find variables before this position?
-		for line in indents
-			let scope
-			if let m = line.match(/^(export )?(tag|class) ([\w\-]+)/)
-				scope = {type: m[2], name: m[3],parent: res.scope}
-				scope[m[2]] = m[3]
-				res.className = m[3]
-				res.path += res.className
-				
-			elif let m = line.match(/^(static )?(def|get|set) ([\w\-]+)/)
-				scope = {type: m[2], name: m[3],body: yes,parent: res.scope}
-				scope[m[2]] = m[3]
-				res.methodName = m[3]
-				res.static = !!m[1]
-				res.path += (m[1] ? '.' : '#') + m[3]
-
-			elif let m = line.match(/^\<([\w\-]+)/)
-				res.tagtree.push(m[1])
-				res.scope.html = yes
-				# scope = {type: m[2], name: m[3]}
-				
-			if scope
-				res.scope = scope
-			
-		
-		# could use the actual lexer to get better info about this?
-		
-		if code[lft] == '<' && code[rgt - 1] == '>' and code.substr(lft,4).match(/^\<[\w\{\[\.\#\>]/)
-			res.context = 'tag'
-			res.string = code.slice(lft,rgt)
-			res.tagName = (res.string.match(/\<([\w\-\:]+)/) or [])[1]
-			res.before = code.slice(lft,loc)
-			res.after = code.slice(loc,rgt)
-			res.pattern = res.before + '˘' + res.after
-			res.prefix = res.before[res.before.length - 1]
-			# should move forward 
-			let i = lft
-			let stack = []
-			let pairs = []
-			while i < loc
-				chr = code[i++]
-
-				if stack[0] == '('
-					if chr == ')'
-						stack.shift()
-						continue
-
-				if stack[0] == '{'
-					if chr == '}'
-						stack.shift()
-						continue 
-
-				if chr == '(' or chr == '{' or chr == '['
-					stack.unshift(chr)
-
-				elif chr == '<'
-					stack.unshift('tag')
-				elif chr == ' '
-					# if stack[0] == 'event'
-					# need to deal with 
-					stack.unshift('attr')
-				elif chr == '='
-					stack.unshift('value')
-				elif chr == ':'
-					stack.unshift('event')
-					# include the name of the event?
-				elif chr == '.'
-					if stack[0] == 'event' or stack[0] == 'modifier'
-						stack[0] = 'modifier'
-					else
-						stack.unshift('flag')
-
-			res.stack = stack
-		return res
+		return util.fastExtractContext(getSourceContent!,loc)
