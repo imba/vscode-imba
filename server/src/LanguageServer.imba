@@ -1,6 +1,6 @@
 import {Component} from './Component'
 import {snippets} from './snippets'
-import {IConnection,InitializeParams,TextDocuments,Location,LocationLink,MarkedString,DocumentSymbol,InsertTextFormat} from 'vscode-languageserver'
+import {IConnection,InitializeParams,TextDocuments,Location,LocationLink,MarkedString,DocumentSymbol,InsertTextFormat,ReferenceParams} from 'vscode-languageserver'
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import {CompletionItemKind,SymbolKind} from 'vscode-languageserver-types'
 import {CompilerOptions,LanguageService} from 'typescript'
@@ -53,13 +53,21 @@ export class LanguageServer < Component
 	prop allFiles\File[]
 	prop rootFiles\string[]
 	prop service\LanguageService
+	prop tsp\LanguageService
 
 	def resolveConfigFile dir
 		return null if !dir or (dir == path.dirname(dir))
 
 		let src = path.resolve(dir,'imbaconfig.json')
 		if fs.existsSync(src)
-			return JSON.parse(fs.readFileSync(src,'utf8'))
+			let resolver = do |key,value|
+				if typeof value == 'string' and value.match(/^\.\//)
+					return path.resolve(dir,value)
+				return value
+
+			let config = JSON.parse(fs.readFileSync(src,'utf8'),resolver)
+			return config
+
 		return self.resolveConfigFile(path.dirname(dir))
 
 	def constructor(connection\IConnection, documents\TextDocuments, params\InitializeParams, o = {})
@@ -76,6 +84,10 @@ export class LanguageServer < Component
 		self.version = 0
 		self.debug = !!o.debug
 		self.cache = {}
+		console.log('imba config',imbaConfig)
+
+		for item in imbaConfig.entries
+			self.rootFiles.push(item.input)
 
 		createTypeScriptService!
 		self
@@ -115,6 +127,7 @@ export class LanguageServer < Component
 			readDirectory: ts.sys.readDirectory
 		}
 		self.service = ts.createLanguageService(servicesHost,ts.createDocumentRegistry!)
+		self.tsp = self.service
 		
 		
 	def invalidate
@@ -207,6 +220,7 @@ export class LanguageServer < Component
 		let map = {}
 
 		for entry in entries
+			console.log 'diagnostic entry',entry.file.fileName
 			if let file = files[entry.file.fileName]
 				let items = map[file.jsPath] ||= []
 				items.push(entry)
@@ -382,12 +396,11 @@ export class LanguageServer < Component
 		elif trigger == '<'
 			return
 			
-		if trigger == '.' or ctx.textBefore.match(/\.[\w\$\-]*$/)
+		if trigger == '.' or ctx.textBefore.match(/\.[\w\$\-]*$/) or ctx.context == 'object'
 			console.log 'get completions directly',loc,options
 			let tspitems = file.tspGetCompletionsAtPosition(loc,ctx,options)
 			console.log('tspitems',tspitems.length)
 			items.push(...tspitems)
-
 		else
 			# if the completion is part of an access - we want to
 			# redirect directly to typescript?
@@ -539,7 +552,6 @@ export class LanguageServer < Component
 	def getWorkspaceSymbols {query,type} = {}
 		indexFiles! # not after simple changes
 		let symbols = cache.symbols ||= files.reduce(&,[]) do $1.concat($2.workspaceSymbols)
-		
 		if query
 			symbols = symbols.filter do util.matchFuzzyString(query,$1.name)
 
@@ -551,6 +563,24 @@ export class LanguageServer < Component
 		return symbols
 
 		return self.entities.getWorkspaceSymbols(query)
+
+	def onReferences params\ReferenceParams
+		let uri = params.textDocument.uri
+		let file = getImbaFile(uri)
+		let loc = documents.get(uri).offsetAt(params.position)
+		# @type {number}
+		let tsp-loc = file.generatedLocFor(loc)
+		console.log 'referencs',uri,params.position,loc,tsp-loc
+
+		let references = tsp.getReferencesAtPosition(file.jsPath,tsp-loc)
+		let results\Location[] = []
+		console.log references
+		for ref in references
+			let ifile\File = files[ref.fileName]
+			let span = ifile.textSpanToRange(ref.textSpan)
+			results.push(Location.create(ifile.uri,span)) if span
+		console.log 'results',results
+		return results
 
 	def getSymbols uri
 		let file = self.getImbaFile(uri)

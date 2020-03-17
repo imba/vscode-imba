@@ -8459,18 +8459,13 @@
           </dict>
         </dict>
         <key>end</key>
-        <string>(")|((?:[^\\\n])$)</string>
+        <string>"</string>
         <key>endCaptures</key>
         <dict>
-          <key>1</key>
+          <key>0</key>
           <dict>
             <key>name</key>
             <string>punctuation.definition.string.end.imba</string>
-          </dict>
-          <key>2</key>
-          <dict>
-            <key>name</key>
-            <string>invalid.illegal.newline.imba</string>
           </dict>
         </dict>
         <key>patterns</key>

@@ -22,7 +22,6 @@ export class File < Component
 
 	/**
 	@param {import("./LanguageServer").LanguageServer} program
-	@param {ts.LanguageService} service
 	*/
 	def constructor program, path
 		super

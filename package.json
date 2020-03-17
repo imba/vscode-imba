@@ -86,7 +86,8 @@
 					"imba"
 				],
 				"extensions": [
-					".imba"
+					".imba",
+					".imba1"
 				],
 				"configuration": "./language-configuration.json",
 				"firstLine": "^#!/.*\\bimba[0-9.-]*\\b"

@@ -27,6 +27,7 @@ documents.onDidSave do |event|
 documents.listen(connection)
 
 connection.onInitialize do |params|
+	// Could this start a single instance for multiple workspaces?
 	connection.console.log("[Server({process.pid}) {params.rootUri}] Started and initialize received")
 	server = LanguageServer.new(connection,documents,params)
 
@@ -43,6 +44,7 @@ connection.onInitialize do |params|
 			documentHighlightProvider: true,
 			documentSymbolProvider: true,
 			workspaceSymbolProvider: true,
+			renameProvider: true,
 			semanticTokensProvider: {
 				legend: {
 					tokenTypes: ['variable']
@@ -52,7 +54,7 @@ connection.onInitialize do |params|
 				documentProvider: true
 			},
 			definitionProvider: true,
-			referencesProvider: false
+			referencesProvider: true
 		}
 	}
 
@@ -84,6 +86,11 @@ connection.onWorkspaceSymbol do |event|
 connection.onDefinition do |event,b|
 	console.log 'onDefinition',event
 	let res = server.getDefinitionAtPosition(event.textDocument.uri,event.position)
+	return res
+
+connection.onReferences do |event|
+	console.log 'onReferences'
+	let res = server.onReferences(event)
 	return res
 
 connection.onTypeDefinition do |event|

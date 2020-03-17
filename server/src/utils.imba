@@ -229,14 +229,17 @@ export def fastExtractContext code, loc
 	res.textAfter = textAfter.split('\n')[0]
 	
 	let currIndent = res.textBefore.match(/^\t*/)[0].length
+	let maxIndent = currIndent
 	let indents = [res.textBefore.slice(currIndent)]
 	res.indent = currIndent
 	
 	let ln = linesBefore.length
+	res.lineAbove = linesBefore[ln - 2]
 	while ln > 0
 		let line = linesBefore[--ln]
 		continue if line.match(/^[\t\s]*$/)
 		let ind = line.match(/^\t*/)[0].length
+
 		if ind < currIndent
 			currIndent = ind
 			indents.unshift(line.slice(ind))
@@ -268,6 +271,27 @@ export def fastExtractContext code, loc
 			
 		if scope
 			res.scope = scope
+
+	let pre = res.indents.join('  ')
+	let k = pre.length
+	let pairs = []
+	let pairable = '{}()[]'.split('')
+	while k > 0
+		let chr = pre[--k]
+		let idx = pairable.indexOf(chr)
+		continue if idx == -1
+		if idx % 2
+			pairs.unshift(pairable[chr - 1])
+		elif pairs[0] == chr
+			pairs.shift!
+		else
+			console.log 'found an unmatched pairing!'
+			res.bracket = chr
+			break
+	
+	if res.bracket == '{'
+		res.context = 'object'
+
 	
 	# could use the actual lexer to get better info about this?
 	
