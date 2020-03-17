@@ -52,8 +52,7 @@ export class LanguageServer < Component
 
 	prop allFiles\File[]
 	prop rootFiles\string[]
-	prop service\LanguageService
-	prop tsp\LanguageService
+	prop tls\LanguageService
 
 	def resolveConfigFile dir
 		return null if !dir or (dir == path.dirname(dir))
@@ -126,9 +125,7 @@ export class LanguageServer < Component
 			writeFile: self.writeFile.bind(self)
 			readDirectory: ts.sys.readDirectory
 		}
-		self.service = ts.createLanguageService(servicesHost,ts.createDocumentRegistry!)
-		self.tsp = self.service
-		
+		self.tls = ts.createLanguageService(servicesHost,ts.createDocumentRegistry!)
 		
 	def invalidate
 		version++
@@ -136,7 +133,7 @@ export class LanguageServer < Component
 
 	def emitRootFiles
 		for file in self.rootFiles
-			self.service.getEmitOutput(file)
+			tls.getEmitOutput(file)
 
 	def addFile fileName
 		fileName = path.resolve(self.rootPath,fileName)
@@ -150,7 +147,7 @@ export class LanguageServer < Component
 		self
 
 	def getProgram
-		self.service.getProgram()
+		tls.getProgram()
 
 	def log ...params
 		console.log(...params)
@@ -164,7 +161,7 @@ export class LanguageServer < Component
 		var alt = fileName.replace(/\.js$/, '.imba')
 
 		if ((alt != fileName) or fileName.match(/\.imba$/)) && ts.sys.fileExists(alt)
-			File.new(self,alt,self.service)
+			File.new(self,alt)
 			return true
 		return false
 
@@ -216,7 +213,7 @@ export class LanguageServer < Component
 		emitDiagnostics!
 
 	def emitDiagnostics
-		let entries = service.getProgram!.getSemanticDiagnostics!
+		let entries = tls.getProgram!.getSemanticDiagnostics!
 		let map = {}
 
 		for entry in entries
@@ -232,7 +229,7 @@ export class LanguageServer < Component
 
 	def getSemanticDiagnostics
 		let t = Date.now()
-		let entries = self.service.getProgram().getSemanticDiagnostics()
+		let entries = tls.getProgram().getSemanticDiagnostics()
 
 		let info = entries.map do
 			[$1.file.fileName,$1.messageText,$1.start,$1.length,$1.relatedInformation,$1]
@@ -241,7 +238,7 @@ export class LanguageServer < Component
 		return
 
 	def inspectProgram
-		let program = self.service.getProgram()
+		let program = tls.getProgram()
 		let files = program.getSourceFiles().map do
 			$1.fileName
 		let file 
@@ -249,7 +246,7 @@ export class LanguageServer < Component
 
 	def inspectFile fileName
 		fileName = path.resolve(self.rootPath,fileName)
-		let program = self.service.getProgram()
+		let program = tls.getProgram()
 		let sourceFile = program.getSourceFile(fileName)
 		# let deps = program.getAllDependencies(sourceFile)
 		console.log sourceFile,sourceFile.referencedFiles
@@ -309,7 +306,7 @@ export class LanguageServer < Component
 		src = util.uriToPath(src)
 		src = path.resolve(self.rootPath,src).replace(/\.(imba|js|ts)$/,'.imba')
 		# what if it is a local file?
-		let file\File = self.files[src] ||= File.new(self,src,self.service)
+		let file\File = self.files[src] ||= File.new(self,src)
 
 		return file
 
@@ -317,11 +314,11 @@ export class LanguageServer < Component
 		let file = self.getImbaFile(uri)
 		let loc = self.documents.get(uri).offsetAt(pos)
 		
-		unless service
+		unless tls
 			return []
 
 		let jsloc = file.generatedLocFor(loc)
-		let info = self.service.getDefinitionAndBoundSpan(file.lsPath,jsloc)
+		let info = tls.getDefinitionAndBoundSpan(file.lsPath,jsloc)
 
 		if info and info.definitions
 
@@ -351,7 +348,7 @@ export class LanguageServer < Component
 				elif item.name == '__new' and info.definitions.length > 1
 					continue
 				else
-					let span = util.textSpanToRange(item.contextSpan or item.textSpan,item.fileName,self.service)
+					let span = util.textSpanToRange(item.contextSpan or item.textSpan,item.fileName,tls)
 					if isLink
 						LocationLink.create(
 							util.pathToUri(item.fileName),
@@ -449,7 +446,7 @@ export class LanguageServer < Component
 				}
 			return {isIncomplete: false, items: items}
 
-		let res = self.service.getCompletionsAtPosition(file.lsPath,jsLoc,options)
+		let res = tls.getCompletionsAtPosition(file.lsPath,jsLoc,options)
 		
 		if res
 			if self.debug
@@ -516,7 +513,7 @@ export class LanguageServer < Component
 		let prefs = {
 			includeCompletionsWithInsertText: true
 		}
-		let details = self.service.getCompletionEntryDetails(item.data.path,item.data.loc,item.label,undefined,source,prefs)
+		let details = tls.getCompletionEntryDetails(item.data.path,item.data.loc,item.label,undefined,source,prefs)
 		if details
 			console.log details
 			item.detail = ts.displayPartsToString(details.displayParts)
@@ -533,7 +530,7 @@ export class LanguageServer < Component
 		let loc = documents.get(uri).offsetAt(pos)
 		# @type {number}
 		let loc2 = file.generatedLocFor(loc)
-		let info = loc2 and service.getQuickInfoAtPosition(String(file.lsPath), loc2)
+		let info = loc2 and tls.getQuickInfoAtPosition(String(file.lsPath), loc2)
 
 		# console.log pos2
 		if info
@@ -549,7 +546,7 @@ export class LanguageServer < Component
 				contents: contents
 			}
 			
-	def getWorkspaceSymbols {query,type} = {}
+	def getWorkspaceSymbols {query='',type=null} = {}
 		indexFiles! # not after simple changes
 		let symbols = cache.symbols ||= files.reduce(&,[]) do $1.concat($2.workspaceSymbols)
 		if query
@@ -565,6 +562,8 @@ export class LanguageServer < Component
 		return self.entities.getWorkspaceSymbols(query)
 
 	def onReferences params\ReferenceParams
+		return [] unless tls
+
 		let uri = params.textDocument.uri
 		let file = getImbaFile(uri)
 		let loc = documents.get(uri).offsetAt(params.position)
@@ -572,7 +571,7 @@ export class LanguageServer < Component
 		let tsp-loc = file.generatedLocFor(loc)
 		console.log 'referencs',uri,params.position,loc,tsp-loc
 
-		let references = tsp.getReferencesAtPosition(file.jsPath,tsp-loc)
+		let references = tls.getReferencesAtPosition(file.jsPath,tsp-loc)
 		let results\Location[] = []
 		console.log references
 		for ref in references
@@ -586,7 +585,7 @@ export class LanguageServer < Component
 		let file = self.getImbaFile(uri)
 		return unless file
 
-		unless service
+		unless tls
 			file.$indexWorkspaceSymbols!
 			let conv = do |sym|
 				{

@@ -1,6 +1,6 @@
 {
 	"name": "vsimba",
-	"displayName": "imba",
+	"displayName": "Imba",
 	"description": "Language support for Imba 2",
 	"version": "2.0.0",
 	"publisher": "scrimba",
@@ -10,7 +10,7 @@
 	"author": "Sindre Aarsaether",
 	"repository": {
 		"type": "git",
-		"url": "git://github.com/somebee/vscode-imba.git"
+		"url": "git://github.com/imba/vscode-imba.git"
 	},
 	"engines": {
 		"vscode": "^1.42.0"
@@ -56,7 +56,7 @@
 		],
 		"configuration": {
 			"type": "object",
-			"title": "Imba Configuration",
+			"title": "Imba",
 			"properties": {
 				"imba.maxNumberOfProblems": {
 					"type": "number",

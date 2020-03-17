@@ -1,11 +1,8 @@
-# imba$selfless=1
-
 var path = require 'path'
 
 import {window, languages, IndentAction, workspace,SnippetString,Position,TextDocument,CancellationToken,DocumentSemanticTokensProvider,SemanticTokensLegend} from 'vscode'
 import {LanguageClient, TransportKind, RevealOutputChannelOn} from 'vscode-languageclient'
 import { SemanticTokensFeature, DocumentSemanticsTokensSignature } from 'vscode-languageclient/lib/semanticTokens.proposed'
-
 
 import {SemanticTokenTypes,SemanticTokenModifiers} from '../../src/protocol'
 
@@ -20,8 +17,6 @@ class ClientAdapter
 			return window.createTextEditorDecorationType({
 				light: {color: '#509DB5'}
 				dark: {
-					# color: dark.color or undefined
-					
 					# borderWidth: dark.border ? '0px 0px 1px 0px' : '0px'
 					# border: "1px {dark.color}40 dashed",
 					# borderWidth: '0px 0px 1px 0px'
@@ -110,7 +105,6 @@ languages.setLanguageConfiguration('imba',{
 
 class SemanticTokensProvider
 	def provideDocumentSemanticTokens(document\TextDocument, token\CancellationToken)
-		console.log 'provide semantic tokens!',document
 		await []
 		return []
 
@@ -155,21 +149,14 @@ export def activate context
 	
 	await client.onReady!
 
-	window.onDidChangeActiveTextEditor do |ev|
-		console.log 'changed active editor!'
-
 	window.onDidChangeVisibleTextEditors do |editors|
-		console.log 'onDidChangeVisibleTextEditors',editors
 		for editor in editors
 			try
 				let doc = editor.document
 				let uri = doc.uri.toString!
 				let version = doc.version
-				console.log 'show decorations for?',uri
 				if let markers = DecorationsCache[uri]
 					adapter.decorateEditor(uri,version,markers)
-				
-
 	
 	workspace.onDidRenameFiles do |ev|
 		client.sendNotification('onDidRenameFiles',ev)
@@ -184,7 +171,5 @@ export def activate context
 			console.log "error",e
 
 	client.onNotification('entities') do |{uri,version,markers}|
-		console.log 'setting decorations for editor',uri
 		DecorationsCache[uri] = markers
-		# let editor = adapter.uriToEditor(uri,version)
 		adapter.decorateEditor(uri,version,markers)

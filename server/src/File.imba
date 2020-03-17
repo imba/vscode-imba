@@ -51,14 +51,11 @@ export class File < Component
 		let uri = 'file://' + @imbaPath
 		@program.documents.get(uri)
 
-	get $tsp
-		@program.service
+	get tls
+		@program.tls
 	
 	get $lsp
 		@program
-		
-	get ls
-		@program.service
 
 	get uri
 		'file://' + @imbaPath
@@ -109,7 +106,7 @@ export class File < Component
 			version++
 			program.invalidate!
 		
-		ls.getEmitOutput(lsPath) if ls
+		tls.getEmitOutput(lsPath) if tls
 
 
 	def updateDiagnostics items = []
@@ -330,7 +327,7 @@ export class File < Component
 		$flush('emitFile')
 		let tsploc = generatedLocFor(loc)
 		# console.log 'get tsp completions',loc,tsploc
-		if let result = $tsp.getCompletionsAtPosition(lsPath,tsploc,options)
+		if let result = tls.getCompletionsAtPosition(lsPath,tsploc,options)
 			return util.tsp2lspCompletions(result.entries,file: self, jsLoc: tsploc)
 		return []
 	
@@ -350,15 +347,14 @@ export class File < Component
 				if typ == '#'
 					loc = loc + (comment + 'prototype.').length
 
-				if let result = $tsp.getCompletionsAtPosition(lsPath,loc,{})
+				if let result = tls.getCompletionsAtPosition(lsPath,loc,{})
 					return util.tsp2lspCompletions(result.entries,file: self, jsLoc: loc, meta: {member: yes})
 
 		return []
 
 
 	def getSymbols
-		let tree = $tsp.getNavigationTree(lsPath)
-
+		let tree = tls.getNavigationTree(lsPath)
 		let conv = do |item|
 			return if item.kind == 'alias' or item.text == 'meta$'
 			
