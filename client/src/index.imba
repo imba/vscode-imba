@@ -1,8 +1,7 @@
 var path = require 'path'
 
-import {window, languages, IndentAction, workspace,SnippetString,Position,TextDocument,CancellationToken,DocumentSemanticTokensProvider,SemanticTokensLegend} from 'vscode'
-import {LanguageClient, TransportKind, RevealOutputChannelOn} from 'vscode-languageclient'
-import { SemanticTokensFeature, DocumentSemanticsTokensSignature } from 'vscode-languageclient/lib/semanticTokens.proposed'
+import {window, languages, IndentAction, workspace,SnippetString} from 'vscode'
+import {LanguageClient, TransportKind} from 'vscode-languageclient'
 
 import {SemanticTokenTypes,SemanticTokenModifiers} from '../../src/protocol'
 
@@ -104,7 +103,7 @@ languages.setLanguageConfiguration('imba',{
 
 
 class SemanticTokensProvider
-	def provideDocumentSemanticTokens(document\TextDocument, token\CancellationToken)
+	def provideDocumentSemanticTokens(document, token)
 		await []
 		return []
 
@@ -122,7 +121,7 @@ export def activate context
 	var clientOptions = {
 		documentSelector: [{scheme: 'file', language: 'imba'}]
 		synchronize: { configurationSection: ['imba'] }
-		revealOutputChannelOn: RevealOutputChannelOn.Info
+		revealOutputChannelOn: 1
 		initializationOptions: {
 			something: 1
 			other: 100
