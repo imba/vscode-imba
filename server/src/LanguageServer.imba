@@ -89,6 +89,7 @@ export class LanguageServer < Component
 			self.rootFiles.push(item.input)
 
 		createTypeScriptService!
+		setTimeout(&,0) do indexFiles!
 		self
 		
 	def createTypeScriptService
@@ -142,8 +143,12 @@ export class LanguageServer < Component
 			# @service.getEmitOutput(@files[fileName].jsPath)
 			
 	def indexFiles
-		# let t = Date.now!
-		allFiles ||= glob.sync(path.resolve(self.rootPath,'**','*.imba'),ignore: 'node_modules').map do getImbaFile($1)
+		let t = Date.now!
+		let matches = glob.sync(path.resolve(self.rootPath,'**','*.imba'),ignore: 'node_modules')
+		matches = matches.filter do |file| file.indexOf('node_modules') == -1
+		allFiles ||= matches.map do |file|
+			getImbaFile($1)
+		# console.log "indexed files",Date.now! - t
 		self
 
 	def getProgram
@@ -547,7 +552,7 @@ export class LanguageServer < Component
 			}
 			
 	def getWorkspaceSymbols {query='',type=null} = {}
-		indexFiles! # not after simple changes
+		# indexFiles! # not after simple changes
 		let symbols = cache.symbols ||= files.reduce(&,[]) do $1.concat($2.workspaceSymbols)
 		if query
 			symbols = symbols.filter do util.matchFuzzyString(query,$1.name)
@@ -558,8 +563,6 @@ export class LanguageServer < Component
 			symbols = symbols.filter do $1.type == type
 		
 		return symbols
-
-		return self.entities.getWorkspaceSymbols(query)
 
 	def onReferences params\ReferenceParams
 		return [] unless tls
