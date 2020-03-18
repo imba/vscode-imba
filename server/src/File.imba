@@ -29,6 +29,14 @@ export class File < Component
 		jsPath   = path.replace(/\.(imba|js|ts)$/,'.js')
 		imbaPath = path.replace(/\.(imba|js|ts)$/,'.imba')
 		lsPath   = jsPath
+
+		# console.log "created file {path}"
+		program.files[lsPath] = self
+		program.files[imbaPath] = self
+		program.files.push(self)
+
+		if program && !program.rootFiles.includes(lsPath)
+			program.rootFiles.push(lsPath)
 		
 		version = 1
 		diagnostics = []
@@ -36,36 +44,28 @@ export class File < Component
 		emitted = {}
 		invalidate!
 
-		# console.log "created file {path}"
-
-		program.files[lsPath] = self
-		program.files[imbaPath] = self
-		program.files.push(self)
-
-		if program && !program.rootFiles.includes(lsPath)
-			program.rootFiles.push(lsPath)
 		self
 
 
 	get document
-		let uri = 'file://' + @imbaPath
-		@program.documents.get(uri)
+		let uri = 'file://' + imbaPath
+		program.documents.get(uri)
+		
 
 	get tls
-		@program.tls
+		program.tls
 	
-	get $lsp
-		@program
+	get ils
+		program
 
 	get uri
-		'file://' + @imbaPath
+		'file://' + imbaPath
 
 	def didOpen doc
 		self.doc = doc
 		content = doc.getText!
 		# @emitFile()
 		if semanticTokens
-			# console.log 'resending semantic tokens'
 			sendSemanticTokens(semanticTokens)
 
 	def didChange doc, event = null

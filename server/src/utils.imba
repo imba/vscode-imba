@@ -156,7 +156,7 @@ export def fastExtractSymbols text
 		while scope.indent >= indent
 			scope = scope.parent or root 
 
-		m = line.match(/^(\t*((?:export )?(?:static )?)(class|tag|def|get|set|prop|attr) )([\w\-\$\:]+)/)
+		m = line.match(/^(\t*((?:export )?(?:static )?)(class|tag|def|get|set|prop|attr) )([\w\-\$\:]+(?:\.[\w\-\$]+)?)/)
 		# m ||= line.match(/^(.*(def|get|set|prop|attr) )([\w\-\$]+)/)
 
 		if m

@@ -1,4 +1,4 @@
-import {createConnection, TextDocuments, TextDocumentSyncKind} from 'vscode-languageserver'
+import {createConnection, TextDocuments, Location,TextDocumentSyncKind} from 'vscode-languageserver'
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import {LanguageServer} from './LanguageServer'
 
@@ -33,7 +33,7 @@ connection.onInitialize do |params|
 
 	return {
 		capabilities: {
-			textDocumentSync: documents.syncKind # TextDocumentSyncKind.Incremental
+			textDocumentSync: TextDocumentSyncKind.Full
 			completionProvider: {
 				resolveProvider: true,
 				triggerCharacters: ['.', ':', '<', '"', '/', '@', '*','%']
@@ -83,9 +83,9 @@ connection.onWorkspaceSymbol do |event|
 	return server ? server.getWorkspaceSymbols(event) : []
 
 
-connection.onDefinition do |event,b|
+connection.onDefinition do |event|
 	console.log 'onDefinition',event
-	let res = server.getDefinitionAtPosition(event.textDocument.uri,event.position)
+	let res\any[] = server.getDefinitionAtPosition(event.textDocument.uri,event.position)
 	return res
 
 connection.onReferences do |event|
