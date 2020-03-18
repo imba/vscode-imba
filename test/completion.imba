@@ -1,9 +1,11 @@
+var root1 = 1
+
 export class Util
 	@state = 'test'
 	def render
 		this.state.
 		document.location.hash
-		<div titl="hello">
+		<div title="hello">
 		yes
 
 	def hello 
@@ -15,12 +17,21 @@ tag test-here
 
 	# |
 
+	def handle arg2
+		let meth2 = 1
+		if let var3 = 2
+			# |
+			yes
+		yes
+		# |
+		
+
 	def render
 		# |
 		<self>
 			<div> "hello" # |
 			if true
-				hello # |
+				other # |
 			<div
 				.ok=Math.random()
 				:click.test > # |

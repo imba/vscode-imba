@@ -8,17 +8,19 @@ var items = [
 ]
 
 tag app-item
-	@item = []
-	@category
+	prop item = []
+	prop category
+	
 	def hello
 		"test"
 
 tag app-todo < app-item
-	@titl = "10"
-	@todo
+	prop titl = "10"
+	prop item
+	prop todo
 
 	def other
-		@schedule()
+		schedule!
 		# @hello().toUpperCase()
 		# @hanimate()
 		this
@@ -29,13 +31,12 @@ tag app-todo < app-item
 		true
 	
 	def render
-		<self> @todo.title
+		<self> todo.title
 
 tag app-link < a
 	
 	def hello
-		
-		@href = '#'
+		href = '#'
 		self
 
 tag app-header < label

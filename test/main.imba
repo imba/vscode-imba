@@ -21,7 +21,7 @@ tag app-root
 			for item in items
 				<div title=item.name>
 			<app-todo title='one' kind=1> "Hello"
-			<app-todo itm='two' kind=2> "Hello"
+			<app-todo item='two' kind=2> "Hello"
 			<app-todo title='three'> "Hello"
 			<app-link title='three'> "Hello"
 			<app-item title='three'> "Hello"
