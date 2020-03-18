@@ -51,6 +51,7 @@ class ClientAdapter
 			lambda: styler(styles.method)
 			if: styler(styles.flow)
 			for: styler(styles.flow)
+			block: styler(styles.flow)
 		}
 		
 	def uriToEditor uri, version
