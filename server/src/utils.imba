@@ -1,5 +1,6 @@
 import {CompletionItemKind,SymbolKind} from 'vscode-languageserver-types'
 import {URI} from 'vscode-uri'
+import {globals} from './constants'
 
 export def uriToPath uri
 	return uri if uri[0] == '/' or uri.indexOf('://') == -1
@@ -94,7 +95,11 @@ export def tsp2lspCompletions items, {file,jsLoc,meta=null}
 		let name = entry.name
 		let kind = entry.kind
 		let modifiers = (entry.kindModifiers or '').split(/[\,\s]/)
-		console.log entry
+
+		if name.match(/[\w]Component$/)
+			continue
+
+		# console.log entry
 		if name.match(/^is([A-Z])/)
 			name = name[2].toLowerCase() + name.slice(3) + '?'
 		elif name.match(/^do([A-Z])/)
@@ -114,6 +119,14 @@ export def tsp2lspCompletions items, {file,jsLoc,meta=null}
 		}
 		for mod in modifiers when mod
 			item.data[mod] = true
+
+		# only drop these in certain cases
+		if kind == 'function' and item.data.declare
+			continue
+
+		if kind == 'var' and item.data.declare
+			continue unless globals[name]
+
 		Object.assign(item.data,meta) if meta
 		results.push(item)
 

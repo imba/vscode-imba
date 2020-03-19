@@ -1,9 +1,9 @@
 import {Component} from './Component'
 import {snippets} from './snippets'
-import {IConnection,InitializeParams,TextDocuments,Location,LocationLink,MarkedString,DocumentSymbol,InsertTextFormat,ReferenceParams} from 'vscode-languageserver'
+import {IConnection,InitializeParams,TextDocuments,Location,LocationLink,MarkedString,DocumentSymbol,InsertTextFormat,ReferenceParams,CompletionItem} from 'vscode-languageserver'
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import {CompletionItemKind,SymbolKind} from 'vscode-languageserver-types'
-import {CompilerOptions,LanguageService,LanguageServiceHost} from 'typescript'
+import {CompilerOptions,LanguageService,LanguageServiceHost,UserPreferences} from 'typescript'
 
 import {URI} from 'vscode-uri'
 
@@ -99,6 +99,14 @@ export class LanguageServer < Component
 	
 		var options\CompilerOptions = Object.assign({},tsServiceOptions)
 		options.baseUrl =  self.rootPath
+
+		if imbaConfig.alias
+			let paths = options.paths = {}
+			for own key, value of imbaConfig.alias
+				paths[key] = [value]
+				paths[key + '/*'] = [value + '/*']
+
+		console.log 'starting with options',options
 
 		var servicesHost\LanguageServiceHost = {
 			getScriptFileNames:  do self.rootFiles
@@ -426,9 +434,9 @@ export class LanguageServer < Component
 			return []
 			
 		if trigger == '.' or ctx.textBefore.match(/\.[\w\$\-]*$/) or ctx.context == 'object' or ctx.textBefore.match(/Helper/)
-			console.log 'get completions directly',loc,options
+			# console.log 'get completions directly',loc,options
 			let tspitems = file.tspGetCompletionsAtPosition(loc,ctx,options)
-			console.log('tspitems',tspitems.length)
+			# console.log('tspitems',tspitems.length)
 			items.push(...tspitems)
 		else
 			# if the completion is part of an access - we want to
@@ -446,23 +454,42 @@ export class LanguageServer < Component
 		return items
 
 
-	def doResolve item
+	def doResolve item\CompletionItem
 		console.log 'resolving',item
 		if item and item.data.resolved
 			return item
 
 		let source = item.data.source
-
-		let prefs = {
+	
+		let prefs\UserPreferences = {
 			includeCompletionsForModuleExports: true,
 			includeCompletionsWithInsertText: true,
-			importModuleSpecifierPreference: "relative"
+			importModuleSpecifierPreference: "relative",
+			importModuleSpecifierEnding: "minimal"
 		}
+
 		let details = tls.getCompletionEntryDetails(item.data.path,item.data.loc,item.label,{},source,prefs)
 		if details
 			console.dir details, {depth: 8}
 			item.detail = ts.displayPartsToString(details.displayParts)
 			item.documentation = ts.displayPartsToString(details.documentation)
+
+			let actions = details.codeActions || []
+			
+
+			if actions[0] and actions[0].changes
+				// additionalTextEdits.push(...change.textChanges.map(typeConverters.TextEdit.fromCodeEdit));
+				let additionalEdits = []
+				for change in actions[0].changes
+					let file = getImbaFile(change.fileName)
+
+					for textedit in change.textChanges
+						let range = file.textSpanToRange(textedit.span)
+						console.log 'additional change here',textedit,range
+						additionalEdits.push(range: range, newText: textedit.newText)
+
+				item.additionalTextEdits = additionalEdits
+
 			delete item.data
 		return item
 

@@ -35,6 +35,7 @@ ls.addFile(rootFile)
 ls.addFile('completion.js')
 # console.log ls.rootFiles
 ls.emitRootFiles()
+
 if false
 	ls.getSemanticDiagnostics()
 	ls.$updateFile('component.imba') do |content| content.replace(/@titl\b/,'@titls')
@@ -55,12 +56,23 @@ if true
 		console.log 'found index',idx
 		last = idx + 2
 		console.log file.getContextAtLoc(idx)
-	console.log file.getContextAtLoc(301)
-	console.dir file.getSymbols(), { depth: 6 }
-	console.log file.textSpanToRange({ start: 229, length: 11 })
-	console.log util.fastExtractSymbols(content)
+		let completions = ls.getCompletionsAtPosition(file.uri,idx,{})
+		console.log completions
 
-	console.log file.$decorations
+	if false
+		console.log file.getContextAtLoc(301)
+		console.dir file.getSymbols(), { depth: 6 }
+		console.log file.textSpanToRange({ start: 229, length: 11 })
+		console.log util.fastExtractSymbols(content)
+	
+	console.log file.textSpanToRange({ start: 32, length: 0 })
+	console.log file.textSpanToRange({ start: 51, length: 0 })
+	console.log file.textSpanToRange({ start: 21, length: 0 })
+	console.log file.originalLocFor(21)
+	console.log file.originalLocFor(32)
+	console.log file.originalLocFor(51)
+
+	# console.log file.$decorations
 
 	# console.log ls.getCompletionsAtPosition('completion.imba',89)
 	

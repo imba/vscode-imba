@@ -259,12 +259,14 @@ export class File < Component
 
 	def originalRangeFor {start,length}
 		let spans = originalRangesFor(start)
-		if spans.length > 0
-			for span in spans
+		let hits = spans.length
+		if hits > 0
+			for span,i in spans
 				let loff = start - span[0]
 				let roff = (start + length) - span[1]
 				if loff == 0 and roff == 0
 					return {start: span[2],length: span[3] - span[2], end: span[3]}
+				
 		return null
 
 	# need a better converter
@@ -309,6 +311,9 @@ export class File < Component
 		return null
 
 	def textSpanToRange span
+		if span.length == 0
+			let pos = positionAt(originalLocFor(span.start))
+			return {start: pos,end: pos}
 		let range = originalRangeFor(span)
 		if range
 			# let start = @originalLocFor(span.start)
