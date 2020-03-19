@@ -17,3 +17,6 @@ export class Component
 
 	def $flush name
 		$call(name) if $timeouts[name]
+
+	def log ...params
+		console.log(...params)

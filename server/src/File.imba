@@ -352,6 +352,20 @@ export class File < Component
 
 		return []
 
+	def getCompletionsAtPosition loc, options = {}
+		let ctx = getContextAtLoc(loc)
+		let items = []
+		let trigger = options.triggerCharacter
+
+		let tls-options = {
+			triggerCharacter: trigger
+			includeCompletionsForModuleExports: true,
+			includeCompletionsWithInsertText: true
+		}
+
+		if ctx.context == 'params' or ctx.context == 'naming'
+			return []
+
 
 	def getSymbols
 		let tree = tls.getNavigationTree(lsPath)
@@ -359,10 +373,12 @@ export class File < Component
 			return if item.kind == 'alias' or item.text == 'meta$'
 			
 			let span = item.nameSpan
-
+			// console.log 'converting symbol',item
 			if item.kind == 'constructor'
 				span = {start: item.spans[0].start, length: 11}
-
+			
+			return unless span
+			
 			let name = util.tsp2lspSymbolName(item.text)
 			let range = textSpanToRange(span)
 			let kind = util.convertSymbolKind(item.kind)
@@ -382,8 +398,12 @@ export class File < Component
 				children: children.map(conv).filter(do !!$1)
 			}
 		try
-			return tree.childItems.map(conv).filter(do !!$1)
+			
+			let symbols = tree.childItems.map(conv).filter(do !!$1)
+			// console.log 'tree returned from typescript',symbols
+			return symbols
 		catch e
+			console.log 'getSymbols error',e
 			return []
 
 	def getContextAtLoc loc

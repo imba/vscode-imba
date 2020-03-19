@@ -109,6 +109,7 @@ export def tsp2lspCompletions items, {file,jsLoc,meta=null}
 				path: file.lsPath
 				origKind: kind
 				kindModifiers: entry.kindModifiers
+				source: entry.source
 			}
 		}
 		for mod in modifiers when mod
@@ -292,6 +293,14 @@ export def fastExtractContext code, loc
 	if res.bracket == '{'
 		res.context = 'object'
 
+	let context-rules = [
+		[/(def|set) [\w\$]+[\s\(]/,'params']
+		[/(def|set|get|prop|attr|class|tag) $/,'naming']
+	]
+
+	for rule in context-rules
+		if res.textBefore.match(rule[0])
+			break res.context = rule[1]
 	
 	# could use the actual lexer to get better info about this?
 	

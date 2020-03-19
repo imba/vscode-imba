@@ -75,7 +75,8 @@
 			"[imba]": {
 				"editor.insertSpaces": false,
 				"editor.tabSize": 4,
-				"editor.autoIndent": "advanced"
+				"editor.autoIndent": "advanced",
+				"editor.suggest.showWords": false
 			}
 		},
 		"languages": [

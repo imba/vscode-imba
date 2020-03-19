@@ -3,7 +3,7 @@ import {snippets} from './snippets'
 import {IConnection,InitializeParams,TextDocuments,Location,LocationLink,MarkedString,DocumentSymbol,InsertTextFormat,ReferenceParams} from 'vscode-languageserver'
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import {CompletionItemKind,SymbolKind} from 'vscode-languageserver-types'
-import {CompilerOptions,LanguageService} from 'typescript'
+import {CompilerOptions,LanguageService,LanguageServiceHost} from 'typescript'
 
 import {URI} from 'vscode-uri'
 
@@ -45,6 +45,8 @@ var tsServiceOptions\CompilerOptions = {
 	incremental: true
 	target: ts.ScriptTarget.Latest
 	lib: ['lib.es6.d.ts']
+	forceConsistentCasingInFileNames: true
+	
 	moduleResolution: ts.ModuleResolutionKind.NodeJs
 }
 
@@ -56,7 +58,7 @@ export class LanguageServer < Component
 
 	def resolveConfigFile dir
 		return null if !dir or (dir == path.dirname(dir))
-
+		
 		let src = path.resolve(dir,'imbaconfig.json')
 		if fs.existsSync(src)
 			let resolver = do |key,value|
@@ -94,12 +96,15 @@ export class LanguageServer < Component
 		
 	def createTypeScriptService
 		return if imbaConfig.legacy
-		
-		# @type {ts.LanguageServiceHost}
-		var servicesHost = {
+	
+		var options\CompilerOptions = Object.assign({},tsServiceOptions)
+		options.baseUrl =  self.rootPath
+
+		var servicesHost\LanguageServiceHost = {
 			getScriptFileNames:  do self.rootFiles
 			getProjectVersion:   do '' + self.version
 			getTypeRootsVersion: do 1
+			useCaseSensitiveFileNames: do yes
 
 			getScriptVersion: do |fileName|
 				let version = self.files[fileName] ? String(self.files[fileName].version.toString()) : "1"
@@ -119,13 +124,28 @@ export class LanguageServer < Component
 				return snapshot
 			
 			getCurrentDirectory: do self.rootPath
-			getCompilationSettings: do tsServiceOptions
+			getCompilationSettings: do options
 			getDefaultLibFileName: do |options| ts.getDefaultLibFilePath(options)
 			fileExists: self.fileExists.bind(self)
 			readFile: self.readFile.bind(self)
 			writeFile: self.writeFile.bind(self)
 			readDirectory: ts.sys.readDirectory
+			getNewLine: do '\n'
 		}
+
+		var resolutionHost = {
+			fileExists: self.fileExists.bind(self)
+			readFile: self.readFile.bind(self)
+		}
+
+		// servicesHost.resolveModuleNames = do |moduleNames,containingFile,reusedNames,redirectedReference,options2|
+		// 	# console.log 'resolve module names',containingFile,moduleNames
+		// 	for name in moduleNames
+		// 		let result = ts.resolveModuleName(name, containingFile, options,resolutionHost)
+		// 		result.resolvedModule
+		// 	# return []
+		// 	# moduleNames: string[], containingFile: string, reusedNames: string[] | undefined, redirectedReference: ResolvedProjectReference | undefined, options: CompilerOptions
+		
 		self.tls = ts.createLanguageService(servicesHost,ts.createDocumentRegistry!)
 		
 	def invalidate
@@ -393,12 +413,19 @@ export class LanguageServer < Component
 				self.connection.sendNotification('closeAngleBracket',{location: loc,position: pos, uri: uri})
 
 			let items = self.entities.getTagNameCompletions(options)
-			return {isIncomplete: false, items: items}
+			return items
 
 		elif trigger == '<'
 			return
+
+		elif ctx.context == 'params'
+			// No completions inside params atm
+			return []
+
+		elif ctx.context == 'naming'
+			return []
 			
-		if trigger == '.' or ctx.textBefore.match(/\.[\w\$\-]*$/) or ctx.context == 'object'
+		if trigger == '.' or ctx.textBefore.match(/\.[\w\$\-]*$/) or ctx.context == 'object' or ctx.textBefore.match(/Helper/)
 			console.log 'get completions directly',loc,options
 			let tspitems = file.tspGetCompletionsAtPosition(loc,ctx,options)
 			console.log('tspitems',tspitems.length)
@@ -416,111 +443,24 @@ export class LanguageServer < Component
 			# add tag completions as well?
 
 		items = self.entities.normalizeCompletions(items,ctx)
-		console.log 'return items',items
+		return items
 
-		return {isIncomplete: false, items: items}
-		
-		let jsLoc = context.jsLoc or file.generatedLocFor(loc)
-	
-		# return custom completions not based on typescript
-		if ctx.context == 'tag'
-			items = self.entities.getCompletionsForContext(uri,pos,ctx)
-			if trigger == '<'
-				items.unshift(
-					label: 'none'
-					insertText: '  '
-					commitCharacters: [' ']
-					sortText: '00'
-					kind: CompletionItemKind.Field
-					preselect: yes
-					data: { resolved: true }
-				)
-				console.log 'added item?',items[0]
-			return {isIncomplete: false, items: items}
-
-		if types.tagName
-			# console.log 'completion here!'
-			let items = for own name,ctor of TAG_NAMES
-				{
-					uri: uri,
-					position: pos,
-					label: name.replace('_',':'),
-					kind: CompletionItemKind.Field,
-					sortText: name
-					data: { resolved: true }
-				}
-			return {isIncomplete: false, items: items}
-
-		let res = tls.getCompletionsAtPosition(file.lsPath,jsLoc,options)
-		
-		if res
-			if self.debug
-				console.log 'complete',uri,loc,jsLoc,res.isNewIdentifierLocation,res.isGlobalCompletion
-				console.log 'completions!!',res.entries && res.entries.filter(do $1.kindModifiers).map(do [$1.name,$1.kindModifiers,$1.insertText])
-
-			let entryFor = do |entry|
-				let name = entry.name
-				let m
-				
-				if name.match(/^is([A-Z])/)
-					name = name[2].toLowerCase() + name.slice(3) + '?'
-				elif name.match(/^do([A-Z])/)
-					name = name[2].toLowerCase() + name.slice(3) + '!'
-		
-				let completion = {
-					label: name,
-					kind: util.convertCompletionKind(entry.kind,entry),
-					sortText: entry.sortText
-					data: {
-						loc: jsLoc
-						path: file.lsPath
-						origKind: entry.kind
-					}
-				}
-				
-				if entry.kind == 'method' and !name.match(/[\!\/?]$/)
-					completion.insertText = name.replace(/\$/g,'\\$') + '($1)$0'
-					completion.insertTextFormat = InsertTextFormat.Snippet
-				elif entry.insertText
-					yes
-						
-				if entry.source
-					completion.sortText = '\uffff' + entry.sortText
-					
-				if entry.isRecommended
-					completion.preselect = true
-
-				return completion
-
-			let items = res.entries.map(entryFor).filter(do $1)
-			
-
-			if res.isMemberCompletion
-				items = items.filter do $1.kind != CompletionItemKind.Text
-
-			let out = {
-				isIncomplete: false,
-				items: items
-			}
-
-			return out
-
-		return {
-			isIncomplete: false,
-			items: []
-		}
 
 	def doResolve item
 		console.log 'resolving',item
 		if item and item.data.resolved
 			return item
-		let source = undefined
+
+		let source = item.data.source
+
 		let prefs = {
-			includeCompletionsWithInsertText: true
+			includeCompletionsForModuleExports: true,
+			includeCompletionsWithInsertText: true,
+			importModuleSpecifierPreference: "relative"
 		}
-		let details = tls.getCompletionEntryDetails(item.data.path,item.data.loc,item.label,undefined,source,prefs)
+		let details = tls.getCompletionEntryDetails(item.data.path,item.data.loc,item.label,{},source,prefs)
 		if details
-			console.log details
+			console.dir details, {depth: 8}
 			item.detail = ts.displayPartsToString(details.displayParts)
 			item.documentation = ts.displayPartsToString(details.documentation)
 			delete item.data

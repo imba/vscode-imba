@@ -106,6 +106,9 @@ connection.onHover do |event|
 connection.onCompletion do |event|
 	console.log "oncompletion",event
 	let res = server.getCompletionsAtPosition(event.textDocument.uri,event.position,event.context)
+	if res isa Array
+		res = {isIncomplete: false, items: res}
+
 	console.log res && res.items.slice(0,2)
 
 	return res
