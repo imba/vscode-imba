@@ -30,7 +30,6 @@ export class File < Component
 		imbaPath = path.replace(/\.(imba|js|ts)$/,'.imba')
 		lsPath   = jsPath
 
-		# console.log "created file {path}"
 		program.files[lsPath] = self
 		program.files[imbaPath] = self
 		program.files.push(self)
@@ -336,27 +335,6 @@ export class File < Component
 		if let result = tls.getCompletionsAtPosition(lsPath,toffset,options)
 			return util.tsp2lspCompletions(result.entries,file: self, jsLoc: toffset)
 		return []
-	
-	def getMemberCompletionsForPath ref, context
-		# ref could be like ClassName.prototype
-		
-		# remove the last part
-		ref = ref.replace(/[\w\-]+$/,'')
-		
-		if js
-			let typ = ref.slice(-1)
-			let cls = ref.slice(0,-1)
-			let comment = "/*¡{cls}*/"
-			let loc = js.indexOf(comment)
-			
-			if loc and loc > 0
-				if typ == '#'
-					loc = loc + (comment + 'prototype.').length
-
-				if let result = tls.getCompletionsAtPosition(lsPath,loc,{})
-					return util.tsp2lspCompletions(result.entries,file: self, jsLoc: loc, meta: {member: yes})
-
-		return []
 
 	def getCompletionsAtPosition loc, options = {}
 		let ctx = getContextAtLoc(loc)
@@ -370,10 +348,10 @@ export class File < Component
 			includeCompletionsWithInsertText: true
 		}
 
-		if ctx.context == 'params' or ctx.context == 'naming'
+		if ctx.context == 'params' or ctx.context == 'naming' or ctx.context == 'tag'
 			return []
 
-		if ctx.context == 'supertag'
+		if ctx.context == 'supertag' or ctx.context == 'tagname'
 			return ils.entities.getTagNameCompletions(options)
 		
 		if ctx.context == 'superclass'

@@ -73,7 +73,6 @@ export class LanguageServer < Component
 
 	def constructor(connection\IConnection, documents\TextDocuments, params\InitializeParams, o = {})
 		super
-
 		self.files = []
 		self.documents = documents
 		self.connection = connection
@@ -85,7 +84,7 @@ export class LanguageServer < Component
 		self.version = 0
 		self.debug = !!o.debug
 		self.cache = {}
-		console.log('imba config',imbaConfig)
+		log('imba config',imbaConfig)
 
 		for item in imbaConfig.entries
 			self.rootFiles.push(item.input)
@@ -106,7 +105,7 @@ export class LanguageServer < Component
 				paths[key] = [value]
 				paths[key + '/*'] = [value + '/*']
 
-		console.log 'starting with options',options
+		log 'starting with options',options
 
 		var servicesHost\LanguageServiceHost = {
 			getScriptFileNames:  do self.rootFiles
@@ -182,9 +181,6 @@ export class LanguageServer < Component
 	def getProgram
 		tls.getProgram()
 
-	def log ...params
-		console.log(...params)
-
 	# comment about the source file?
 	def sourceFileExists fileName\string
 		if let file = self.files[fileName]
@@ -206,34 +202,34 @@ export class LanguageServer < Component
 		var source = self.files[fileName]
 
 		if source
-			self.log("compile file {source.imbaPath}")
+			log("compile file {source.imbaPath}")
 			source.compile()
 			return String(source.js)
 
 		return ts.sys.readFile(fileName)
 
 	def writeFile fileName, contents
-		self.log "writeFile",fileName
+		log "writeFile",fileName
 		return
 
 	// Used for testing mainly
 	def $updateFile fileName, append
-		fileName = path.resolve(self.rootPath,fileName)
+		fileName = path.resolve(rootPath,fileName)
 
 		if let file = self.files[fileName]
-			let t = Date.now()
-			self.log 'found file!',fileName,file.version
-			file.getSourceContent()
+			let t = Date.now!
+			log 'found file!',fileName,file.version
+			file.getSourceContent!
 			if append isa Function
 				file.content = append(file.content)
 			elif typeof append == 'string'
 				file.content += append
 
 			file.version++
-			file.invalidate()
+			file.invalidate!
 			self.version++
-			file.emitFile()
-			self.log 'updatedFile',fileName,Date.now() - t
+			file.emitFile!
+			log 'updatedFile',fileName,Date.now! - t
 		return
 
 	def removeFile fileName
@@ -250,7 +246,7 @@ export class LanguageServer < Component
 		let map = {}
 
 		for entry in entries
-			console.log 'diagnostic entry',entry.file.fileName
+			# console.log 'diagnostic entry',entry.file.fileName
 			if let file = files[entry.file.fileName]
 				let items = map[file.jsPath] ||= []
 				items.push(entry)
@@ -261,34 +257,30 @@ export class LanguageServer < Component
 		self
 
 	def getSemanticDiagnostics
-		let t = Date.now()
-		let entries = tls.getProgram().getSemanticDiagnostics()
+		let t = Date.now!
+		let entries = tls.getProgram!.getSemanticDiagnostics!
 
 		let info = entries.map do
 			[$1.file.fileName,$1.messageText,$1.start,$1.length,$1.relatedInformation,$1]
-		# let decl = @service.getProgram().getDeclarationDiagnostics()
-		console.log 'got diagnostics',Date.now() - t,info
+
 		return
 
 	def inspectProgram
-		let program = tls.getProgram()
-		let files = program.getSourceFiles().map do
-			$1.fileName
-		let file 
+		let program = tls.getProgram!
+		let files = program.getSourceFiles!.map do $1.fileName
 		console.log files
 
 	def inspectFile fileName
-		fileName = path.resolve(self.rootPath,fileName)
-		let program = tls.getProgram()
+		fileName = path.resolve(rootPath,fileName)
+		let program = tls.getProgram!
 		let sourceFile = program.getSourceFile(fileName)
-		# let deps = program.getAllDependencies(sourceFile)
 		console.log sourceFile,sourceFile.referencedFiles
 
 	# methods for vscode
 	def onDidOpen event
 		let doc = event.document
 		let src = util.uriToPath(event.document.uri)
-		self.log('onDidOpen',src)
+		log('onDidOpen',src)
 		let existing = self.files[src]
 		let file = self.getImbaFile(src)
 
@@ -313,9 +305,9 @@ export class LanguageServer < Component
 		let version = self.version
 		
 		for entry in event.files
-			console.log 'renamed file?',entry.oldUri.path
+			log 'renamed file?',entry.oldUri.path
 			if let file = self.files[entry.oldUri.path]
-				console.log 'found renamed file!',file.imbaPath
+				# console.log 'found renamed file!',file.imbaPath
 				file.dispose()
 
 		if self.version != version
@@ -361,7 +353,7 @@ export class LanguageServer < Component
 			# console.log 'definitions!',sourceSpan,sourceText,isLink
 
 			var defs = for item of info.definitions
-				console.log 'get definition',item
+				# console.log 'get definition',item
 				let ifile = self.files[item.fileName]
 				if ifile
 					# console.log 'definition',item
@@ -383,27 +375,16 @@ export class LanguageServer < Component
 				else
 					let span = util.textSpanToRange(item.contextSpan or item.textSpan,item.fileName,tls)
 					if isLink
-						LocationLink.create(
-							util.pathToUri(item.fileName),
-							span,
-							span,
-							sourceSpan
-						)
+						LocationLink.create(util.pathToUri(item.fileName),span,span,sourceSpan)
 					else
 						Location.create(util.pathToUri(item.fileName),span)
 			return defs
-		# if let info = file.getDefinitionAtPosition(loc)
-		#	return info
 
 	# should delegate this through to the file itself
 	def getCompletionsAtPosition uri, pos, context = {}
-		let file = self.getImbaFile(uri)
-		let loc = typeof pos == 'number' ? pos : self.documents.get(uri).offsetAt(pos)
+		let file = getImbaFile(uri)
+		let loc = typeof pos == 'number' ? pos : documents.get(uri).offsetAt(pos)
 		let ctx = file.getContextAtLoc(loc)
-		let items = []
-		let TAG_START = /(\> |^\s*|[\[\(])\<$/
-
-		self.log('completions context',ctx,loc)
 
 		let options = {
 			triggerCharacter: context.triggerCharacter
@@ -411,58 +392,11 @@ export class LanguageServer < Component
 			includeCompletionsWithInsertText: true
 		}
 	
-		if ctx.textBefore.match(TAG_START) and context.triggerCharacter == '<'
+		if ctx.context == 'tagname' and context.triggerCharacter == '<'
 			options.autoclose = yes
-			self.connection.sendNotification('closeAngleBracket',{location: loc,position: pos, uri: uri})
-			# let items = self.entities.getTagNameCompletions(options)
-			# return items
+			connection.sendNotification('closeAngleBracket',{location: loc,position: pos, uri: uri})
 
 		return file.getCompletionsAtPosition(loc,options)
-
-		if true
-			return
-
-		elif ctx.context == 'params'
-			// No completions inside params atm
-			return []
-
-		elif ctx.context == 'naming'
-			return []
-
-		elif ctx.context == 'supertag'
-			items = self.entities.getTagNameCompletions(options)
-
-		elif ctx.context == 'superclass'
-			items = self.entities.getTagNameCompletions(options)
-		
-		// ask ts directly if we are in a context where we cannot just do completions from scope
-		elif ctx.textBefore.match(/\.[\w\$\-]*$/) or ctx.context == 'object'
-			# console.log 'get completions directly',loc,options
-			let tspitems = file.tspGetCompletionsAtPosition(loc,ctx,options)
-			# console.log('tspitems',tspitems.length)
-			items.push(...tspitems)
-		else
-			# if the completion is part of an access - we want to
-			# redirect directly to typescript?
-			let snippets = self.entities.getSnippetsForContext(ctx)
-			items.push(...snippets)
-
-			if ctx.scope.tloc
-				let toffset = ctx.scope.tloc.offset
-				console.log 'find ts location at loc',toffset
-				if let result = tls.getCompletionsAtPosition(file.lsPath,toffset,options)
-					items.push(...util.tsp2lspCompletions(result.entries,file: file, jsLoc: toffset))
-
-			else
-				let find = ctx.path.replace(/[\w\-]+$/,'')
-				let members = file.getMemberCompletionsForPath(find,ctx)
-				items.push(...members)
-
-			# add tag completions as well?
-
-		items = self.entities.normalizeCompletions(items,ctx)
-		return items
-
 
 	def doResolve item\CompletionItem
 		console.log 'resolving',item

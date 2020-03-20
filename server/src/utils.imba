@@ -209,6 +209,55 @@ export def fastExtractSymbols text
 	
 	return symbols
 
+export def fastParseCode code
+	let stack = [{type: 'code',start: 0}]
+	let len = code.length
+	let pairs = []
+	let pairers = {
+		'{':'}',
+		'(':')',
+		'[':']',
+		'"': '"'
+		"'": "'"
+		"`": "`"
+	}
+	let i = 0
+
+	let ctx = stack[0]
+
+	let push = do(typ,o={})
+		ctx = Object.assign(o,type: typ,up: ctx,start: i)
+		ctx[typ] = 1
+		stack.push(ctx)
+
+	let pop = do
+		ctx = ctx.up
+		stack.pop()
+
+	while i < len
+		let chr = code[i++]
+
+		if chr == '<' and code[i].match(/[\w\{\[\.]/)
+			push('tag')
+		elif chr == '>' and ctx.tag
+			pop()
+
+		elif pairers[chr]
+			push(chr,closer: pairers[chr])
+		elif ctx.closer == chr
+			pop()
+
+	if ctx.type == '{' and ctx.up.type.match(/tag|"|`/)
+		ctx.type = 'code'
+	if ctx.type == '(' or ctx.type == '['
+		ctx.type = 'code'
+	ctx.content = code.slice(ctx.start)
+	if ctx.type == 'tag'
+		if ctx.content.match(/\=\s*([^\s]*)$/)
+			ctx.type = 'code'
+	return ctx
+
+
 export def locationInString string, find, startFrom = 0
 	let index = string.indexOf(find,startFrom)
 	if index >= 0
@@ -233,32 +282,14 @@ export def fastExtractContext code, loc, compiled = ''
 	let res = {
 		loc: loc
 	}
-	
-	# first find the line and indentation 
-	while lft and (loc - lft) < 300
-		chr = code[--lft]
-		if chr == '>'
-			break
 
-		if chr == '<'
-			break
-
-	while rgt < (loc + 300)
-		chr = code[rgt++]
-		if chr == '>' or chr == ''
-			break
-			
 	let textBefore = code.slice(0,loc)
 	let textAfter = code.slice(loc)
 	
 	let lnstart = textBefore.lastIndexOf('\n')
 	let lnend = textAfter.indexOf('\n')
 	let linesBefore = textBefore.split('\n')
-	# find the indentation of the current line
-	# console.log loc,lft,rgt
-	res.start = lft
-	res.length = rgt - lft
-	# res.string = code.slice(lft,rgt)
+
 	res.textBefore = linesBefore[linesBefore.length - 1]
 	res.textAfter = textAfter.split('\n')[0]
 	
@@ -282,7 +313,7 @@ export def fastExtractContext code, loc, compiled = ''
 	res.scope = {type: 'root',root: yes,body: yes,tloc: {offset: 0}}
 
 	res.tagtree = []
-	res.scopes = []
+	# res.scopes = []
 	res.path = ""
 
 	# trace pairings etc
@@ -290,6 +321,7 @@ export def fastExtractContext code, loc, compiled = ''
 	let k = pre.length
 	let pairs = []
 	let pairable = '{}()[]'.split('')
+
 	while k > 0
 		let chr = pre[--k]
 		let idx = pairable.indexOf(chr)
@@ -299,9 +331,10 @@ export def fastExtractContext code, loc, compiled = ''
 		elif pairs[0] == chr
 			pairs.shift!
 		else
-			console.log 'found an unmatched pairing!'
 			res.bracket = chr
 			break
+
+	let ctx = fastParseCode(pre)
 	
 	if res.bracket == '{'
 		res.context = 'object'
@@ -310,14 +343,18 @@ export def fastExtractContext code, loc, compiled = ''
 		[/(def|set) [\w\$]+[\s\(]/,'params']
 		[/(class) ([\w\-\:]+) < ([\w\-]*)$/,'superclass']
 		[/(tag) ([\w\-\:]+) < ([\w\-]*)$/,'supertag']
-		[/(def|set|get|prop|attr|class|tag) $/,'naming']
+		[/(def|set|get|prop|attr|class|tag) ([\w\-]*)$/,'naming']
+		[/\<([\w\-\:]*)$/,'tagname']
 	]
 
 	for rule in context-rules
 		if res.textBefore.match(rule[0])
 			break res.context = rule[1]
 	
+	unless res.context
+		res.context = ctx.type
 	# find variables before this position?
+
 	let findFromIndex = 0
 	for line in indents
 		let scope
@@ -334,10 +371,9 @@ export def fastExtractContext code, loc, compiled = ''
 			match = "class {name}"
 			
 		elif let m = line.match(/^(static )?(def|get|set|prop) ([\w\-\$]+)/)
-			scope = {type: m[2], name: m[3],body: yes,parent: res.scope}
+			scope = {type: m[2], name: m[3],body: yes,parent: res.scope,static: !!m[1]}
 			scope[m[2]] = m[3]
 			let name = res.methodName = m[3]
-			res.static = !!m[1]
 			res.path += (m[1] ? '.' : '#') + m[3]
 
 
@@ -350,68 +386,20 @@ export def fastExtractContext code, loc, compiled = ''
 
 			match = m[1] + match if m[1]
 
+
 		elif let m = line.match(/^\<([\w\-]+)/)
+			# find something
 			res.tagtree.push(m[1])
 			res.scope.html = yes
-		
+
 		if match and scope
-			scope.matcher = match
 			if let m = locationInString(compiled,match,findFromIndex)
 				findFromIndex = m.offset
 				scope.tloc = m
 
 		if scope
-			res.scopes.push(scope)
+			# res.scopes.push(scope)
 			res.scope = scope
 
 	
-	
-	# could use the actual lexer to get better info about this?
-	
-	if code[lft] == '<' && code[rgt - 1] == '>' and code.substr(lft,4).match(/^\<[\w\{\[\.\#\>]/)
-		res.context = 'tag'
-		res.string = code.slice(lft,rgt)
-		res.tagName = (res.string.match(/\<([\w\-\:]+)/) or [])[1]
-		res.before = code.slice(lft,loc)
-		res.after = code.slice(loc,rgt)
-		res.pattern = res.before + '˘' + res.after
-		res.prefix = res.before[res.before.length - 1]
-		# should move forward 
-		let i = lft
-		let stack = []
-		let pairs = []
-		while i < loc
-			chr = code[i++]
-
-			if stack[0] == '('
-				if chr == ')'
-					stack.shift()
-					continue
-
-			if stack[0] == '{'
-				if chr == '}'
-					stack.shift()
-					continue 
-
-			if chr == '(' or chr == '{' or chr == '['
-				stack.unshift(chr)
-
-			elif chr == '<'
-				stack.unshift('tag')
-			elif chr == ' '
-				# if stack[0] == 'event'
-				# need to deal with 
-				stack.unshift('attr')
-			elif chr == '='
-				stack.unshift('value')
-			elif chr == ':'
-				stack.unshift('event')
-				# include the name of the event?
-			elif chr == '.'
-				if stack[0] == 'event' or stack[0] == 'modifier'
-					stack[0] = 'modifier'
-				else
-					stack.unshift('flag')
-
-		res.stack = stack
 	return res
