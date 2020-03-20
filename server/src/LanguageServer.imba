@@ -394,18 +394,15 @@ export class LanguageServer < Component
 			return defs
 		# if let info = file.getDefinitionAtPosition(loc)
 		#	return info
-	
+
 	# should delegate this through to the file itself
 	def getCompletionsAtPosition uri, pos, context = {}
 		let file = self.getImbaFile(uri)
-
 		let loc = typeof pos == 'number' ? pos : self.documents.get(uri).offsetAt(pos)
-		let types = {}
 		let ctx = file.getContextAtLoc(loc)
 		let items = []
-		let trigger = context.triggerCharacter
 		let TAG_START = /(\> |^\s*|[\[\(])\<$/
-		# console.log 'completions at line',ctx
+
 		self.log('completions context',ctx,loc)
 
 		let options = {
@@ -413,17 +410,16 @@ export class LanguageServer < Component
 			includeCompletionsForModuleExports: true,
 			includeCompletionsWithInsertText: true
 		}
+	
+		if ctx.textBefore.match(TAG_START) and context.triggerCharacter == '<'
+			options.autoclose = yes
+			self.connection.sendNotification('closeAngleBracket',{location: loc,position: pos, uri: uri})
+			# let items = self.entities.getTagNameCompletions(options)
+			# return items
 
-		if ctx.textBefore.match(TAG_START)
-			
-			if trigger == '<'
-				options.autoclose = yes
-				self.connection.sendNotification('closeAngleBracket',{location: loc,position: pos, uri: uri})
+		return file.getCompletionsAtPosition(loc,options)
 
-			let items = self.entities.getTagNameCompletions(options)
-			return items
-
-		elif trigger == '<'
+		if true
 			return
 
 		elif ctx.context == 'params'
@@ -432,8 +428,15 @@ export class LanguageServer < Component
 
 		elif ctx.context == 'naming'
 			return []
-			
-		if trigger == '.' or ctx.textBefore.match(/\.[\w\$\-]*$/) or ctx.context == 'object' or ctx.textBefore.match(/Helper/)
+
+		elif ctx.context == 'supertag'
+			items = self.entities.getTagNameCompletions(options)
+
+		elif ctx.context == 'superclass'
+			items = self.entities.getTagNameCompletions(options)
+		
+		// ask ts directly if we are in a context where we cannot just do completions from scope
+		elif ctx.textBefore.match(/\.[\w\$\-]*$/) or ctx.context == 'object'
 			# console.log 'get completions directly',loc,options
 			let tspitems = file.tspGetCompletionsAtPosition(loc,ctx,options)
 			# console.log('tspitems',tspitems.length)
@@ -444,9 +447,16 @@ export class LanguageServer < Component
 			let snippets = self.entities.getSnippetsForContext(ctx)
 			items.push(...snippets)
 
-			let find = ctx.path.replace(/[\w\-]+$/,'')
-			let members = file.getMemberCompletionsForPath(find,ctx)
-			items.push(...members)
+			if ctx.scope.tloc
+				let toffset = ctx.scope.tloc.offset
+				console.log 'find ts location at loc',toffset
+				if let result = tls.getCompletionsAtPosition(file.lsPath,toffset,options)
+					items.push(...util.tsp2lspCompletions(result.entries,file: file, jsLoc: toffset))
+
+			else
+				let find = ctx.path.replace(/[\w\-]+$/,'')
+				let members = file.getMemberCompletionsForPath(find,ctx)
+				items.push(...members)
 
 			# add tag completions as well?
 
@@ -475,21 +485,27 @@ export class LanguageServer < Component
 			item.documentation = ts.displayPartsToString(details.documentation)
 
 			let actions = details.codeActions || []
-			
+			let additionalEdits = []
+			let actionDescs = ''
+			for action in actions
+				actionDescs += action.description + '\n'
+				if let m = action.description.match(/Change '([^']+)' to '([^']+)'/)
+					console.log 'change action',m
+					if m[1] == (item.insertText or item.label)
+						item.insertText = m[2]
+						continue
 
-			if actions[0] and actions[0].changes
-				// additionalTextEdits.push(...change.textChanges.map(typeConverters.TextEdit.fromCodeEdit));
-				let additionalEdits = []
-				for change in actions[0].changes
+				for change in action.changes
 					let file = getImbaFile(change.fileName)
 
 					for textedit in change.textChanges
 						let range = file.textSpanToRange(textedit.span)
 						console.log 'additional change here',textedit,range
-						additionalEdits.push(range: range, newText: textedit.newText)
-
-				item.additionalTextEdits = additionalEdits
-
+						let text = textedit.newText.replace(/\;/g,'')
+						additionalEdits.push(range: range, newText: text)
+			item.detail = actionDescs + item.detail
+			item.additionalTextEdits = additionalEdits
+			console.log item
 			delete item.data
 		return item
 

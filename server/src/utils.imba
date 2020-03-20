@@ -101,9 +101,9 @@ export def tsp2lspCompletions items, {file,jsLoc,meta=null}
 
 		# console.log entry
 		if name.match(/^is([A-Z])/)
-			name = name[2].toLowerCase() + name.slice(3) + '?'
-		elif name.match(/^do([A-Z])/)
-			name = name[2].toLowerCase() + name.slice(3) + '!'
+			name = name[2].toLowerCase! + name.slice(3) + '?'
+		# elif name.match(/^do([A-Z])/)
+		#	name = name[2].toLowerCase() + name.slice(3) + '!'
 			
 		let item = {
 			label: name,
@@ -120,11 +120,15 @@ export def tsp2lspCompletions items, {file,jsLoc,meta=null}
 		for mod in modifiers when mod
 			item.data[mod] = true
 
+		if entry.insertText
+			if entry.insertText.indexOf('this.') == 0
+				item.data.implicitSelf = yes
+
 		# only drop these in certain cases
-		if kind == 'function' and item.data.declare
+		if kind == 'function' and item.data.declare and name.match(/^[a-z]/)
 			continue
 
-		if kind == 'var' and item.data.declare
+		if kind == 'var' and item.data.declare and name.match(/^[a-z]/)
 			continue unless globals[name]
 
 		Object.assign(item.data,meta) if meta
@@ -134,22 +138,22 @@ export def tsp2lspCompletions items, {file,jsLoc,meta=null}
 
 
 export def pascalCase str
-	str.replace(/(^|[\-\_\s])(\w)/g) do |m,v,l| l.toUpperCase
+	str.replace(/(^|[\-\_\s])(\w)/g) do |m,v,l| l.toUpperCase!
 
 export def camelCase str
 	str = String(str)
 	# should add shortcut out
-	str.replace(/([\-\_\s])(\w)/g) do |m,v,l| l.toUpperCase
+	str.replace(/([\-\_\s])(\w)/g) do |m,v,l| l.toUpperCase!
 
 export def dashToCamelCase str
 	str = String(str)
 	if str.indexOf('-') >= 0
 		# should add shortcut out
-		str = str.replace(/([\-\s])(\w)/g) do |m,v,l| l.toUpperCase
+		str = str.replace(/([\-\s])(\w)/g) do |m,v,l| l.toUpperCase!
 	return str
 
 export def kebabCase str
-	let out = str.replace(/([A-Z])/g) do |m,l| '-' + l.toLowerCase()
+	let out = str.replace(/([A-Z])/g) do |m,l| '-' + l.toLowerCase!
 	out[0] == '-' ? out.slice(1) : out
 
 
@@ -205,7 +209,23 @@ export def fastExtractSymbols text
 	
 	return symbols
 
-export def fastExtractContext code, loc
+export def locationInString string, find, startFrom = 0
+	let index = string.indexOf(find,startFrom)
+	if index >= 0
+		let br = string.indexOf('\n',index)
+		let res = {offset: br >= 0 ? br : index}
+		if find[find.length - 1] == '{'
+			res.offset = index + find.length
+
+		let k = index
+		let l = string.length
+		let pair = []
+		# while k < l
+		#	let letter = string[k++]
+		return res
+	return null
+
+export def fastExtractContext code, loc, compiled = ''
 	let lft = loc
 	let rgt = loc
 	let len = code.length
@@ -259,33 +279,13 @@ export def fastExtractContext code, loc
 			indents.unshift(line.slice(ind))
 	
 	res.indents = indents
-	res.scope = {type: 'root',root: yes,body: yes}
+	res.scope = {type: 'root',root: yes,body: yes,tloc: {offset: 0}}
+
 	res.tagtree = []
+	res.scopes = []
 	res.path = ""
-	
-	# find variables before this position?
-	for line in indents
-		let scope
-		if let m = line.match(/^(export )?(tag|class) ([\w\-\:]+)/)
-			scope = {type: m[2], name: m[3],parent: res.scope}
-			scope[m[2]] = m[3]
-			res.className = m[3]
-			res.path += res.className
-			
-		elif let m = line.match(/^(static )?(def|get|set|prop) ([\w\-\$]+)/)
-			scope = {type: m[2], name: m[3],body: yes,parent: res.scope}
-			scope[m[2]] = m[3]
-			res.methodName = m[3]
-			res.static = !!m[1]
-			res.path += (m[1] ? '.' : '#') + m[3]
 
-		elif let m = line.match(/^\<([\w\-]+)/)
-			res.tagtree.push(m[1])
-			res.scope.html = yes
-			
-		if scope
-			res.scope = scope
-
+	# trace pairings etc
 	let pre = res.indents.join('  ')
 	let k = pre.length
 	let pairs = []
@@ -308,12 +308,63 @@ export def fastExtractContext code, loc
 
 	let context-rules = [
 		[/(def|set) [\w\$]+[\s\(]/,'params']
+		[/(class) ([\w\-\:]+) < ([\w\-]*)$/,'superclass']
+		[/(tag) ([\w\-\:]+) < ([\w\-]*)$/,'supertag']
 		[/(def|set|get|prop|attr|class|tag) $/,'naming']
 	]
 
 	for rule in context-rules
 		if res.textBefore.match(rule[0])
 			break res.context = rule[1]
+	
+	# find variables before this position?
+	let findFromIndex = 0
+	for line in indents
+		let scope
+		let match = null
+		if let m = line.match(/^(export )?(tag|class) ([\w\-\:]+)/)
+			scope = {type: m[2], name: m[3],parent: res.scope, tloc: null}
+			scope[m[2]] = m[3]
+			let name = res.className = m[3]
+			res.path += res.className
+			# try to find 
+			if m[2] == 'tag'
+				name = pascalCase(name) + 'Component'
+
+			match = "class {name}"
+			
+		elif let m = line.match(/^(static )?(def|get|set|prop) ([\w\-\$]+)/)
+			scope = {type: m[2], name: m[3],body: yes,parent: res.scope}
+			scope[m[2]] = m[3]
+			let name = res.methodName = m[3]
+			res.static = !!m[1]
+			res.path += (m[1] ? '.' : '#') + m[3]
+
+
+			if scope.type == 'prop'
+				match = m[1] ? '$static$(){' : '$member$(){' # "{name}"
+			elif scope.type == 'def'
+				match = "{name}("
+			else
+				match = "{scope.type} {name}("
+
+			match = m[1] + match if m[1]
+
+		elif let m = line.match(/^\<([\w\-]+)/)
+			res.tagtree.push(m[1])
+			res.scope.html = yes
+		
+		if match and scope
+			scope.matcher = match
+			if let m = locationInString(compiled,match,findFromIndex)
+				findFromIndex = m.offset
+				scope.tloc = m
+
+		if scope
+			res.scopes.push(scope)
+			res.scope = scope
+
+	
 	
 	# could use the actual lexer to get better info about this?
 	

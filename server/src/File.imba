@@ -186,6 +186,7 @@ export class File < Component
 		cache = {
 			srclocs: {}
 			genlocs: {}
+			contexts: {}
 			symbols: null
 		}
 		self
@@ -328,12 +329,12 @@ export class File < Component
 		return content.slice(start,end)
 	
 	
-	def tspGetCompletionsAtPosition loc, ctx, options
-		$flush('emitFile')
-		let tsploc = generatedLocFor(loc)
+	def tspGetCompletionsAtPosition toffset, ctx, options
+		# $flush('emitFile')
+		# let tsploc = generatedLocFor(loc)
 		# console.log 'get tsp completions',loc,tsploc
-		if let result = tls.getCompletionsAtPosition(lsPath,tsploc,options)
-			return util.tsp2lspCompletions(result.entries,file: self, jsLoc: tsploc)
+		if let result = tls.getCompletionsAtPosition(lsPath,toffset,options)
+			return util.tsp2lspCompletions(result.entries,file: self, jsLoc: toffset)
 		return []
 	
 	def getMemberCompletionsForPath ref, context
@@ -360,16 +361,43 @@ export class File < Component
 	def getCompletionsAtPosition loc, options = {}
 		let ctx = getContextAtLoc(loc)
 		let items = []
-		let trigger = options.triggerCharacter
+		let tloc = ctx.scope.tloc && ctx.scope.tloc.offset
+		let snippets = ils.entities.getSnippetsForContext(ctx)
 
 		let tls-options = {
-			triggerCharacter: trigger
+			triggerCharacter: options.triggerCharacter
 			includeCompletionsForModuleExports: true,
 			includeCompletionsWithInsertText: true
 		}
 
 		if ctx.context == 'params' or ctx.context == 'naming'
 			return []
+
+		if ctx.context == 'supertag'
+			return ils.entities.getTagNameCompletions(options)
+		
+		if ctx.context == 'superclass'
+			tloc = 0
+
+		if ctx.scope.tag or ctx.scope.class
+			return snippets
+
+		# direct acceess on an object -- we need to make sure file is compiled?
+		if ctx.textBefore.match(/\.[\w\$\-]*$/) or ctx.context == 'object'
+			# console.log 'get completions directly',loc,options
+			$flush('emitFile')
+			tloc = generatedLocFor(loc)
+			# let tspitems = tspGetCompletionsAtPosition(loc,ctx,options)
+
+		if typeof tloc == 'number'
+			if let found = tls.getCompletionsAtPosition(lsPath,tloc,options)
+				items = util.tsp2lspCompletions(found.entries,file: self, jsLoc: tloc)
+
+		# returning these
+		return items.filter do(item)
+			if ctx.context == 'superclass' and item.label.match(/^[a-z]/)
+				return no
+			return yes
 
 
 	def getSymbols
@@ -412,4 +440,4 @@ export class File < Component
 			return []
 
 	def getContextAtLoc loc
-		return util.fastExtractContext(getSourceContent!,loc)
+		return cache.contexts[loc] ||= util.fastExtractContext(getSourceContent!,loc,js)
