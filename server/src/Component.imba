@@ -19,4 +19,10 @@ export class Component
 		$call(name) if $timeouts[name]
 
 	def log ...params
-		console.log(...params)
+		# console.log(...params)
+		return
+	
+	def inspect object
+		# console.dir(object, depth: 10)
+		return
+		

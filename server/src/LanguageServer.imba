@@ -1,8 +1,8 @@
 import {Component} from './Component'
 import {snippets} from './snippets'
-import {IConnection,InitializeParams,TextDocuments,Location,LocationLink,MarkedString,DocumentSymbol,InsertTextFormat,ReferenceParams,CompletionItem} from 'vscode-languageserver'
+import {IConnection,InitializeParams,TextDocuments,Location,LocationLink,MarkedString,DocumentSymbol,InsertTextFormat,ReferenceParams,CompletionItem, RenameRequest} from 'vscode-languageserver'
 import { TextDocument } from 'vscode-languageserver-textdocument'
-import {CompletionItemKind,SymbolKind} from 'vscode-languageserver-types'
+import {CompletionItemKind,SymbolKind, WorkspaceEdit} from 'vscode-languageserver-types'
 import {CompilerOptions,LanguageService,LanguageServiceHost,UserPreferences} from 'typescript'
 
 import {URI} from 'vscode-uri'
@@ -18,13 +18,6 @@ var fs = require 'fs'
 var ts = require 'typescript'
 var glob = require 'glob'
 var imbac = require 'imba/dist/compiler.js'
-import htmlData from './html-data.json'
-
-# var html-data = require './html-data.json'
-var html-elements = {}
-
-for item in htmlData.tags
-	html-elements[item.name] = item
 
 var tsServiceOptions\CompilerOptions = {
 	allowJs: true
@@ -123,7 +116,6 @@ export class LanguageServer < Component
 					return undefined
 
 				if let file = self.files[fileName]
-					# console.log 'get script snapshot',fileName
 					file.compile()
 					return file.jsSnapshot
 
@@ -145,15 +137,9 @@ export class LanguageServer < Component
 			readFile: self.readFile.bind(self)
 		}
 
-		// servicesHost.resolveModuleNames = do |moduleNames,containingFile,reusedNames,redirectedReference,options2|
-		// 	# console.log 'resolve module names',containingFile,moduleNames
-		// 	for name in moduleNames
-		// 		let result = ts.resolveModuleName(name, containingFile, options,resolutionHost)
-		// 		result.resolvedModule
-		// 	# return []
-		// 	# moduleNames: string[], containingFile: string, reusedNames: string[] | undefined, redirectedReference: ResolvedProjectReference | undefined, options: CompilerOptions
-		
 		self.tls = ts.createLanguageService(servicesHost,ts.createDocumentRegistry!)
+
+		tls.findRenameLocations
 		
 	def invalidate
 		version++
@@ -172,10 +158,9 @@ export class LanguageServer < Component
 	def indexFiles
 		let t = Date.now!
 		let matches = glob.sync(path.resolve(self.rootPath,'**','*.imba'),ignore: 'node_modules')
-		matches = matches.filter do |file| file.indexOf('node_modules') == -1
-		allFiles ||= matches.map do |file|
-			getImbaFile($1)
-		# console.log "indexed files",Date.now! - t
+		matches = matches.filter do(file) file.indexOf('node_modules') == -1
+		allFiles ||= matches.map do(file) getImbaFile(file)
+
 		self
 
 	def getProgram
@@ -500,6 +485,25 @@ export class LanguageServer < Component
 			results.push(Location.create(ifile.uri,span)) if span
 		console.log 'results',results
 		return results
+
+	def onRenameRequest params
+		let renames\WorkspaceEdit = {changes: {}}
+		try
+			let newName = params.newName
+			let file = getImbaFile(params.textDocument.uri)
+			let iloc = file.offsetAt(params.position)
+			let tloc = file.generatedLocFor(iloc)
+			log 'rename request',iloc,tloc,params
+			let t_renames = tls.findRenameLocations(file.jsPath,tloc,false,false)
+			log t_renames
+
+			for rename in t_renames
+				let dest = getImbaFile(rename.fileName)
+				let edits = (renames.changes[dest.uri] ||= [])
+				let range = dest.textSpanToRange(rename.textSpan)
+				edits.push(range: range, newText: newName)
+		inspect renames
+		return renames
 
 	def getSymbols uri
 		let file = self.getImbaFile(uri)

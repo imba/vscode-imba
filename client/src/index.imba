@@ -100,6 +100,9 @@ languages.setLanguageConfiguration('imba',{
 	},{
 		beforeText: /\s*(?:do)\s*(\|.*\|\s*)?$/,
 		action: { indentAction: IndentAction.Indent }
+	},{
+		beforeText: /\s*(?:do)\(.*\)\s*$/,
+		action: { indentAction: IndentAction.Indent }
 	}]
 })
 

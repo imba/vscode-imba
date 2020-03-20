@@ -89,13 +89,17 @@ connection.onDefinition do |event|
 	let res\any[] = server.getDefinitionAtPosition(event.textDocument.uri,event.position)
 	return res
 
-connection.onReferences do |event|
-	# console.log 'onReferences'
+connection.onReferences do(event)
 	let res = server.onReferences(event)
 	return res
 
 connection.onTypeDefinition do |event|
 	return undefined
+
+connection.onRenameRequest do(event)
+	if server
+		return server.onRenameRequest(event)
+	return
 
 connection.onHover do |event|
 	# console.log "onhover",event

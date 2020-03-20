@@ -177,6 +177,7 @@ export class File < Component
 
 
 	def offsetAt position
+		return doc.offsetAt(position) if doc
 		self.document && self.document.offsetAt(position)
 
 	# remove compiled output etc
