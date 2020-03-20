@@ -46,6 +46,11 @@ if false
 
 	ls.getSemanticDiagnostics()
 	console.log ls.getSymbols('util.imba')
+	
+def toffset2ioffset file, start, length
+	let iloc = file.originalLocFor(start)
+	let range = file.textSpanToRange({ start: start, length: length })
+	console.log "orig offset",start,length,iloc,range
 
 if true
 	let file = ls.getImbaFile('completion.imba')
@@ -53,11 +58,14 @@ if true
 	let last = 0
 	let idx = 0
 	while (idx = content.indexOf('# |',last)) > -1
-		console.log 'found index',idx
 		last = idx + 2
-		console.log file.getContextAtLoc(idx)
-		let completions = ls.getCompletionsAtPosition(file.uri,idx,{})
-		console.log completions
+		if let m = content.slice(idx + 3).match(/^\d+/)
+			idx = idx - parseInt(m[0])
+
+		console.log 'found index',idx
+		console.dir file.getContextAtLoc(idx), {depth: 7}
+		# let completions = ls.getCompletionsAtPosition(file.uri,idx,{})
+		# console.log completions
 
 	if false
 		console.log file.getContextAtLoc(301)
@@ -65,17 +73,21 @@ if true
 		console.log file.textSpanToRange({ start: 229, length: 11 })
 		console.log util.fastExtractSymbols(content)
 	
-	console.log file.textSpanToRange({ start: 32, length: 0 })
-	console.log file.textSpanToRange({ start: 51, length: 0 })
-	console.log file.textSpanToRange({ start: 21, length: 0 })
-	console.log file.originalLocFor(21)
-	console.log file.originalLocFor(32)
-	console.log file.originalLocFor(51)
+	toffset2ioffset(file,21,0)
+	toffset2ioffset(file,32,0)
+	toffset2ioffset(file,51,0)
+	
 
 	# console.log file.$decorations
 
 	# console.log ls.getCompletionsAtPosition('completion.imba',89)
-	
+console.log util.fastParseCode('<div hello=(')
+console.log util.fastParseCode('<div> "')
+console.log util.fastParseCode('<div> "{')
+console.log util.fastParseCode('<div.{')
+console.log util.fastParseCode('<div test=')
+console.log util.fastParseCode('<div v=({')
+console.log util.fastParseCode('<div> <','>')
 # ls.getCompletionsAtPosition('completion.imba',88)
 # console.log ls.getImbaFile('completion.imba').getContextAtLoc(89)
 # ls.emitDiagnostics()

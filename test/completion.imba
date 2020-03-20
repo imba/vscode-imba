@@ -1,36 +1,12 @@
-
-[Helper,Repo]
-
-tag app-pill
-	
-	<self> <span.title> data.title
-tag app-filter-bar
-	prop data\Repo
-
-var root1 = 1
-var fs = require 'fs'
-
-export class Util
-	@state = 'test'
-	def render
-		this.state.
-		document.location.hash
-		<div title="hello">
-		yes
-
-	def hello 
-		yes
-# 
 tag test-here
 	prop test
 	prop other # 
-
-	# 
 
 	def handle targ2
 		let tmeth2 = 1
 		if let tvar3 = 2
 			yes
+		
 		yes
 		
 
@@ -38,16 +14,21 @@ tag test-here
 		# 
 		<self>
 			<div> "hello" # 
+			<div > # |2
+			<div > # |3
+			<div> # |
 			if true
 				other # 
 			<div
 				.ok=Math.random()
-				:click.test >
+				:click.test > # |2
+				
 
 # 
-class Item
+class Item # 
 	prop test
-	prop other # 
+	prop other #
+	static prop other #
 
 	# 
 
@@ -56,7 +37,7 @@ class Item
 		if let var3 = 2
 			yes
 		yes
-		# |
+		# 
 	
 	def setup
 		self
