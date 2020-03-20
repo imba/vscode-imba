@@ -81,13 +81,14 @@ if true
 	# console.log file.$decorations
 
 	# console.log ls.getCompletionsAtPosition('completion.imba',89)
-console.log util.fastParseCode('<div hello=(')
-console.log util.fastParseCode('<div> "')
-console.log util.fastParseCode('<div> "{')
-console.log util.fastParseCode('<div.{')
-console.log util.fastParseCode('<div test=')
-console.log util.fastParseCode('<div v=({')
-console.log util.fastParseCode('<div> <','>')
+if false
+	console.log util.fastParseCode('<div hello=(')
+	console.log util.fastParseCode('<div> "')
+	console.log util.fastParseCode('<div> "{')
+	console.log util.fastParseCode('<div.{')
+	console.log util.fastParseCode('<div test=')
+	console.log util.fastParseCode('<div v=({')
+	console.log util.fastParseCode('<div> <','>')
 # ls.getCompletionsAtPosition('completion.imba',88)
 # console.log ls.getImbaFile('completion.imba').getContextAtLoc(89)
 # ls.emitDiagnostics()

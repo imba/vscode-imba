@@ -39,7 +39,6 @@ var tsServiceOptions\CompilerOptions = {
 	target: ts.ScriptTarget.Latest
 	lib: ['lib.es6.d.ts']
 	forceConsistentCasingInFileNames: true
-	
 	moduleResolution: ts.ModuleResolutionKind.NodeJs
 }
 

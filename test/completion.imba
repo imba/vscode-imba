@@ -22,7 +22,13 @@ tag test-here
 			<div
 				.ok=Math.random()
 				:click.test > # |2
-				
+	
+	def setup
+		var obj = {
+			a: 1
+			b: 1 # |2
+			# |
+		}
 
 # 
 class Item # 

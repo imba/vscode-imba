@@ -123,6 +123,7 @@ export def tsp2lspCompletions items, {file,jsLoc,meta=null}
 		if entry.insertText
 			if entry.insertText.indexOf('this.') == 0
 				item.data.implicitSelf = yes
+				
 
 		# only drop these in certain cases
 		if kind == 'function' and item.data.declare and name.match(/^[a-z]/)
@@ -255,6 +256,10 @@ export def fastParseCode code,after = ''
 	if ctx.type == 'tag'
 		if ctx.content.match(/\=\s*([^\s]*)$/)
 			ctx.type = 'code'
+	
+	if ctx.type == '{'
+		ctx.type = 'object'
+
 	return ctx
 
 
@@ -311,34 +316,13 @@ export def fastExtractContext code, loc, compiled = ''
 	
 	res.indents = indents
 	res.scope = {type: 'root',root: yes,body: yes,tloc: {offset: 0}}
-
 	res.tagtree = []
-	# res.scopes = []
 	res.path = ""
 
 	# trace pairings etc
 	let pre = res.indents.join('  ')
-	let k = pre.length
-	let pairs = []
-	let pairable = '{}()[]'.split('')
-
-	while k > 0
-		let chr = pre[--k]
-		let idx = pairable.indexOf(chr)
-		continue if idx == -1
-		if idx % 2
-			pairs.unshift(pairable[chr - 1])
-		elif pairs[0] == chr
-			pairs.shift!
-		else
-			res.bracket = chr
-			break
-
 	let ctx = fastParseCode(pre,res.textAfter)
 	
-	if res.bracket == '{'
-		res.context = 'object'
-
 	let context-rules = [
 		[/(def|set) [\w\$]+[\s\(]/,'params']
 		[/(class) ([\w\-\:]+) < ([\w\-]*)$/,'superclass']
@@ -354,6 +338,10 @@ export def fastExtractContext code, loc, compiled = ''
 	
 	unless res.context
 		res.context = ctx.type
+
+		if ctx.type == 'object'
+			if ctx.content.match(/\:\s*([^\s]*)$/)
+				res.context = 'code'
 	# find variables before this position?
 
 	let findFromIndex = 0
