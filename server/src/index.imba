@@ -28,7 +28,7 @@ documents.listen(connection)
 
 connection.onInitialize do |params|
 	// Could this start a single instance for multiple workspaces?
-	connection.console.log("[Server({process.pid}) {params.rootUri}] Started and initialize received")
+	# connection.console.log("[Server({process.pid}) {params.rootUri}] Started and initialize received")
 	server = LanguageServer.new(connection,documents,params)
 
 	return {
@@ -38,7 +38,8 @@ connection.onInitialize do |params|
 				resolveProvider: true,
 				triggerCharacters: ['.', ':', '<', '"', '/', '@', '*','%']
 			},
-			signatureHelpProvider: { triggerCharacters: ['('] },
+			# signatureHelpProvider: { triggerCharacters: ['('] },
+			signatureHelpProvider: false,
 			documentRangeFormattingProvider: false,
 			hoverProvider: true,
 			documentHighlightProvider: true,
@@ -59,7 +60,7 @@ connection.onInitialize do |params|
 	}
 
 connection.onInitialized do |params|
-	console.log 'on initialized'
+	# console.log 'on initialized'
 
 	connection.onNotification('onDidRenameFiles') do |event|
 		server.onDidRenameFiles(event)
@@ -84,12 +85,12 @@ connection.onWorkspaceSymbol do |event|
 
 
 connection.onDefinition do |event|
-	console.log 'onDefinition',event
+	# console.log 'onDefinition',event
 	let res\any[] = server.getDefinitionAtPosition(event.textDocument.uri,event.position)
 	return res
 
 connection.onReferences do |event|
-	console.log 'onReferences'
+	# console.log 'onReferences'
 	let res = server.onReferences(event)
 	return res
 
@@ -104,7 +105,6 @@ connection.onHover do |event|
 
 
 connection.onCompletion do |event|
-	console.log "oncompletion",event
 	let res\any = server.getCompletionsAtPosition(event.textDocument.uri,event.position,event.context)
 	if res isa Array
 		res = {isIncomplete: false, items: res}

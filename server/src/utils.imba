@@ -209,7 +209,7 @@ export def fastExtractSymbols text
 	
 	return symbols
 
-export def fastParseCode code
+export def fastParseCode code,after = ''
 	let stack = [{type: 'code',start: 0}]
 	let len = code.length
 	let pairs = []
@@ -237,7 +237,7 @@ export def fastParseCode code
 	while i < len
 		let chr = code[i++]
 
-		if chr == '<' and code[i].match(/[\w\{\[\.]/)
+		if chr == '<' and ((code[i] and code[i].match(/[\w\{\[\.]/)) or after[0] == '>')
 			push('tag')
 		elif chr == '>' and ctx.tag
 			pop()
@@ -334,7 +334,7 @@ export def fastExtractContext code, loc, compiled = ''
 			res.bracket = chr
 			break
 
-	let ctx = fastParseCode(pre)
+	let ctx = fastParseCode(pre,res.textAfter)
 	
 	if res.bracket == '{'
 		res.context = 'object'
