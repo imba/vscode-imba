@@ -80,7 +80,9 @@ export class LanguageServer < Component
 		log('imba config',imbaConfig)
 
 		for item in imbaConfig.entries
-			self.rootFiles.push(item.input)
+			if let file = getImbaFile(item.input)
+				# self.rootFiles.push(item.input)
+				yes
 
 		createTypeScriptService!
 		setTimeout(&,0) do indexFiles!
