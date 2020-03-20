@@ -75,7 +75,6 @@ connection.onInitialized do |params|
 	# 	console.log 'onDidChangeTextDocument',event
 
 connection.onDidChangeConfiguration do |change|
-	console.log "connection.onDidChangeConfiguration",change
 	server.config.update(change)
 
 connection.onDocumentSymbol do |event|

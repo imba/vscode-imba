@@ -386,7 +386,7 @@ export class LanguageServer < Component
 		return file.getCompletionsAtPosition(loc,options)
 
 	def doResolve item\CompletionItem
-		console.log 'resolving',item
+		inspect item
 		if item and item.data.resolved
 			return item
 
@@ -401,7 +401,7 @@ export class LanguageServer < Component
 
 		let details = tls.getCompletionEntryDetails(item.data.path,item.data.loc,item.label,{},source,prefs)
 		if details
-			console.dir details, {depth: 8}
+			inspect details
 			item.detail = ts.displayPartsToString(details.displayParts)
 			item.documentation = ts.displayPartsToString(details.documentation)
 
@@ -411,7 +411,7 @@ export class LanguageServer < Component
 			for action in actions
 				actionDescs += action.description + '\n'
 				if let m = action.description.match(/Change '([^']+)' to '([^']+)'/)
-					console.log 'change action',m
+					log 'change action',m
 					if m[1] == (item.insertText or item.label)
 						item.insertText = m[2]
 						continue
@@ -421,12 +421,12 @@ export class LanguageServer < Component
 
 					for textedit in change.textChanges
 						let range = file.textSpanToRange(textedit.span)
-						console.log 'additional change here',textedit,range
+						log 'additional change here',textedit,range
 						let text = textedit.newText.replace(/\;/g,'')
 						additionalEdits.push(range: range, newText: text)
 			item.detail = actionDescs + item.detail
 			item.additionalTextEdits = additionalEdits
-			console.log item
+			log item
 			delete item.data
 		return item
 
@@ -476,16 +476,16 @@ export class LanguageServer < Component
 		let loc = documents.get(uri).offsetAt(params.position)
 		# @type {number}
 		let tsp-loc = file.generatedLocFor(loc)
-		console.log 'referencs',uri,params.position,loc,tsp-loc
+		log 'references',uri,params.position,loc,tsp-loc
 
 		let references = tls.getReferencesAtPosition(file.jsPath,tsp-loc)
 		let results\Location[] = []
-		console.log references
+		inspect references
 		for ref in references
 			let ifile\File = files[ref.fileName]
 			let span = ifile.textSpanToRange(ref.textSpan)
 			results.push(Location.create(ifile.uri,span)) if span
-		console.log 'results',results
+		inspect results
 		return results
 
 	def onRenameRequest params

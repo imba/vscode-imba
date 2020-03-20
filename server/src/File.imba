@@ -1,5 +1,3 @@
-# imba$selfless=1
-
 import {Component} from './Component'
 import {CompletionItemKind,DiagnosticSeverity,SymbolKind} from 'vscode-languageserver-types'
 import {Location} from 'vscode-languageserver'
@@ -13,6 +11,7 @@ var sm = require "source-map"
 var imbaOptions = {
 	target: 'tsc'
 	imbaPath: null
+	silent: yes
 	sourceMap: {}
 }
 
@@ -430,7 +429,7 @@ export class File < Component
 			// console.log 'tree returned from typescript',symbols
 			return symbols
 		catch e
-			console.log 'getSymbols error',e
+			log 'getSymbols error',e
 			return []
 
 	def getContextAtLoc loc
