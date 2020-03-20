@@ -36,7 +36,7 @@ connection.onInitialize do |params|
 			textDocumentSync: TextDocumentSyncKind.Full
 			completionProvider: {
 				resolveProvider: true,
-				triggerCharacters: ['.', ':', '<', '"', '/', '@', '*','%']
+				triggerCharacters: ['.', ':', '<', '"', '/', '@', '*','%','\\']
 			},
 			# signatureHelpProvider: { triggerCharacters: ['('] },
 			signatureHelpProvider: false,
@@ -75,7 +75,8 @@ connection.onInitialized do |params|
 	# 	console.log 'onDidChangeTextDocument',event
 
 connection.onDidChangeConfiguration do |change|
-	console.log "connection.onDidChangeConfiguration"
+	console.log "connection.onDidChangeConfiguration",change
+	server.config.update(change)
 
 connection.onDocumentSymbol do |event|
 	return server ? server.getSymbols(event.textDocument.uri) : []

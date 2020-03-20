@@ -63,6 +63,11 @@
 					"default": 100,
 					"description": "Controls the maximum number of problems produced by the server."
 				},
+				"imba.verbose": {
+					"type": "boolean",
+					"default": false,
+					"description": "Controls whether the language server should log out details"
+				},
 				"imba.suggest.completeFunctionCalls": {
 					"type": "boolean",
 					"default": false,

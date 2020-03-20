@@ -342,12 +342,16 @@ export class File < Component
 		let items = []
 		let tloc = ctx.scope.tloc && ctx.scope.tloc.offset
 		let snippets = ils.entities.getSnippetsForContext(ctx)
+		inspect ctx
 
 		let tls-options = {
 			triggerCharacter: options.triggerCharacter
 			includeCompletionsForModuleExports: true,
 			includeCompletionsWithInsertText: true
 		}
+
+		if options.triggerCharacter == '\\'
+			delete options.triggerCharacter
 
 		if ctx.context == 'params' or ctx.context == 'naming' or ctx.context == 'tag'
 			return []
@@ -356,6 +360,10 @@ export class File < Component
 			return ils.entities.getTagNameCompletions(options)
 		
 		if ctx.context == 'superclass'
+			tloc = 0
+
+		if ctx.context == 'type'
+			delete tls-options.triggerCharacter
 			tloc = 0
 
 		if ctx.scope.tag or ctx.scope.class
@@ -376,6 +384,13 @@ export class File < Component
 		return items.filter do(item)
 			if ctx.context == 'superclass' and item.label.match(/^[a-z]/)
 				return no
+			if ctx.context == 'type' and item.label.match(/^[a-z]/)
+				return no if item.data.origKind == 'let'
+				return no if item.data.origKind == 'keyword'
+				return no if item.data.origKind == 'local var'
+				return no if item.data.origKind == 'function'
+				return no if item.data.origKind == 'property'
+
 			return yes
 
 

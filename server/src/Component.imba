@@ -1,7 +1,12 @@
+import * as config from './Config'
+
 export class Component
 	def constructor(...params)
 		$timeouts = {}
 		self
+
+	get config
+		config
 
 	def $delay name, timeout = 500
 		global.clearTimeout($timeouts[name])
@@ -19,10 +24,12 @@ export class Component
 		$call(name) if $timeouts[name]
 
 	def log ...params
-		# console.log(...params)
+		if config.get('verbose')
+			console.log(...params)
 		return
 	
 	def inspect object
-		# console.dir(object, depth: 10)
+		if config.get('verbose')
+			console.dir(object, depth: 10)
 		return
 		

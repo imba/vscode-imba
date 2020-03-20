@@ -345,6 +345,7 @@ export def fastExtractContext code, loc, compiled = ''
 		[/(tag) ([\w\-\:]+) < ([\w\-]*)$/,'supertag']
 		[/(def|set|get|prop|attr|class|tag) ([\w\-]*)$/,'naming']
 		[/\<([\w\-\:]*)$/,'tagname']
+		[/\\([\w\-\:]*)$/,'type']
 	]
 
 	for rule in context-rules
