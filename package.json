@@ -2,7 +2,7 @@
 	"name": "vsimba",
 	"displayName": "Imba",
 	"description": "Language support for Imba 2",
-	"version": "2.0.1",
+	"version": "2.0.2",
 	"publisher": "scrimba",
 	"main": "./client/index.js",
 	"icon": "assets/imba.png",
