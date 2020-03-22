@@ -279,6 +279,43 @@ export def locationInString string, find, startFrom = 0
 		return res
 	return null
 
+export def findStyleBlocks code
+	let blocks = []
+	let matcher = /\#\#\# css(\s|$)/
+	let from = 0
+	let loc
+	while (loc = code.indexOf('### css',from)) >= 0
+		let end = code.indexOf('###',loc + 3)
+		let start = code.indexOf('\n',loc + 1)
+		let block = {start: start, end: end}
+		blocks.push(block)
+		from = end + 3
+
+	return blocks
+
+
+export def stripNonStyleBlocks code
+	let css = ""
+	let blocks = findStyleBlocks(code)
+	let start = 0
+	for block in blocks
+		let text = code.slice(start,block.start)
+		css += text.replace(/\S/gm,' ')
+		css += code.slice(block.start,block.end)
+		start = block.end
+
+	css += code.slice(start).replace(/\S/gm,' ')
+
+	if false
+		console.log css.length,code.length
+		let lines = css.split('\n')
+		let lines2 = code.split('\n')
+		for line,i in lines
+			console.log line.length, JSON.stringify(line)
+			console.log lines2[i].length, JSON.stringify(lines2[i])
+	return css
+	
+
 export def fastExtractContext code, loc, compiled = ''
 	let lft = loc
 	let rgt = loc
@@ -288,6 +325,7 @@ export def fastExtractContext code, loc, compiled = ''
 		loc: loc
 	}
 
+	let styleBlocks = findStyleBlocks(code)
 	let textBefore = code.slice(0,loc)
 	let textAfter = code.slice(loc)
 	
@@ -295,8 +333,14 @@ export def fastExtractContext code, loc, compiled = ''
 	let lnend = textAfter.indexOf('\n')
 	let linesBefore = textBefore.split('\n')
 
+	res.styleBlocks = styleBlocks
 	res.textBefore = linesBefore[linesBefore.length - 1]
 	res.textAfter = textAfter.split('\n')[0]
+
+	for block in styleBlocks
+		if block.end > loc > block.start
+			res.context = 'css'
+			return res
 	
 	let currIndent = res.textBefore.match(/^\t*/)[0].length
 	let maxIndent = currIndent
@@ -325,8 +369,8 @@ export def fastExtractContext code, loc, compiled = ''
 	
 	let context-rules = [
 		[/(def|set) [\w\$]+[\s\(]/,'params']
-		[/(class) ([\w\-\:]+) < ([\w\-]*)$/,'superclass']
-		[/(tag) ([\w\-\:]+) < ([\w\-]*)$/,'supertag']
+		[/(class) ([\w\-\:]+) <\s?([\w\-]*)$/,'superclass']
+		[/(tag) ([\w\-\:]+) <\s?([\w\-]*)$/,'supertag']
 		[/(def|set|get|prop|attr|class|tag) ([\w\-]*)$/,'naming']
 		[/\<([\w\-\:]*)$/,'tagname']
 		[/\\([\w\-\:]*)$/,'type']

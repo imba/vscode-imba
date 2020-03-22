@@ -5,6 +5,13 @@ import { TextDocument } from 'vscode-languageserver-textdocument'
 import {CompletionItemKind,SymbolKind, WorkspaceEdit} from 'vscode-languageserver-types'
 import {CompilerOptions,LanguageService,LanguageServiceHost,UserPreferences} from 'typescript'
 
+import {
+	getCSSLanguageService,
+	getSCSSLanguageService,
+	getLESSLanguageService,
+	LanguageService as CSSLanguageService
+} from 'vscode-css-languageservice'
+
 import {URI} from 'vscode-uri'
 
 import {File} from './File'
@@ -47,6 +54,7 @@ export class LanguageServer < Component
 	prop allFiles\File[]
 	prop rootFiles\string[]
 	prop tls\LanguageService
+	prop cssls\CSSLanguageService
 
 	def resolveConfigFile dir
 		return null if !dir or (dir == path.dirname(dir))
@@ -84,6 +92,9 @@ export class LanguageServer < Component
 				yes
 
 		createTypeScriptService!
+
+		self.cssls = getCSSLanguageService()
+
 		setTimeout(&,0) do indexFiles!
 		self
 		
@@ -377,6 +388,10 @@ export class LanguageServer < Component
 			includeCompletionsForModuleExports: true,
 			includeCompletionsWithInsertText: true
 		}
+
+		if ctx.context == 'css'
+			log 'inside css block'
+			return file.styleDocument.getCompletionsAtPosition(loc,options)
 	
 		if ctx.context == 'tagname' and context.triggerCharacter == '<'
 			options.autoclose = yes
@@ -435,7 +450,12 @@ export class LanguageServer < Component
 		# console.log "get quick info at pos {path}"
 
 		let file = getImbaFile(uri)
-		let loc = documents.get(uri).offsetAt(pos)
+		let loc = file.offsetAt(pos)
+		let ctx = file.getContextAtLoc(loc)
+
+		if ctx.context == 'css'
+			return file.styleDocument.doHover(loc)
+		
 		# @type {number}
 		let loc2 = file.generatedLocFor(loc)
 		let info = loc2 and tls.getQuickInfoAtPosition(String(file.lsPath), loc2)
