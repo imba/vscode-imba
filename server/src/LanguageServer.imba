@@ -473,6 +473,31 @@ export class LanguageServer < Component
 				range: file.textSpanToRange(info.textSpan)
 				contents: contents
 			}
+
+	def getPathCompletions basePath, query
+		# index all files in the project
+		log 'path completions',basePath,query
+		# should be cached for a file for some time?
+		let items = []
+		let dir = path.dirname(basePath)
+		for file in files
+			let full = file.imbaPath
+			let rel = path.relative(dir,full)
+			rel = "./{rel}" if rel[0] != '.'
+			rel = rel.replace(/\.imba$/,'')
+			let sortText = "" + rel.replace(/[^\.\/]/g,'').length
+			items.push({
+				label: rel
+				kind: CompletionItemKind.File
+				data: {resolved: yes}
+				sortText: sortText
+				
+			})
+
+		# if query
+		#	items = items.filter do util.matchFuzzyString(item.label,$1.name)
+		
+		return items
 			
 	def getWorkspaceSymbols {query='',type=null} = {}
 		# indexFiles! # not after simple changes

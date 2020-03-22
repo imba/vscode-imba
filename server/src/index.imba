@@ -36,7 +36,7 @@ connection.onInitialize do |params|
 			textDocumentSync: TextDocumentSyncKind.Full
 			completionProvider: {
 				resolveProvider: true,
-				triggerCharacters: ['.', ':', '<', '"', '/', '@', '*','%','\\']
+				triggerCharacters: ['.', ':', '<', '"', '/', '@', '*','%','\\',"'"]
 			},
 			# signatureHelpProvider: { triggerCharacters: ['('] },
 			signatureHelpProvider: false,

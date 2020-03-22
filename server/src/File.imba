@@ -18,7 +18,6 @@ var imbaOptions = {
 
 export class File < Component
 	prop symbols = []
-	prop program
 
 	/**
 	@param {import("./LanguageServer").LanguageServer} program
@@ -361,8 +360,11 @@ export class File < Component
 
 		if ctx.context == 'supertag' or ctx.context == 'tagname'
 			return ils.entities.getTagNameCompletions(options)
-		
-		if ctx.context == 'superclass'
+
+		if ctx.context == 'filepath'
+			return ils.getPathCompletions(imbaPath,ctx.ctxBefore or '')
+
+		elif ctx.context == 'superclass'
 			tloc = 0
 
 		elif ctx.context == 'type'

@@ -252,6 +252,10 @@ export def fastParseCode code,after = ''
 		ctx.type = 'code'
 	if ctx.type == '(' or ctx.type == '['
 		ctx.type = 'code'
+	
+	if ctx.type.match(/"|`|'/)
+		ctx.type = 'string'
+
 	ctx.content = code.slice(ctx.start)
 	if ctx.type == 'tag'
 		if ctx.content.match(/\=\s*([^\s]*)$/)
@@ -260,6 +264,9 @@ export def fastParseCode code,after = ''
 	if ctx.type == '{'
 		ctx.type = 'object'
 
+	if ctx.type == 'string'
+		if code.match(/import |from |require(\(|\s)/)
+			ctx.type = 'filepath'
 	return ctx
 
 
@@ -333,7 +340,6 @@ export def fastExtractContext code, loc, compiled = ''
 	let lnend = textAfter.indexOf('\n')
 	let linesBefore = textBefore.split('\n')
 
-	res.styleBlocks = styleBlocks
 	res.textBefore = linesBefore[linesBefore.length - 1]
 	res.textAfter = textAfter.split('\n')[0]
 
@@ -366,6 +372,7 @@ export def fastExtractContext code, loc, compiled = ''
 	# trace pairings etc
 	let pre = res.indents.join('  ')
 	let ctx = fastParseCode(pre,res.textAfter)
+	res.ctxBefore = ctx.content
 	
 	let context-rules = [
 		[/(def|set) [\w\$]+[\s\(]/,'params']
@@ -386,6 +393,7 @@ export def fastExtractContext code, loc, compiled = ''
 		if ctx.type == 'object'
 			if ctx.content.match(/\:\s*([^\s]*)$/)
 				res.context = 'code'
+
 	# find variables before this position?
 
 	let findFromIndex = 0
