@@ -313,6 +313,7 @@ export class File < Component
 				return span[0] + offset
 		return null
 
+	# need to specify that this converts from typescript
 	def textSpanToRange span
 		if span.length == 0
 			let pos = positionAt(originalLocFor(span.start))
@@ -329,15 +330,6 @@ export class File < Component
 		let end = originalLocFor(span.start + span.length)
 		let content = getSourceContent!
 		return content.slice(start,end)
-	
-	
-	def tspGetCompletionsAtPosition toffset, ctx, options
-		# $flush('emitFile')
-		# let tsploc = generatedLocFor(loc)
-		# console.log 'get tsp completions',loc,tsploc
-		if let result = tls.getCompletionsAtPosition(lsPath,toffset,options)
-			return util.tsp2lspCompletions(result.entries,file: self, jsLoc: toffset)
-		return []
 
 	def getCompletionsAtPosition loc, options = {}
 		let ctx = getContextAtLoc(loc)
@@ -387,14 +379,22 @@ export class File < Component
 
 		# returning these
 		return items.filter do(item)
+			let kind = item.data.origKind
+			return no if item.label == '$member$'
+			return no if item.label == '$static$'
+			
 			if ctx.context == 'superclass' and item.label.match(/^[a-z]/)
 				return no
+			
+			if item.label.match(/\$/) and (kind == 'local var' or kind == 'let')
+				return no
+
 			if ctx.context == 'type' and item.label.match(/^[a-z]/)
-				return no if item.data.origKind == 'let'
-				return no if item.data.origKind == 'keyword'
-				return no if item.data.origKind == 'local var'
-				return no if item.data.origKind == 'function'
-				return no if item.data.origKind == 'property'
+				return no if kind == 'let'
+				return no if kind == 'keyword'
+				return no if kind == 'local var'
+				return no if kind == 'function'
+				return no if kind == 'property'
 
 			return yes
 
