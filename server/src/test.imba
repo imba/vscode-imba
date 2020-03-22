@@ -73,10 +73,15 @@ if true
 		console.log file.textSpanToRange({ start: 229, length: 11 })
 		console.log util.fastExtractSymbols(content)
 	
-	toffset2ioffset(file,21,0)
-	toffset2ioffset(file,32,0)
+	# toffset2ioffset(file,21,0)
+	# toffset2ioffset(file,32,0)
 	toffset2ioffset(file,51,0)
+	console.dir file.getSymbols(), { depth: 6 }
+	console.log util.stripNonStyleBlocks(content)
 	
+	console.log file.styleDocument.getCompletionsAtPosition(564)
+	console.log util.stripNonStyleBlocks(content).slice(560,570)
+	console.log file.getContextAtLoc(825)
 
 	# console.log file.$decorations
 

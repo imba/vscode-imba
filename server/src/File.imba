@@ -3,6 +3,7 @@ import {CompletionItemKind,DiagnosticSeverity,SymbolKind} from 'vscode-languages
 import {Location} from 'vscode-languageserver'
 import {ScriptElementKind} from 'typescript'
 import * as util from './utils'
+import { StyleDocument } from './StyleDocument'
 var ts = require 'typescript'
 
 var imbac = require 'imba/dist/compiler.js'
@@ -27,6 +28,7 @@ export class File < Component
 		self.program = program
 		jsPath   = path.replace(/\.(imba|js|ts)$/,'.js')
 		imbaPath = path.replace(/\.(imba|js|ts)$/,'.imba')
+		cssPath  = path.replace(/\.(imba|js|ts)$/,'.css')
 		lsPath   = jsPath
 
 		program.files[lsPath] = self
@@ -48,7 +50,9 @@ export class File < Component
 	get document
 		let uri = 'file://' + imbaPath
 		program.documents.get(uri)
-		
+	
+	get styleDocument
+		$styleDocument ||= StyleDocument.new(program,cssPath,self)
 
 	get tls
 		program.tls
@@ -361,11 +365,11 @@ export class File < Component
 		if ctx.context == 'superclass'
 			tloc = 0
 
-		if ctx.context == 'type'
+		elif ctx.context == 'type'
 			delete tls-options.triggerCharacter
 			tloc = 0
 
-		if ctx.scope.tag or ctx.scope.class
+		elif ctx.scope.tag or ctx.scope.class
 			return snippets
 
 		# direct acceess on an object -- we need to make sure file is compiled?

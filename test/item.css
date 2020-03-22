@@ -1,0 +1,23 @@
+uxa-multi-input {
+	display: block;
+	padding: 10px;
+	margin: 10px;
+	border: 1px solid black;
+}
+
+.item {
+	padding: 2px;
+	border: 1px solid transparent;
+}
+
+.item.before {
+	border-left-color: blue;
+}
+
+.item.sel {
+	border-color: blue;
+}
+
+.selecting input {
+	caret-color: transparent;
+}

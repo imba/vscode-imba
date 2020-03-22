@@ -1,3 +1,5 @@
+class Hello
+
 tag test-here
 	prop test
 	prop other # 
@@ -8,7 +10,6 @@ tag test-here
 			yes
 		
 		yes
-		
 
 	def render #
 		# 
@@ -27,7 +28,8 @@ tag test-here
 		var obj = {
 			a: 1
 			b: 1 # |2
-			# |
+			c: 
+			# |4
 		}
 
 # 
@@ -47,3 +49,33 @@ class Item #
 	
 	def setup
 		self
+
+### css scoped
+
+uxa-multi-input {
+	display: block;
+	padding: 10px;
+	margin: 10px;
+	border: 1px solid black;
+}
+
+.item {
+	padding: 2px;
+	border: 1px solid transparent;
+}
+
+.item.before {
+	border-left-color: blue;
+}
+
+.item.sel {
+	border-color: blue;
+}
+
+.selecting input {
+	caret-color: transparent;
+}
+
+.other P
+
+###
