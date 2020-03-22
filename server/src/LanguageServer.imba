@@ -450,7 +450,12 @@ export class LanguageServer < Component
 		# console.log "get quick info at pos {path}"
 
 		let file = getImbaFile(uri)
-		let loc = documents.get(uri).offsetAt(pos)
+		let loc = file.offsetAt(pos)
+		let ctx = file.getContextAtLoc(loc)
+
+		if ctx.context == 'css'
+			return file.styleDocument.doHover(loc)
+		
 		# @type {number}
 		let loc2 = file.generatedLocFor(loc)
 		let info = loc2 and tls.getQuickInfoAtPosition(String(file.lsPath), loc2)

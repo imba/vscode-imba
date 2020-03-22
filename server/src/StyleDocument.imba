@@ -28,3 +28,8 @@ export class StyleDocument < Document
 		for item in vals.items
 			item.data = {resolved: true, context: 'css'}
 		return vals.items
+
+	def doHover loc
+		refresh!
+		let res = cssls.doHover(doc,positionAt(loc),stylesheet)
+		return res
