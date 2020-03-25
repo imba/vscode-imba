@@ -3,13 +3,41 @@ import { TextDocument } from 'vscode-languageserver-textdocument'
 import {LanguageServer} from './LanguageServer'
 
 import {snippets} from './snippets'
+import { FullTextDocument } from './FullTextDocument'
 
 var connection = process.argv.length <= 2 ? createConnection(process.stdin, process.stdout) : createConnection()
 
 # Create a simple text document manager. The text document manager
 # supports full document sync only
-const documents = TextDocuments.new(TextDocument)
+# create(uri: string, languageId: string, version: number, content: string): T;
+# update(document: T, changes: TextDocumentContentChangeEvent[], version: number): T;
+/*
+let applyEdits = TextDocument.applyEdits
+let update = TextDocument.update
+let create = TextDocument.create
+
+TextDocument.applyEdits = do |document,edits|
+	console.log 'apply edits',document,edits
+	applyEdits.call(TextDocument,document,edits)
+
+TextDocument.create = do |uri,languageId,version,content|
+	let doc = create.call(TextDocument,uri,languageId,version,content)
+	console.log 'create doc',uri,languageId,version
+	doc.ilsDoc = FullTextDocument.create(uri,languageId,version,content)
+	return doc
+
+TextDocument.update = do |document,changes,version|
+	console.log 'update',document.uri,version,!!document.ilsDoc
+	console.dir changes, {depth: 4}
+	let ret = update.call(TextDocument,document,changes,version)
+	if document.ilsDoc
+		document.ilsDoc.update(changes,version)
+		console.log 'same?',document.getText!, document.ilsDoc.getText!
+	return ret
+*/
+const documents = TextDocuments.new(FullTextDocument)
 documents.listen(connection)
+
 
 var server\LanguageServer
 
@@ -33,7 +61,7 @@ connection.onInitialize do |params|
 
 	return {
 		capabilities: {
-			textDocumentSync: TextDocumentSyncKind.Full
+			textDocumentSync: TextDocumentSyncKind.Incremental
 			completionProvider: {
 				resolveProvider: true,
 				triggerCharacters: ['.', ':', '<', '"', '/', '@', '*','%','\\',"'"]

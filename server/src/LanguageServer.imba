@@ -88,7 +88,6 @@ export class LanguageServer < Component
 
 		for item in imbaConfig.entries
 			if let file = getImbaFile(item.input)
-				# self.rootFiles.push(item.input)
 				yes
 
 		createTypeScriptService!

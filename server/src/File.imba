@@ -4,6 +4,7 @@ import {Location} from 'vscode-languageserver'
 import {ScriptElementKind} from 'typescript'
 import * as util from './utils'
 import { StyleDocument } from './StyleDocument'
+import { FullTextDocument } from './FullTextDocument'
 var ts = require 'typescript'
 
 var imbac = require 'imba/dist/compiler.js'
@@ -61,18 +62,19 @@ export class File < Component
 
 	get uri
 		'file://' + imbaPath
+	
+	get doc
+		$doc ||= FullTextDocument.create(uri,'imba',0,ts.sys.readFile(imbaPath))
 
 	def didOpen doc
-		self.doc = doc
+		$doc = doc
 		content = doc.getText!
 		# @emitFile()
 		if semanticTokens
 			sendSemanticTokens(semanticTokens)
 
 	def didChange doc, event = null
-		self.doc = doc
-
-		# console.log 'did change!',version,doc.version
+		$doc = doc
 		version = doc.version
 		content = doc.getText!
 		$delay('emitFile',500)
@@ -96,15 +98,13 @@ export class File < Component
 
 	def emitFile
 		$cancel('emitFile')
-		# console.log 'emitFile',imbaPath
 		let content = getSourceContent!
-		# see if there are changes
-		# this is usually where we should do the compilation?
 		if content != lastEmitContent
-			self.content = content
+			content = content
 			lastEmitContent = content
 			invalidate!
 			version++
+			log 'emitFile',uri,version
 			program.invalidate!
 		
 		tls.getEmitOutput(lsPath) if tls
@@ -116,8 +116,8 @@ export class File < Component
 		let out = for entry in items
 			let lstart = originalLocFor(entry.start)
 			let msg = entry.messageText
-			let start = positionAt(lstart)
-			let end = positionAt(originalLocFor(entry.start + entry.length) or (lstart + entry.length))
+			let start = doc.positionAt(lstart)
+			let end = doc.positionAt(originalLocFor(entry.start + entry.length) or (lstart + entry.length))
 			let sev = [DiagnosticSeverity.Warning,DiagnosticSeverity.Error,DiagnosticSeverity.Information][entry.category]
 			# console.log 'converting diagnostic',entry.category,entry.messageText
 			{
@@ -168,19 +168,15 @@ export class File < Component
 
 	# how is this converting?
 	def positionAt offset
-		if doc
-			return doc.positionAt(offset)
+		doc.positionAt(offset)
 
-		let loc = locs and locs.map[offset]
-		return loc && {line: loc[0], character: loc[1]}
+	def offsetAt position
+		doc.offsetAt(position)
 
 	def getSourceContent
 		content ||= ts.sys.readFile(imbaPath)
 
-
-	def offsetAt position
-		return doc.offsetAt(position) if doc
-		self.document && self.document.offsetAt(position)
+	
 
 	# remove compiled output etc
 	def invalidate
@@ -213,8 +209,8 @@ export class File < Component
 			catch e
 				let loc = e.loc && e.loc()
 				let range = loc && {
-					start: positionAt(loc[0])
-					end: positionAt(loc[1])
+					start: doc.positionAt(loc[0])
+					end: doc.positionAt(loc[1])
 				}
 
 				let err = {
@@ -316,14 +312,14 @@ export class File < Component
 	# need to specify that this converts from typescript
 	def textSpanToRange span
 		if span.length == 0
-			let pos = positionAt(originalLocFor(span.start))
+			let pos = doc.positionAt(originalLocFor(span.start))
 			return {start: pos,end: pos}
 		let range = originalRangeFor(span)
 		if range
 			# let start = @originalLocFor(span.start)
 			# let end = @originalLocFor(span.start + span.length)
 			# console.log 'textSpanToRange',span,start,end,@locs and @locs.generated
-			{start: positionAt(range.start), end: positionAt(range.end)}
+			{start: doc.positionAt(range.start), end: doc.positionAt(range.end)}
 
 	def textSpanToText span
 		let start = originalLocFor(span.start)
@@ -352,7 +348,7 @@ export class File < Component
 
 		if ctx.context == 'supertag' or ctx.context == 'tagname'
 			return ils.entities.getTagNameCompletions(options)
-
+		
 		if ctx.context == 'filepath'
 			return ils.getPathCompletions(imbaPath,ctx.ctxBefore or '')
 
@@ -376,6 +372,14 @@ export class File < Component
 		if typeof tloc == 'number'
 			if let found = tls.getCompletionsAtPosition(lsPath,tloc,options)
 				items = util.tsp2lspCompletions(found.entries,file: self, jsLoc: tloc)
+
+			for item in ctx.variables
+				items.push(
+					label: item.text,
+					kind: util.convertCompletionKind('local var')
+					detail: "var {item.text}"
+					data: {resolved: yes, origKind: 'local var'}
+				)
 
 		# returning these
 		return items.filter do(item)

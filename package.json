@@ -131,7 +131,8 @@
 	"scripts": {
 		"dev:bootstrap": "lerna bootstrap",
 		"dev:watch": "rollup -c --watch",
-		"prod:version": "lerna version"
+		"prod:version": "lerna version",
+		"test": "node server/test.js"
 	},
 	"__metadata": {
 		"id": "c0926dfb-bf29-4689-849e-63ca645e2c1c",

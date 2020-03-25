@@ -2,6 +2,16 @@
 {
     "version": "0.1.0",
     "configurations": [
+        {
+            "name": "Run test",
+            "type": "shell",
+            "command": "node ./server/test.js",
+            "group": "test",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        },
         
         {
             "name": "Attach to Server",

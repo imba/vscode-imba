@@ -12,7 +12,9 @@ export class Document < Component
 	*/
 	def constructor program, path
 		super()
+		self.version = 0
 		self.program = program
+		self.edits = []
 
 	get tls
 		self.program.tls
@@ -37,4 +39,7 @@ export class Document < Component
 
 	// Add incremental changes
 	def update
+		self
+
+	def applyEdits edits
 		self

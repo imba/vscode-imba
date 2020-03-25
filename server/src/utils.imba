@@ -1,6 +1,7 @@
 import {CompletionItemKind,SymbolKind} from 'vscode-languageserver-types'
 import {URI} from 'vscode-uri'
 import {globals} from './constants'
+import { parse } from './Parser'
 
 export def uriToPath uri
 	return uri if uri[0] == '/' or uri.indexOf('://') == -1
@@ -350,19 +351,29 @@ export def fastExtractContext code, loc, compiled = ''
 	
 	let currIndent = res.textBefore.match(/^\t*/)[0].length
 	let maxIndent = currIndent
-	let indents = [res.textBefore.slice(currIndent)]
 	res.indent = currIndent
 	
 	let ln = linesBefore.length
 	res.lineAbove = linesBefore[ln - 2]
+
+	let lineLoc = loc
+	currIndent += 1
+
+	let indents = []
+	
 	while ln > 0
 		let line = linesBefore[--ln]
-		continue if line.match(/^[\t\s]*$/)
-		let ind = line.match(/^\t*/)[0].length
+		lineLoc -= line.length
+		if line.match(/^[\t\s]*$/) and indents.length
+			lineLoc -= 1
+			continue
 
+		let ind = line.match(/^\t*/)[0].length
+	
 		if ind < currIndent
 			currIndent = ind
-			indents.unshift(line.slice(ind))
+			indents.unshift({loc: lineLoc, text: line.slice(ind)})
+		lineLoc -= 1
 	
 	res.indents = indents
 	res.scope = {type: 'root',root: yes,body: yes,tloc: {offset: 0}}
@@ -370,7 +381,7 @@ export def fastExtractContext code, loc, compiled = ''
 	res.path = ""
 
 	# trace pairings etc
-	let pre = res.indents.join('  ')
+	let pre = res.indents.map(do $1.text).join('  ')
 	let ctx = fastParseCode(pre,res.textAfter)
 	res.ctxBefore = ctx.content
 	
@@ -394,13 +405,14 @@ export def fastExtractContext code, loc, compiled = ''
 			if ctx.content.match(/\:\s*([^\s]*)$/)
 				res.context = 'code'
 
-	# find variables before this position?
-
 	let findFromIndex = 0
-	for line in indents
+	let tokenizeFromLoc = -1
+	for indent in indents
+		let line = indent.text
 		let scope
 		let match = null
 		if let m = line.match(/^(export )?(tag|class) ([\w\-\:]+)/)
+			if tokenizeFromLoc == -1
 			scope = {type: m[2], name: m[3],parent: res.scope, tloc: null}
 			scope[m[2]] = m[3]
 			let name = res.className = m[3]
@@ -412,11 +424,11 @@ export def fastExtractContext code, loc, compiled = ''
 			match = "class {name}"
 			
 		elif let m = line.match(/^(static )?(def|get|set|prop) ([\w\-\$]+)/)
+			if tokenizeFromLoc == -1
 			scope = {type: m[2], name: m[3],body: yes,parent: res.scope,static: !!m[1]}
 			scope[m[2]] = m[3]
 			let name = res.methodName = m[3]
 			res.path += (m[1] ? '.' : '#') + m[3]
-
 
 			if scope.type == 'prop'
 				match = m[1] ? '$static$(){' : '$member$(){' # "{name}"
@@ -427,6 +439,9 @@ export def fastExtractContext code, loc, compiled = ''
 
 			match = m[1] + match if m[1]
 
+		elif let m = line.match(/^(if|unless|while|for|try$) /)
+			if tokenizeFromLoc == -1
+				tokenizeFromLoc = indent.loc
 
 		elif let m = line.match(/^\<([\w\-]+)/)
 			# find something
@@ -442,5 +457,14 @@ export def fastExtractContext code, loc, compiled = ''
 			# res.scopes.push(scope)
 			res.scope = scope
 
-	
+	if tokenizeFromLoc >= 0 and false
+		let tokens = parse(code.slice(tokenizeFromLoc,loc))
+		# res.tokens = tokens.tokens
+		res.tokens = tokens.tokens
+		res.stack = tokens.stack
+		res.variables = tokens.variables
+		# res.tokens = tokens.code
+		# res.tokstate = tokens.endState
+		# res.tokenized = tokens
+
 	return res
