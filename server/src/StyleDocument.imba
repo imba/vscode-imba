@@ -16,7 +16,7 @@ export class StyleDocument < Document
 	def refresh
 		if version < script.version
 			version = script.version
-			let body = utils.stripNonStyleBlocks(script.getSourceContent!)
+			let body = utils.stripNonStyleBlocks(script.doc.getText!)
 			if body != content
 				doc = TextDocument.create(uri,'css',version,content = body)
 				stylesheet = cssls.parseStylesheet(doc)

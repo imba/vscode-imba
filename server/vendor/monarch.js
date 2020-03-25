@@ -3827,6 +3827,7 @@ class MonarchTokenizer {
                     throwError(this._lexer, 'groups cannot be nested: ' + rule.name);
                 }
                 if (matches.length !== result.length + 1) {
+                    console.log(result);
                     throwError(this._lexer, 'matched number of groups does not match the number of actions in rule: ' + rule.name);
                 }
                 let totalLen = 0;

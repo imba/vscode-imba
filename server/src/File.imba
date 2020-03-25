@@ -68,21 +68,18 @@ export class File < Component
 
 	def didOpen doc
 		$doc = doc
-		content = doc.getText!
-		# @emitFile()
 		if semanticTokens
 			sendSemanticTokens(semanticTokens)
 
 	def didChange doc, event = null
 		$doc = doc
 		version = doc.version
-		content = doc.getText!
+		cache.contexts = {}
 		$delay('emitFile',500)
 		$clearSyntacticErrors!
 
 	def didSave doc
-		content = doc.getText!
-		savedContent = content
+		savedContent = doc.getText!
 		emitFile!
 
 	def dispose
@@ -98,9 +95,8 @@ export class File < Component
 
 	def emitFile
 		$cancel('emitFile')
-		let content = getSourceContent!
+		let content = doc.getText!
 		if content != lastEmitContent
-			content = content
 			lastEmitContent = content
 			invalidate!
 			version++
@@ -173,11 +169,6 @@ export class File < Component
 	def offsetAt position
 		doc.offsetAt(position)
 
-	def getSourceContent
-		content ||= ts.sys.readFile(imbaPath)
-
-	
-
 	# remove compiled output etc
 	def invalidate
 		result = null
@@ -191,8 +182,7 @@ export class File < Component
 
 	def compile
 		unless result
-			getSourceContent!
-			var body = content
+			var body = doc.getText!
 			
 			var opts = Object.assign({},imbaOptions,{
 				filename: imbaPath
@@ -236,7 +226,7 @@ export class File < Component
 		return self
 		
 	def $indexWorkspaceSymbols
-		cache.symbols ||= util.fastExtractSymbols(getSourceContent!)
+		cache.symbols ||= util.fastExtractSymbols(doc.getText!)
 		cache.workspaceSymbols ||= cache.symbols.map do |sym|
 			{
 				kind: sym.kind
@@ -324,14 +314,12 @@ export class File < Component
 	def textSpanToText span
 		let start = originalLocFor(span.start)
 		let end = originalLocFor(span.start + span.length)
-		let content = getSourceContent!
-		return content.slice(start,end)
+		return doc.getText!.slice(start,end)
 
-	def getCompletionsAtPosition loc, options = {}
-		let ctx = getContextAtLoc(loc)
+	def getCompletionsAtOffset loc, options = {}
+		let ctx = getContextAtOffset(loc)
 		let items = []
-		let tloc = ctx.scope.tloc && ctx.scope.tloc.offset
-		let snippets = ils.entities.getSnippetsForContext(ctx)
+
 		inspect ctx
 
 		let tls-options = {
@@ -339,6 +327,13 @@ export class File < Component
 			includeCompletionsForModuleExports: true,
 			includeCompletionsWithInsertText: true
 		}
+
+		if ctx.tokenState.match(/comment|regexp|string|\.(var|let|const)/)
+			log 'abort completions in tokenState',ctx.tokenState
+			return []
+
+		let snippets = ils.entities.getSnippetsForContext(ctx)
+		let tloc = ctx.scope.tloc && ctx.scope.tloc.offset
 
 		if options.triggerCharacter == '\\'
 			delete options.triggerCharacter
@@ -442,5 +437,5 @@ export class File < Component
 			log 'getSymbols error',e
 			return []
 
-	def getContextAtLoc loc
-		return cache.contexts[loc] ||= util.fastExtractContext(getSourceContent!,loc,js)
+	def getContextAtOffset loc
+		return cache.contexts[loc] ||= util.fastExtractContext(doc.getText!,loc,doc.tokens,js)

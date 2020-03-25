@@ -1,4 +1,5 @@
 import * as monarch from '../vendor/monarch'
+import { Component } from './Component'
 
 const newline = '¬'
 const lookahead = '¬'
@@ -62,6 +63,7 @@ export var grammar = {
 	variable: /[\w\$]+(?:-[\w\$]*)*/
 	varKeyword: /var|let|const/
 	newline: /\¬/
+	tagIdentifier: /-*[a-zA-Z][\w\-]*/
 	
 	regEx: /\/(?!\/\/)(?:[^\/\\]|\\.)*\/[igm]*/,
 	
@@ -78,17 +80,30 @@ export var grammar = {
 			{ include: '@whitespace' }
 		]
 
+		indents: [
+			[/^(\t)(?!$)/,{
+				cases: {
+
+				}
+			}]
+		]
+
 		expression: [
 			{ include: 'identifiers' }
-			{ include: 'tag' },
+			{ include: 'tag_start' },
 			{ include: 'string_start' }
 			{ include: 'regexp_start' }
 			{ include: 'object_start' }
+			{ include: 'array_start' }
 			{ include: 'number' }
 			{ include: 'comments' }
 			{ include: 'common' }
 			{ include: 'operators' }
 			[/\(/, 'delimiter.parens.open', '@parens']
+		]
+
+		scopes: [
+			[/(def|get|set|if|unless|while|for|class|tag|do) /,token: '@rematch',next: 'scope.$1']
 		]
 
 		identifiers: [
@@ -99,7 +114,7 @@ export var grammar = {
 				'this': 'variable.predefined.this',
 				'self': 'variable.predefined.self',
 				'$1@boolean': {token: 'boolean.$1'},
-				'$1@keywords': {token: 'keyword.$1.$S0'},
+				'$1@keywords': {token: 'keyword.$1'},
 				'@default': 'identifier'
 			}],
 			{include: 'type_start'}
@@ -134,6 +149,7 @@ export var grammar = {
 			[/\)/, 'delimiter.parens.close', '@pop']
 			{include: 'var_expr'}
 			{include: 'expression'}
+			[/\,/, 'delimiter']
 		]
 
 		statements: [
@@ -178,6 +194,24 @@ export var grammar = {
 			[/\{/, 'delimiter.bracket.open', '@object']
 		]
 
+		array_start: [
+			[/\[/, 'array.open', '@array']
+		]
+
+		array: [
+			[/\]/, 'array.close', '@pop']
+			[/\,/, 'delimiter']
+			{include: 'expression'}
+		]
+
+		
+
+		expressions: [
+			[/\,/, 'delimiter']
+			{include: 'expression'}
+			
+		]
+
 		var_object: [
 			[/\{/, 'object.open', '@var_object']
 			[/\}/, 'object.close', '@pop']
@@ -185,6 +219,16 @@ export var grammar = {
 			{ include: 'common' }
 			[/,/,'delimiter']
 		]
+
+		var_array: [
+			[/\{/, 'object.open', '@var_object']
+			[/\}/, 'object.close', '@pop']
+			[/\[/, 'array.open', '@var_array']
+			[/\]/, 'array.close', '@pop']
+			[/(@identifier)/, token: 'variable.$S2']
+			{ include: 'common' }
+			[/,/,'delimiter']
+		]		
 
 		object_value: [
 			eolpop
@@ -203,10 +247,12 @@ export var grammar = {
 			[/(@variable)/,token: 'variable.$S2']
 			[/\s*(=)\s*/,'operator','@var_value']
 			[/\{/,'object.open','@var_object.$S2']
+			[/\[/,'array.open','@var_array.$S2']
 			[/,/,'delimiter']
 			[/(?=\n)/,'delimiter','@pop']
 			{ include: 'common' }
 			{ include: 'type_start' }
+			{ include: 'comments' }
 		]
 
 		var_params: [
@@ -224,18 +270,7 @@ export var grammar = {
 		]
 		
 		body: [
-			[/([a-z]\w*)(\:)(?=\w)/, {
-				cases: {
-					'this:': ['variable.predefined.this','delimiter.access'],
-					'self:': ['variable.predefined.self','delimiter.access'],
-					'@default': ['identifier','delimiter.access']
-				}
-			}]
 			{include: 'statements'}
-
-			[/(@ivar)(\:)(?=\w)/, [names.ivar,names.access]]
-			[/(@constant)(\:)(?=\w)/, [names.constant,names.access]]
-
 			[/(class|tag|module)(?=\s)/, { token: 'keyword.$1', next: '@declstart.$1'}],
 			
 			[/(def|get|set)(?=\s)/, { token: 'keyword.$1', next: '@defstart.$1'}],
@@ -267,8 +302,6 @@ export var grammar = {
 			
 			# whitespace
 			{ include: '@whitespace' },
-			{ include: '@tag' },
-			{ include: '@tag_singleton_ref' },
 			
 			# Comments
 			[/### (javascript|compiles to)\:/, { token: 'comment', next: '@js_comment', nextEmbedded: 'text/javascript' }]
@@ -290,13 +323,8 @@ export var grammar = {
 			# numbers
 			{ include: '@number' },
 			# delimiter: after number because of .\d floats
-			[/[,]/, 'delimiter.comma'],
-			[/[.]/, 'delimiter.dot'],
-			# strings:
-			[/"""/, 'string', '@herestring."""'],
-			[/'''/, 'string', '@herestring.\'\'\''],
-			[/"/, { cases: { '@eos': 'string', '@default': { token: 'string', next: '@string."' } } }],
-			[/'/, { cases: { '@eos': 'string', '@default': { token: 'string', next: '@string.\'' } } }],
+			[/\,/, 'delimiter.comma'],
+			[/\./, 'delimiter.dot']
 		],
 		js_comment: [
 			[/###/, token: 'comment', next: '@pop', nextEmbedded: '@pop']
@@ -308,10 +336,6 @@ export var grammar = {
 			[/"/, { cases: { '@eos': 'string', '@default': { token: 'string.open', next: '@string."' } } }],
 			[/'/, { cases: { '@eos': 'string', '@default': { token: 'string', next: '@string.\'' } } }],
 			[/`/, { cases: { '@eos': 'string', '@default': { token: 'string', next: '@string.\`' } } }],
-		],
-		value: [
-			{ include: 'string_start' },
-			{ include: '@number' },
 		],
 		unspaced_expr: [
 			[/([a-z]\w*)(\:)(?=\w)/, {
@@ -348,9 +372,10 @@ export var grammar = {
 		],
 
 		comments: [
-			[/###\s(css)/, {token: 'comment.$1.open'}, '@comment.$1'],
+			[/###\s(css)/, {token: 'style.$1.open'}, '@style.$1'],
 			[/###/, {token: 'comment.block.open'}, '@comment.block'],
-			[/#(\s[^@newline]*)?$/, 'commentz'],
+			[/#(\s[^@newline]*)?$/, 'comment'],
+			[/\/\/([^@newline]*)?$/, 'comment'],
 		],
 
 		comment: [
@@ -359,8 +384,43 @@ export var grammar = {
 			[/#/, 'comment']
 		]
 
-		
+		style: [
+			[/###/, {token: 'style.$S2.close'}, '@pop']
+		]
+
+		tag_start: [
+			[/(<)(?=\.)/, 'tag.open','@tag.flag'],
+			[/(<)(?=\w|\{|>)/,'tag.open','@tag.name']
+		]
+
 		tag: [
+			[/>/,'tag.close','@pop']
+			[/(@tagIdentifier)/,{token: 'tag.$S2'}]
+			[/\./,{ cases: {
+				'$S2==event': {token: 'tag.modifier.start', switchTo: 'tag.modifier'}
+				'$S2==modifier': {token: 'tag.modifier.start', switchTo: 'tag.modifier'}
+				'@default': {token: 'tag.flag.start', switchTo: 'tag.flag'}
+			}}]
+			[/(\s*)(\=)(\s*)/,['white','tag.operator',token: 'white', next: 'tag_value']]
+			[/\:/,token: 'tag.event.start', switchTo: 'tag.event']
+			[/\{/,token: 'tag.$S2.braces.open', next: '@tag_interpolation.$S2']
+			[/\[/,token: 'tag.data.open', next: '@tag_data']
+			[/\s+/,token: 'white', switchTo: 'tag.attr']
+		]
+		
+		tag_interpolation: [
+			[/\}/,token: 'tag.$S2.braces.close', next: '@pop']
+			{include: 'expression'}
+			[/\)|\]/,token: 'invalid']
+		]
+
+		tag_data: [
+			[/\]/,token: 'tag.data.close', next: '@pop']
+			{include: 'expression'}
+			[/\)|\]|\}/,token: 'invalid']
+		]
+
+		tag2: [
 			[/\<\>/, { token: 'tag.empty' }],
 			[/(<)([a-z][a-z\-\d]*(?:\:[A-Za-z\-\d]+)?)/, ['tag.open',{token: 'tag.name.tag-$2', next: '@tag_start'}]],
 			[/(<)([A-Z][A-Za-z\-\d]*)/,['tag.open',{token: 'tag.name.local', next: '@tag_start'}]],
@@ -375,7 +435,7 @@ export var grammar = {
 			[/\@(-*[a-zA-Z][\w\-]*)/, 'tag.iref'],
 			[/[\#\.\@]\{/, { token: 'tag.interpolated.open', next: '@tag_inter' }],
 		],
-		tag_start: [
+		tag_start2: [
 			[/[ \t\r\n]+/, { token: 'white', switchTo: '@tag_content' }],
 			{ include: 'tag_parts' },
 			[/\[/, { token: 'tag.data.open', next: '@tag_data' }],
@@ -385,10 +445,15 @@ export var grammar = {
 			['}', { token: 'tag.interpolated.close', next: '@pop' }],
 			{ include: 'body' }
 		],
-		tag_data: [
+		tag_data2: [
 			[']', { token: 'tag.data.close', next: '@pop' }],
 			{ include: 'body' }
 		],
+		tag_value: [
+			[/(?=(\:?[\w]+\=))/, { token: '', next: '@pop' }],
+			[/(?=(\>|\s))/, { token: '', next: '@pop' }],
+			{include: 'expression'}
+		]
 		tag_content: [
 			# [/(\:[a-zA-Z][\w\-]*)((?:\.[a-zA-Z][\w\-]*)+|)\s*(\=)\s*/, ['tag.attribute.listener','tag.attribute.modifier','tag.attribute'], '@tag_attr_value'],
 			[/(\:[a-zA-Z][\w\-]*)((?:\.[a-zA-Z][\w\-]*)+)/,['tag.attribute.listener','tag.attribute.modifier']],
@@ -520,20 +585,21 @@ export var grammar = {
 
 monarch.register('imba',grammar)
 
-export class TokenizedDocument
+export class TokenizedDocument < Component
 	def constructor document
+		super
 		doc = document
-		lastLine = -1
 		lineTokens = []
 		tokens = []
 		lexer = monarch.getLexer('imba')
 
-		head = lineTokens[0] = {
+		head = start = {
 			index: 0
 			line: 0
 			offset: 0
 			type: 'line'
 			state: lexer.getInitialState!
+			scopes: []
 		}
 	
 	# Remove tokens etc from memory
@@ -541,10 +607,8 @@ export class TokenizedDocument
 		self
 
 	def invalidateFromLine line
-		if lastLine >= line
-			lastLine = Math.max(line - 1,0)
-			# remove the tokens after this
-			let state = lineTokens[lastLine]
+		if head.line >= line
+			let state = lineTokens[Math.max(line - 1,0)] or start
 			if state
 				tokens.length = state.index
 				head = state
@@ -562,46 +626,58 @@ export class TokenizedDocument
 		let idx = tokens.indexOf(token)
 		return tokens[idx - 1]
 
-	def getContextAtOffset offset
+	def getTokenAtOffset offset
 		let pos = doc.positionAt(offset)
 		getTokens(pos) # ensure that we have tokenized all the way here
 		let line = lineTokens[pos.line]
 		let idx = line.index
 		let token
 		let prev
-
+		# find the token
 		while token = tokens[++idx]
-			if token.offset == offset
-				return prev or token
-			elif token.offset > offset
-				return prev
+			break if token.offset >= offset
 			prev = token
+		return prev or token
 
-		console.log 'got here?',line.index,tokens.length,idx,prev,token
-		return prev
+	def getContextAtOffset offset
+		let pos = doc.positionAt(offset)
+		let token = getTokenAtOffset(offset)
+		let index = tokens.indexOf(token)
+		let line = lineTokens[pos.line]
+		let context = {
+			offset: offset
+			position: pos
+			token: token
+			right: after(token)
+			left: before(token)
+			scopes: line.scopes
+		}
+		let scopes = []
+		let vars = []
+		context.vars = vars
 
-		let code = line.lineContent
+		if let start = line.scopes[line.scopes.length - 1]
+			let i = tokens.indexOf(start.token)
+			while i < index
+				let tok = tokens[i++]
+				if tok.scope and tok.scope.endIndex < index
+					i = tok.scope.endIndex
+					continue
 
-		# console.log 'now get context',line.lineContent,offset
-		lexer._verbose = true
-		let lexed = lexer.tokenize(code,line.state,line.offset)
-		lexer._verbose = false
+				if tok.type.match(/variable/)
+					vars.push(tok)
 
-		for tok,i in lexed.tokens
-			
-			let next = tok.next = lexed.tokens[i + 1]
-			let to = next ? next.offset : 1000000
-			tok.value = code.slice(tok.offset - line.offset,to - line.offset)
-			# console.log 'token',tok.value,tok.type,tok.s
-			next.prev = tok if next
-		
-		for tok in lexed.tokens
-			if tok.offset == offset
-				return tok.prev or tok
-			if !tok.next or tok.next.offset > offset
-				return tok
-		return null
+		# if we are inside tag - find the whole tag-name
+		let depth = token.stack.depth
+		while index > 0
+			let tok = tokens[--index]
 
+			if tok.type == 'tag.open' and tok.stack.depth == depth
+				context.startTag ||= tok
+			if !tok.stack.parent
+				break context.root = tok
+
+		return context
 		
 
 	def getTokens range
@@ -618,22 +694,36 @@ export class TokenizedDocument
 			let offset = head.offset
 			let code = codelines[head.line]
 
+			let indent = 0
+			while code[indent] === '\t'
+				indent++
+
 			let lineToken = lineTokens[i] = {
 				offset: offset
 				state: head.state
+				stack: head.state.stack
 				line: i
+				indent: indent
 				type: 'line'
+				meta: head.state.stack
 				lineContent: code
 				value: i ? '\n' : ''
-				index: tokens.length - 1
+				index: tokens.length
+				scopes: head.scopes.slice(0)
 			}
+
+			if code[indent] or i == toLine
+				for scope,i in lineToken.scopes
+					if scope.indent >= indent
+						# console.log 'popping scope!',head.state.stack
+						scope.end = offset
+						scope.endIndex = lineToken.index
+						head.scopes.shift!
 
 			tokens.push(lineToken)
 
 			# dont deal with this in all states
-			let indent = 0
-			while code[indent] === '\t'
-				indent++
+			
 			# find the next 
 			let lexed = lexer.tokenize(code,head.state,offset)
 
@@ -645,6 +735,10 @@ export class TokenizedDocument
 				# continue if tok.type == 'lookahead.imba'
 				let next = lexed.tokens[i + 1]
 				let to = next ? (next.offset - offset) : 1000000
+				if tok.type.match(/keyword\.(class|def|if|for|while|do|elif)/)
+					tok.scope = {token: tok, start: tok.offset, indent: indent, type: tok.type}
+					# tok.indent = indent
+					head.scopes.unshift(tok.scope)
 				
 				tok.value = code.slice(tok.offset - offset,to)
 				tokens.push(tok)
@@ -655,11 +749,11 @@ export class TokenizedDocument
 			head.state = lexed.endState
 
 		var elapsed = Date.now! - t
-		if tokens.length < 50
-			console.log tokens
+		# if tokens.length < 50
+		#	console.log tokens
 		# console.log 'tokenized',elapsed,added
 
-		return tokens.map(do $1.value).join('')
+		return tokens
 
 export def parse code,prev
 	var lexer = monarch.getLexer('imba')
@@ -675,11 +769,16 @@ export def parse code,prev
 	for line,i in codelines
 		let lexline = [loc,line,[]]
 		let lexed = lexer.tokenize(line,state,loc)
-		loc += line.length + 1
-		for tok in lexed.tokens
+
+		for tok,i in lexed.tokens
+			let next = lexed.tokens[i + 1]
+			let to = next ? next.offset : code.length
 			lexline[2].push(tok)
+			tok.value = line.slice(tok.offset - loc,to - loc)
 			tokens.push(tok)
+			
 		state = lexed.endState
+		loc += line.length + 1
 
 		if lexed.endState.stack.parent
 			lexline[3] = lexed.endState
@@ -689,8 +788,14 @@ export def parse code,prev
 	var str = ""
 	var vars = res.variables = []
 	console.log 'parsed',code.length,'in',elapsed
+	var stackname = do |stack|
+		let val = [stack.state]
+		while stack = stack.parent
+			val.push(stack.state)
+		return val
+
 	for line in lines
-		console.log line[0],line[1],line[2].map(do $1.type),line[3] && line[3].stack.state
+		console.log line[0],line[1],line[2].map(do [$1.type,$1.value,$1.offset,stackname($1.stack)]),line[3] && line[3].stack.state
 
 	return {}
 

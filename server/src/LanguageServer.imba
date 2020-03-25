@@ -215,7 +215,7 @@ export class LanguageServer < Component
 		if let file = self.files[fileName]
 			let t = Date.now!
 			log 'found file!',fileName,file.version
-			file.getSourceContent!
+			file.doc.getText!
 			if append isa Function
 				file.content = append(file.content)
 			elif typeof append == 'string'
@@ -380,7 +380,8 @@ export class LanguageServer < Component
 	def getCompletionsAtPosition uri, pos, context = {}
 		let file = getImbaFile(uri)
 		let loc = typeof pos == 'number' ? pos : documents.get(uri).offsetAt(pos)
-		let ctx = file.getContextAtLoc(loc)
+		log 'completion',loc,pos
+		let ctx = file.getContextAtOffset(loc)
 
 		let options = {
 			triggerCharacter: context.triggerCharacter
@@ -396,7 +397,7 @@ export class LanguageServer < Component
 			options.autoclose = yes
 			connection.sendNotification('closeAngleBracket',{location: loc,position: pos, uri: uri})
 
-		return file.getCompletionsAtPosition(loc,options)
+		return file.getCompletionsAtOffset(loc,options)
 
 	def doResolve item\CompletionItem
 		inspect item
@@ -450,7 +451,7 @@ export class LanguageServer < Component
 
 		let file = getImbaFile(uri)
 		let loc = file.offsetAt(pos)
-		let ctx = file.getContextAtLoc(loc)
+		let ctx = file.getContextAtOffset(loc)
 
 		if ctx.context == 'css'
 			return file.styleDocument.doHover(loc)

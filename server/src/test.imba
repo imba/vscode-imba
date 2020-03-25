@@ -23,7 +23,7 @@ if false
 	for test in tests
 		file.content = test[0]
 		for pos in test.slice(1)
-			console.log file.getContextAtLoc(pos)
+			console.log file.getContextAtOffset(pos)
 
 var conn = {
 	sendDiagnostics: do yes
@@ -55,85 +55,102 @@ def toffset2ioffset file, start, length
 	let range = file.textSpanToRange({ start: start, length: length })
 	console.log "orig offset",start,length,iloc,range
 
+let tmpdoc = FullTextDocument.new('','imba',0,'')
+
+def testparsex code
+	return
+
 def testparse code
-	let res = parse(code)
-	let pairs = []
-	for tok,i in res.tokens
-		let next = res.tokens[i + 1]
-		let to = next ? next.offset : code.length
-		let content = code.slice(tok.offset,to)
-		let typ = tok.type.replace('.imba','')
-		if typ == 'white' or typ == 'invalid' # or content.match(/[\{\}\[\]\(\)\,]|=/)
-			pairs.push(content)
-		else
-			pairs.push("{content}({typ})")
+	console.log "\nparsing ---"
+	console.log code
+	let pos = code.indexOf('§')
+	code = code.replace(/§/g,'')
+	# let res = parse(code)
+	tmpdoc.overwrite(code)
+	let tokens = tmpdoc.tokens.getTokens!
+	for tok in tokens
+		console.log [tok.offset,tok.value,tok.type,tok.scope or tok.meta]
 
-	# console.log code,res.endState.stack,
-	# console.log pairs.join('') + '\n'
+	if pos >= 0
+		console.log tmpdoc.tokens.getContextAtOffset(pos)
 
-if true
+if false
 	let file = ls.getImbaFile('completion.imba')
-	let content = file.getSourceContent()
+	let content = file.doc.getText!
 	let last = 0
 	let idx = 0
+
 	while (idx = content.indexOf('# |',last)) > -1
 		last = idx + 2
 		if let m = content.slice(idx + 3).match(/^\d+/)
 			idx = idx - parseInt(m[0])
 
 		console.log 'found index',idx
-		console.dir file.getContextAtLoc(idx), {depth: 7}
+		console.dir file.getContextAtOffset(idx), {depth: 7}
 
-	# console.log ls.getCompletionsAtPosition('completion.imba',89)
+
+let parses = `
+class One
+	def again
+		true
+
+
+	def setup par1,par2
+		let [
+			a1
+			a2
+		] = [1,2]
+		if let h1 = 1
+			let h2 = 2
+		let meth = do(h3,h4)
+			let h5 = 2
+
+		Math.ceil(
+			let i1 = 0.5
+		)
+
+		let str = '
+			test dette her
+		'
+
+		if let if1 = 1
+			let s1 = 1§
+		
+		let s2 = 2
+`
+
+if true
+	// testparse('<div>')
+	// testparse('<div.one.two :click.stop value=10>')
+	// testparse('<div .one value=10 .two>')
+	// testparse('<div .one=(test)>')
+	// testparse('<div .one-{state}-here>')
+	// testparse('<div .one-{state)}-here>')
+	// testparse('<div[item]>')
+	// testparse('<div title="hello">')
+	// testparse('<div :test.§self.stop>')
+	// testparse('<div x=(<b>) .§test>')
+	
+	// testparse('<div x="hello there {§}">')
+	# testparse('if let y = 1\n\tlet x = true\ntrue')
+	# testparse("var x = 'a\ns§df\nsdfsd'")
+	testparse(parses)
+
 if false
-	console.log util.fastParseCode('<div hello=(')
-	console.log util.fastParseCode('<div> "')
-	console.log util.fastParseCode('<div> "{')
-	console.log util.fastParseCode('<div.{')
-	console.log util.fastParseCode('<div test=')
-	console.log util.fastParseCode('<div v=({')
-	console.log util.fastParseCode('<div> <','>')
-
-if true
-	testparse('let x,y')
-	testparse('let x = 1, y = 2')
-	testparse('let x = 1, y = 2')
-	testparse('let {x,y} = a')
-	testparse('for {x,y},i in test')
-	testparse('test(let x = 10, hello)')
-	testparse('if let h = 20')
-	testparse('if let h = 20\n\tvar test = 10')
-	testparse('let {\n\tx,\n\ty\n} = a')
-	testparse('let x = /testing/\n')
-	testparse('def test a,b\n\tyes')
-	testparse('### tester dette ### 10')
-	testparse('### css\na\n\n###\n10')
-	testparse('<div>')
-	testparse('<div.one.two value=10>')
-	testparse('<div[item]>')
-	testparse('<div title="hello">')
-	testparse('<div :test.self.stop>')
-	# testparse('def one a,b\n\ttrue')
-	# testparse('def one(a,b = z,[x,y])\n\ttrue')
-	# testparse('def one(a,b = "one{Math}test",[x,y])\n\ttrue')
-	testparse('<div \n\ta=1\n> 10')
-	testparse('aba\n### css\na\n\n###\n10')
-	if false
-		let file = ls.getImbaFile('completion.imba')
-		testparse(file.getSourceContent!)
-		let t = Date.now!
-		let tokens = imbac.tokenize(file.getSourceContent!)
-		console.log 'tokenized',Date.now! - t,tokens.length
-		testparse(file.getSourceContent!)
-
-
-if true
 	let file = ls.getImbaFile('context.imba')
-	let doc = ImbaTextDocument.new('file://test.imba','imba',0,file.getSourceContent!)
+	let doc = ImbaTextDocument.new('file://test.imba','imba',0,file.doc.getText!)
 	# console.log doc.tokens.getTokens(line: 2)
 	# console.log doc.tokens.getTokens(line: 100)
 	# console.log doc.tokens.getTokens(line: 103)
-	for offset in [25,86,119,155,161,200,229,239,277,300,331,364,365,368]
+	let locs = [
+		22,25,86,119,155,161,
+		200,229,239,277,
+		300,331,364,365,368,
+		411,432,463,479,480,492,493,
+		510,532,544,554,622,304,632,639,644,651,
+		677
+		]
+	for offset in locs
 		let pos = doc.positionAt(offset)
 		let ctx = doc.tokens.getContextAtOffset(offset)
 		let line = doc.tokens.lineTokens[pos.line]
@@ -141,7 +158,8 @@ if true
 		let prev = doc.tokens.lineTokens[pos.line - 1]
 		let str = line.lineContent.slice(0,idx) + '|' + line.lineContent.slice(idx)
 		console.log ['---',prev.lineContent,str,'---'].join('\n').replace(/\t/g,'  ')
-		console.dir ctx, depth: 1
+		console.log ctx.value,ctx.type,ctx.stack.state
+		# console.dir [ctx.value,ctx.type,ctx.stack.state], depth: 1
 
 
 # ls.getCompletionsAtPosition('completion.imba',88)

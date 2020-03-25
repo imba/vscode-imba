@@ -78,6 +78,8 @@ export class FullTextDocument < Component
 		languageId = languageId
 		version = version
 		content = content
+		cache = {}
+
 		if languageId == 'imba'
 			tokens = TokenizedDocument.new(self)
 
@@ -87,7 +89,7 @@ export class FullTextDocument < Component
 	get lineOffsets
 		_lineOffsets ||= computeLineOffsets(content,yes)
 	
-	def getText range
+	def getText range = null
 		if range
 			var start = offsetAt(range.start)
 			var end = offsetAt(range.end)
@@ -113,6 +115,9 @@ export class FullTextDocument < Component
 		return { line: line, character: (offset - lineOffsets[line]) }
 
 	def offsetAt position
+		if position.offset
+			return position.offset
+
 		var lineOffsets = lineOffsets
 		if position.line >= lineOffsets.length
 			return content.length
@@ -122,6 +127,14 @@ export class FullTextDocument < Component
 		var lineOffset = lineOffsets[position.line]
 		var nextLineOffset = (position.line + 1 < lineOffsets.length) ? lineOffsets[position.line + 1] : content.length
 		return Math.max(Math.min(lineOffset + position.character, nextLineOffset), lineOffset)
+
+	def overwrite body
+		version++
+		content = body
+		_lineOffsets = null
+		if tokens
+			tokens.invalidateFromLine(0)
+		return self
 
 	def update changes, version
 		# what if it is a full updaate
@@ -174,11 +187,11 @@ export class FullTextDocument < Component
 		content = content.substring(0, change.range.start.offset) + change.text + content.substring(change.range.end.offset, content.length)
 		tokens.applyEdit(change,version,changes) if tokens
 
+	def getContextAtOffset offset
+		self
+
 
 export class ImbaTextDocument < FullTextDocument
 
 	def constructor ...params
 		super
-
-	get tokens
-		$tokens ||= TokenizedDocument.new(self)

@@ -324,14 +324,25 @@ export def stripNonStyleBlocks code
 	return css
 	
 
-export def fastExtractContext code, loc, compiled = ''
+export def fastExtractContext code, loc, tokens, compiled = ''
 	let lft = loc
 	let rgt = loc
 	let len = code.length
 	let chr
 	let res = {
 		loc: loc
+		tokenState: ''
 	}
+
+	let token = tokens ? tokens.getTokenAtOffset(loc) : {}
+
+	res.token = token
+	res.tokenState = token.stack.state
+
+	if token.type.match(/regexp|comment|string/)
+		res.tokenState = token.type
+		return res
+
 
 	let styleBlocks = findStyleBlocks(code)
 	let textBefore = code.slice(0,loc)
@@ -412,7 +423,7 @@ export def fastExtractContext code, loc, compiled = ''
 		let scope
 		let match = null
 		if let m = line.match(/^(export )?(tag|class) ([\w\-\:]+)/)
-			if tokenizeFromLoc == -1
+			tokenizeFromLoc = -1
 			scope = {type: m[2], name: m[3],parent: res.scope, tloc: null}
 			scope[m[2]] = m[3]
 			let name = res.className = m[3]
@@ -424,7 +435,7 @@ export def fastExtractContext code, loc, compiled = ''
 			match = "class {name}"
 			
 		elif let m = line.match(/^(static )?(def|get|set|prop) ([\w\-\$]+)/)
-			if tokenizeFromLoc == -1
+			tokenizeFromLoc = -1
 			scope = {type: m[2], name: m[3],body: yes,parent: res.scope,static: !!m[1]}
 			scope[m[2]] = m[3]
 			let name = res.methodName = m[3]
