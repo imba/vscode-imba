@@ -63,17 +63,24 @@ def testparsex code
 def testparse code
 	console.log "\nparsing ---"
 	console.log code
-	let pos = code.indexOf('§')
-	code = code.replace(/§/g,'')
-	# let res = parse(code)
+
+	let locs = []
+
+	while code.indexOf('§') >= 0
+		locs.push(code.indexOf('§'))
+		code = code.replace(/§/,'')
+
 	tmpdoc.overwrite(code)
 	let tokens = tmpdoc.tokens.getTokens!
 	for tok in tokens
 		console.log [tok.offset,tok.value,tok.type]
 
-	if pos >= 0
-		let ctx = tmpdoc.tokens.getContextAtOffset(pos)
+	for offset in locs
+		let ctx = tmpdoc.tokens.getContextAtOffset(offset)
 		ctx.vars = ctx.vars.map do $1.value
+		for own k,v of ctx
+			if v and v.language == 'imba'
+				ctx[k] = [v.offset,v.value,v.type]
 		# for scope in ctx.scopes when scope.name
 		#	scope.name = scope.name.value
 		console.log ctx
@@ -125,7 +132,7 @@ class One
 		
 
 tag app-item
-	prop value = §10
+	prop value = 10
 	get value
 		$value
 
@@ -136,9 +143,12 @@ tag app-item
 		
 		self
 
-	def render
+	def render param
+		let a = 1
 		<self>
-			<div>
+			<div> "title"
+			<span :§click.stop> "test"
+			<span title= §"hello"> "test"
 			
 `
 

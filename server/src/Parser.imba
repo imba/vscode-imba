@@ -401,7 +401,7 @@ export var grammar = {
 				'$S2==modifier': {token: 'tag.modifier.start', switchTo: 'tag.modifier'}
 				'@default': {token: 'tag.flag.start', switchTo: 'tag.flag'}
 			}}]
-			[/(\s*)(\=)(\s*)/,['white','tag.operator',token: 'white', next: 'tag_value']]
+			[/(\s*\=\s*)/,token: 'tag.operator.equals', next: 'tag_value']
 			[/\:/,token: 'tag.event.start', switchTo: 'tag.event']
 			[/\{/,token: 'tag.$S2.braces.open', next: '@tag_interpolation.$S2']
 			[/\[/,token: 'tag.data.open', next: '@tag_data']
@@ -603,14 +603,17 @@ const TokenScopeTypes = {
 }
 
 class TokenScope
-	def constructor {parent,token,indent,type,line}
-		token = token
-		indent = indent
+	def constructor {parent,token,type,line}
 		type = type
-		parent = parent
+		indent = line.indent
 		start = token.offset
+		token = token	
+		parent = parent
 		end = null
 		endIndex = null
+
+		if token.type.match(/(\w+)\.open/)
+			pair = token.type.replace('open','close')
 
 		if let m = (meta.matcher and line.lineContent.match(meta.matcher))
 			name = m[m.length - 1]
@@ -621,6 +624,9 @@ class TokenScope
 	
 	get meta
 		ScopeTypes[type] or ScopeTypes.flow
+
+	def sub token,type,line
+		TokenScope.new(parent: self, token: token, type: type, line: line)
 	
 	def closest match = null
 		let scope = self
@@ -642,7 +648,7 @@ export class TokenizedDocument < Component
 		lineTokens = []
 		tokens = []
 		lexer = monarch.getLexer('imba')
-		rootScope = TokenScope.new(token: {offset: 0}, indent: -1, type: 'root', line: null, parent: null)
+		rootScope = TokenScope.new(token: {offset: 0, type: 'root'}, type: 'root', line: {indent: -1}, parent: null)
 		head = start = {
 			index: 0
 			line: 0
@@ -766,13 +772,15 @@ export class TokenizedDocument < Component
 				context: head.context
 			}
 
+			let scope = head.context
+
 			if (code[indent] or i == toLine) and !lineToken.stack.state.match(/string|regexp/)
 				# Need to track parens etc as well
-				while let scope = head.context
-					if scope.indent >= indent
+				while scope
+					if scope.indent >= indent and !scope.pair
 						scope.end = offset
 						scope.endIndex = lineToken.index
-						head.context = scope.parent
+						scope = scope.parent
 					else
 						break
 
@@ -785,17 +793,21 @@ export class TokenizedDocument < Component
 				let next = lexed.tokens[i + 1]
 				let to = next ? (next.offset - offset) : 1000000
 				if let m = tok.type.match(/keyword\.(class|def|set|get|prop|tag|if|for|while|do|elif)/)
-					tok.scope = head.context = TokenScope.new({
-						parent: head.context,
-						token: tok,
-						indent: indent,
-						type: m[1],
-						line: lineToken
-					})
+					tok.scope = scope = scope.sub(tok,m[1],lineToken)
+				elif tok.type == 'tag.open'
+					tok.scope = scope = scope.sub(tok,'element',lineToken)
+				elif tok.type == scope.pair
+					console.log 'token is ending?!'
+					# end on specific token?
+					scope.end = tok.offset
+					scope.endIndex = tokens.length
+					scope = scope.parent
+
 				tok.value = code.slice(tok.offset - offset,to)
 				tokens.push(tok)
 				added++
 
+			head.context = scope
 			head.line++
 			head.offset += code.length + 1
 			head.state = lexed.endState
