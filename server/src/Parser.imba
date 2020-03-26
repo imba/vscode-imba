@@ -333,9 +333,9 @@ export var grammar = {
 		string_start: [
 			[/"""/, 'string', '@herestring."""'],
 			[/'''/, 'string', '@herestring.\'\'\''],
-			[/"/, { cases: { '@eos': 'string', '@default': { token: 'string.open', next: '@string."' } } }],
-			[/'/, { cases: { '@eos': 'string', '@default': { token: 'string', next: '@string.\'' } } }],
-			[/`/, { cases: { '@eos': 'string', '@default': { token: 'string', next: '@string.\`' } } }],
+			[/"/, { token: 'string.open', next: '@string."' }],
+			[/'/, { token: 'string.open', next: '@string.\'' }],
+			[/`/, { token: 'string.open', next: '@string.\`' }],
 		],
 		unspaced_expr: [
 			[/([a-z]\w*)(\:)(?=\w)/, {
@@ -494,8 +494,8 @@ export var grammar = {
 			[/[\{\}\,]/, { token: 'keyword'}],
 			[/"""/, 'string', '@herestring."""'],
 			[/'''/, 'string', '@herestring.\'\'\''],
-			[/"/, { cases: { '@eos': 'string', '@default': { token: 'string', next: '@string."' } } }],
-			[/'/, { cases: { '@eos': 'string', '@default': { token: 'string', next: '@string.\'' } } }],
+			[/"/, { token: 'string', next: '@string."' }],
+			[/'/, { token: 'string', next: '@string.\'' }],
 			[/[a-z_A-Z][A-Za-z\d\-\_]*/, token: 'identifier.import']
 		]
 
@@ -585,6 +585,56 @@ export var grammar = {
 
 monarch.register('imba',grammar)
 
+const ScopeTypes = {
+	def:   {closure: yes, matcher: /(static)?\s*def ([\w\-\$]+\??)/}
+	get:   {closure: yes, matcher: /(static)?\s*get ([\w\-\$]+\??)/}
+	set:   {closure: yes, matcher: /(static)?\s*set ([\w\-\$]+\??)/}
+	prop:  {closure: yes, matcher: /(static)?\s*prop ([\w\-\$]+\??)/}
+	class: {closure: yes, matcher: /class ([\w\-]+)/ }
+	tag:   {closure: yes, matcher: /tag ([\w\-]+)/ }
+	do:    {closure: no}
+	flow:  {closure: no}
+	root:  {closure: yes}
+	element: {closure: no, pop: 'tag.close'}
+}
+
+const TokenScopeTypes = {
+	'tag.open': 'element'
+}
+
+class TokenScope
+	def constructor {parent,token,indent,type,line}
+		token = token
+		indent = indent
+		type = type
+		parent = parent
+		start = token.offset
+		end = null
+		endIndex = null
+
+		if let m = (meta.matcher and line.lineContent.match(meta.matcher))
+			name = m[m.length - 1]
+			for mod in m.slice(1,-1)
+				self[mod] = true if mod
+		return self
+		# token: tok, start: tok.offset, indent: indent, type: m[1]
+	
+	get meta
+		ScopeTypes[type] or ScopeTypes.flow
+	
+	def closest match = null
+		let scope = self
+		while scope
+			let typ = scope.meta
+			if typeof match == 'string'
+				return scope if typ[match] or scope.type == match
+			scope = scope.parent
+		return null
+
+	get closure
+		closest('closure')
+				
+
 export class TokenizedDocument < Component
 	def constructor document
 		super
@@ -592,7 +642,7 @@ export class TokenizedDocument < Component
 		lineTokens = []
 		tokens = []
 		lexer = monarch.getLexer('imba')
-
+		rootScope = TokenScope.new(token: {offset: 0}, indent: -1, type: 'root', line: null, parent: null)
 		head = start = {
 			index: 0
 			line: 0
@@ -600,6 +650,7 @@ export class TokenizedDocument < Component
 			type: 'line'
 			state: lexer.getInitialState!
 			scopes: []
+			context: rootScope
 		}
 	
 	# Remove tokens etc from memory
@@ -650,22 +701,25 @@ export class TokenizedDocument < Component
 			token: token
 			right: after(token)
 			left: before(token)
-			scopes: line.scopes
+			scope: line.context
 		}
-		let scopes = []
-		let vars = []
-		context.vars = vars
 
-		if let start = line.scopes[line.scopes.length - 1]
-			let i = tokens.indexOf(start.token)
+		let vars = context.vars = []
+		
+		// Start from the first scope and collect variables up to this token
+		if let start = line.context.closure # line.scopes[line.scopes.length - 1]
+			let i = Math.max(tokens.indexOf(start.token),0)
 			while i < index
 				let tok = tokens[i++]
-				if tok.scope and tok.scope.endIndex < index
-					i = tok.scope.endIndex
-					continue
+				if tok.scope
+					if tok.scope.endIndex < index
+						i = tok.scope.endIndex
+						continue
+					context.scope = tok.scope
 
 				if tok.type.match(/variable/)
 					vars.push(tok)
+				
 
 		# if we are inside tag - find the whole tag-name
 		let depth = token.stack.depth
@@ -709,37 +763,35 @@ export class TokenizedDocument < Component
 				lineContent: code
 				value: i ? '\n' : ''
 				index: tokens.length
-				scopes: head.scopes.slice(0)
+				context: head.context
 			}
 
-			if code[indent] or i == toLine
-				for scope,i in lineToken.scopes
+			if (code[indent] or i == toLine) and !lineToken.stack.state.match(/string|regexp/)
+				# Need to track parens etc as well
+				while let scope = head.context
 					if scope.indent >= indent
-						# console.log 'popping scope!',head.state.stack
 						scope.end = offset
 						scope.endIndex = lineToken.index
-						head.scopes.shift!
+						head.context = scope.parent
+					else
+						break
 
 			tokens.push(lineToken)
 
-			# dont deal with this in all states
-			
-			# find the next 
 			let lexed = lexer.tokenize(code,head.state,offset)
-
-			# add a newline token with some info?
-			# if lexed.tokens.length == 0
-			#	console.log 'no tokens in line!!!',lexed
 
 			for tok,i in lexed.tokens
 				# continue if tok.type == 'lookahead.imba'
 				let next = lexed.tokens[i + 1]
 				let to = next ? (next.offset - offset) : 1000000
-				if tok.type.match(/keyword\.(class|def|if|for|while|do|elif)/)
-					tok.scope = {token: tok, start: tok.offset, indent: indent, type: tok.type}
-					# tok.indent = indent
-					head.scopes.unshift(tok.scope)
-				
+				if let m = tok.type.match(/keyword\.(class|def|set|get|prop|tag|if|for|while|do|elif)/)
+					tok.scope = head.context = TokenScope.new({
+						parent: head.context,
+						token: tok,
+						indent: indent,
+						type: m[1],
+						line: lineToken
+					})
 				tok.value = code.slice(tok.offset - offset,to)
 				tokens.push(tok)
 				added++

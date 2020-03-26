@@ -69,10 +69,14 @@ def testparse code
 	tmpdoc.overwrite(code)
 	let tokens = tmpdoc.tokens.getTokens!
 	for tok in tokens
-		console.log [tok.offset,tok.value,tok.type,tok.scope or tok.meta]
+		console.log [tok.offset,tok.value,tok.type]
 
 	if pos >= 0
-		console.log tmpdoc.tokens.getContextAtOffset(pos)
+		let ctx = tmpdoc.tokens.getContextAtOffset(pos)
+		ctx.vars = ctx.vars.map do $1.value
+		# for scope in ctx.scopes when scope.name
+		#	scope.name = scope.name.value
+		console.log ctx
 
 if false
 	let file = ls.getImbaFile('completion.imba')
@@ -104,19 +108,38 @@ class One
 			let h2 = 2
 		let meth = do(h3,h4)
 			let h5 = 2
+			test
 
 		Math.ceil(
 			let i1 = 0.5
 		)
 
 		let str = '
-			test dette her
+	test dette her
 		'
 
 		if let if1 = 1
-			let s1 = 1§
-		
+			let s1 = 1
+				
 		let s2 = 2
+		
+
+tag app-item
+	prop value = §10
+	get value
+		$value
+
+	set value val
+		$value = val
+
+	static def init
+		
+		self
+
+	def render
+		<self>
+			<div>
+			
 `
 
 if true
@@ -135,6 +158,7 @@ if true
 	# testparse('if let y = 1\n\tlet x = true\ntrue')
 	# testparse("var x = 'a\ns§df\nsdfsd'")
 	testparse(parses)
+	# testparse("var x = '\ntest\nhello\n'")
 
 if false
 	let file = ls.getImbaFile('context.imba')
