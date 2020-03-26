@@ -316,11 +316,15 @@ export class File < Component
 		let end = originalLocFor(span.start + span.length)
 		return doc.getText!.slice(start,end)
 
-	def getCompletionsAtOffset loc, options = {}
-		let ctx = getContextAtOffset(loc)
+	def getCompletionsAtOffset offset, options = {}
+		let ctx = getContextAtOffset(offset)
+		# inspect ctx
+		let context = doc.getContextAtOffset(offset)
 		let items = []
 
-		inspect ctx
+		
+
+		inspect context
 
 		let tls-options = {
 			triggerCharacter: options.triggerCharacter
@@ -328,27 +332,31 @@ export class File < Component
 			includeCompletionsWithInsertText: true
 		}
 
-		if ctx.tokenState.match(/comment|regexp|string|\.(var|let|const)/)
-			log 'abort completions in tokenState',ctx.tokenState
+		let mode = context.state
+		let scope = context.scope
+
+		if js
+			util.findCompiledOffsetForScope(scope,js)
+
+		if mode.match(/regexp|string|comment|varname|naming|params/)
+			log 'skip completions in context',mode
 			return []
 
+		if mode == 'supertag' or mode == 'tagname'
+			return ils.entities.getTagNameCompletions(options)
+
+		if mode == 'filepath'
+			return ils.getPathCompletions(imbaPath,'')
+
+		let tloc = scope.closure.compiled-offset
+
+		if mode == 'superclass'
+			tloc = 0
+
 		let snippets = ils.entities.getSnippetsForContext(ctx)
-		let tloc = ctx.scope.tloc && ctx.scope.tloc.offset
 
 		if options.triggerCharacter == '\\'
 			delete options.triggerCharacter
-
-		if ctx.context == 'params' or ctx.context == 'naming' or ctx.context == 'tag'
-			return []
-
-		if ctx.context == 'supertag' or ctx.context == 'tagname'
-			return ils.entities.getTagNameCompletions(options)
-		
-		if ctx.context == 'filepath'
-			return ils.getPathCompletions(imbaPath,ctx.ctxBefore or '')
-
-		elif ctx.context == 'superclass'
-			tloc = 0
 
 		elif ctx.context == 'type'
 			delete tls-options.triggerCharacter
@@ -358,21 +366,22 @@ export class File < Component
 			return snippets
 
 		# direct acceess on an object -- we need to make sure file is compiled?
-		if ctx.textBefore.match(/\.[\w\$\-]*$/) or ctx.context == 'object'
+		if context.textBefore.match(/\.[\w\$\-]*$/) or ctx.context == 'object'
 			# console.log 'get completions directly',loc,options
 			$flush('emitFile')
-			tloc = generatedLocFor(loc)
-			# let tspitems = tspGetCompletionsAtPosition(loc,ctx,options)
+			tloc = generatedLocFor(offset)
 
 		if typeof tloc == 'number'
+			
 			if let found = tls.getCompletionsAtPosition(lsPath,tloc,options)
 				items = util.tsp2lspCompletions(found.entries,file: self, jsLoc: tloc)
+			log 'get items from tsp',items.length
 
-			for item in ctx.variables
+			for item in context.vars
 				items.push(
-					label: item.text,
+					label: item.value,
 					kind: util.convertCompletionKind('local var')
-					detail: "var {item.text}"
+					detail: "var {item.value}"
 					data: {resolved: yes, origKind: 'local var'}
 				)
 

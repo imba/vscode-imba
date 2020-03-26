@@ -72,6 +72,7 @@ def testparse code
 
 	tmpdoc.overwrite(code)
 	let tokens = tmpdoc.tokens.getTokens!
+
 	for tok in tokens
 		console.log [tok.offset,tok.value,tok.type]
 
@@ -83,7 +84,7 @@ def testparse code
 				ctx[k] = [v.offset,v.value,v.type]
 		# for scope in ctx.scopes when scope.name
 		#	scope.name = scope.name.value
-		console.log ctx
+		console.log ctx.state,ctx.line
 
 if false
 	let file = ls.getImbaFile('completion.imba')
@@ -101,8 +102,10 @@ if false
 
 
 let parses = `
+require('§fs')
 class One
 	def again
+		var x = do(a,§b) true
 		true
 
 
@@ -131,7 +134,7 @@ class One
 		let s2 = 2
 		
 
-tag app-item
+tag §app-item
 	prop value = 10
 	get value
 		$value
@@ -139,17 +142,23 @@ tag app-item
 	set value val
 		$value = val
 
-	static def init
-		
+	static def §init
+		// comment§ here
+		let regex = /§hello/
+	
 		self
 
 	def render param
 		let a = 1
 		<self>
 			<div> "title"
-			<span :§click.stop> "test"
-			<span title= §"hello"> "test"
-			
+			<span :click.stop> "test"
+			<span title= "hello"> "test"
+### css
+.test \{
+	display: block;
+\}
+###
 `
 
 if true

@@ -322,6 +322,25 @@ export def stripNonStyleBlocks code
 			console.log line.length, JSON.stringify(line)
 			console.log lines2[i].length, JSON.stringify(lines2[i])
 	return css
+
+export def findCompiledOffsetForScope scope, javascript
+	let findFromOffset = 0
+	for scop in scope.chain
+		let match = null
+		if scop.type == 'tag'
+			match = "class {pascalCase(scop.name) + 'Component'}"
+		elif scop.type == 'class'
+			match = "class {scop.name}"
+		elif scop.type.match(/get|set|def|prop/)
+			match = scop.static ? '$static$(){' : '$member$(){'
+
+		if match
+			if let res = locationInString(javascript,match,findFromOffset)
+				findFromOffset = res.offset
+				scop.compiled-offset = res.offset
+	return scope
+		
+
 	
 
 export def fastExtractContext code, loc, tokens, compiled = ''
@@ -333,16 +352,6 @@ export def fastExtractContext code, loc, tokens, compiled = ''
 		loc: loc
 		tokenState: ''
 	}
-
-	let token = tokens ? tokens.getTokenAtOffset(loc) : {}
-
-	res.token = token
-	res.tokenState = token.stack.state
-
-	if token.type.match(/regexp|comment|string/)
-		res.tokenState = token.type
-		return res
-
 
 	let styleBlocks = findStyleBlocks(code)
 	let textBefore = code.slice(0,loc)

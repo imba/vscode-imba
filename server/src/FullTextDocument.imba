@@ -188,7 +188,7 @@ export class FullTextDocument < Component
 		tokens.applyEdit(change,version,changes) if tokens
 
 	def getContextAtOffset offset
-		self
+		tokens.getContextAtOffset(offset)
 
 
 export class ImbaTextDocument < FullTextDocument

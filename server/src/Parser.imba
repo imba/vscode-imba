@@ -89,6 +89,7 @@ export var grammar = {
 		]
 
 		expression: [
+			{ include: 'do' }
 			{ include: 'identifiers' }
 			{ include: 'tag_start' },
 			{ include: 'string_start' }
@@ -99,7 +100,12 @@ export var grammar = {
 			{ include: 'comments' }
 			{ include: 'common' }
 			{ include: 'operators' }
+			
 			[/\(/, 'delimiter.parens.open', '@parens']
+		]
+
+		do: [
+			[/(do)(\()/, [{token: 'keyword.$1'},{token: 'params.param.open', next: '@var_parens.param'}]],
 		]
 
 		scopes: [
@@ -156,6 +162,7 @@ export var grammar = {
 			{ include: 'var_statement' }
 			{ include: 'forin_statement' }
 			{ include: 'def_statement' }
+			{ include: 'class_statement' }
 			{ include: 'expression'}
 		]
 
@@ -177,8 +184,15 @@ export var grammar = {
 		]
 
 		def_statement: [
-			[/(def|set)(\s)(@identifier)(\s)(?=\{|\w|\[)/, [{token: 'keyword.$1'},'white',{token: 'identifier.$1.name'},{token: 'white', next: '@var_decl.param'}]],
-			[/(def|set)(\s)(@identifier)(\()/, [{token: 'keyword.$1'},'white',{token: 'identifier.$1.name'},{token: 'params.param.open', next: '@var_parens.param'}]],
+			[/(def|set|get)(\s)(@identifier)(\s)(?=\{|\w|\[)/, [{token: 'keyword.$1'},'white.propname',{token: 'identifier.$1.name'},{token: 'white.params', next: '@var_decl.param'}]],
+			[/(def|set|get)(\s)(@identifier)(\()/, [{token: 'keyword.$1'},'white.propname',{token: 'identifier.$1.name'},{token: 'params.param.open', next: '@var_parens.param'}]],
+		]
+
+		class_statement: [
+			[/(class)(\s)(@identifier)/, [{token: 'keyword.$1'},'white.classname',{token: 'identifier.$1.name'}]],
+		]
+		tag_statement: [
+			[/(tag)(\s)(@identifier)(\s)(?=\{|\w|\[)/, [{token: 'keyword.$1'},'white.classname',{token: 'identifier.$1.name'}]],
 		]
 
 		object: [
@@ -271,11 +285,9 @@ export var grammar = {
 		
 		body: [
 			{include: 'statements'}
-			[/(class|tag|module)(?=\s)/, { token: 'keyword.$1', next: '@declstart.$1'}],
-			
+			[/(class|tag)(?=\s)/, { token: 'keyword.$1', next: '@declstart.$1'}],
 			[/(def|get|set)(?=\s)/, { token: 'keyword.$1', next: '@defstart.$1'}],
 			[/(prop|attr)(?=\s)/, { token: 'keyword.$1', next: '@propstart.$1'}],
-			
 			[/(import)(?=\s)/, { token: 'keyword.$1', next: '@importstart.$1'}],
 
 			[/([a-z]\w*)(:?(?!\w))/, {
@@ -595,19 +607,31 @@ const ScopeTypes = {
 	do:    {closure: no}
 	flow:  {closure: no}
 	root:  {closure: yes}
-	element: {closure: no, pop: 'tag.close'}
+	element: {closure: no}
+	style: {closure: yes}
 }
 
 const TokenScopeTypes = {
-	'tag.open': 'element'
+	'tag.open': 'element',
+	'style.css.open': 'style'
 }
+
+const TokenContextRules = [
+	[/(def|set) [\w\$]+[\s\(]/,'params']
+	[/(class) ([\w\-\:]+) <\s?([\w\-]*)$/,'superclass']
+	[/(tag) ([\w\-\:]+) <\s?([\w\-]*)$/,'supertag']
+	[/(def|set|get|prop|attr|class|tag) ([\w\-]*)$/,'naming']
+	[/\<([\w\-\:]*)$/,'tagname']
+	[/\\([\w\-\:]*)$/,'type']
+	# [/\.([\w\-\$]*)$/,'access']
+]
 
 class TokenScope
 	def constructor {parent,token,type,line}
 		type = type
 		indent = line.indent
 		start = token.offset
-		token = token	
+		token = token
 		parent = parent
 		end = null
 		endIndex = null
@@ -627,6 +651,13 @@ class TokenScope
 
 	def sub token,type,line
 		TokenScope.new(parent: self, token: token, type: type, line: line)
+
+	get chain
+		let items = [self]
+		let scope = self
+		while scope = scope.parent
+			items.unshift(scope)
+		return items
 	
 	def closest match = null
 		let scope = self
@@ -701,14 +732,32 @@ export class TokenizedDocument < Component
 		let token = getTokenAtOffset(offset)
 		let index = tokens.indexOf(token)
 		let line = lineTokens[pos.line]
+
 		let context = {
 			offset: offset
 			position: pos
 			token: token
-			right: after(token)
-			left: before(token)
+			line: line.lineContent
+			textBefore: line.lineContent.slice(0,offset - line.offset)
+			textAfter: line.lineContent.slice(offset - line.offset)
+			state: token.stack ? token.stack.state : ''
 			scope: line.context
 		}
+		let m
+		if m = token.type.match(/regexp|string|comment/)
+			context.state = m[0]
+		else
+			if context.state.match(/(\.(var|let|const|param))/)
+				context.state = 'varname'
+			elif m = token.type.match(/white\.(\w+)/)
+				context.state = m[1]
+			else
+				for rule in TokenContextRules
+					if context.textBefore.match(rule[0])
+						break context.state = rule[1]
+		
+		if context.state == 'string' and context.textBefore.match(/import |from |require(\(|\s)/)
+			context.state = 'filepath'
 
 		let vars = context.vars = []
 		
@@ -718,24 +767,13 @@ export class TokenizedDocument < Component
 			while i < index
 				let tok = tokens[i++]
 				if tok.scope
-					if tok.scope.endIndex < index
+					if tok.scope.endIndex != null and tok.scope.endIndex < index
 						i = tok.scope.endIndex
 						continue
 					context.scope = tok.scope
 
 				if tok.type.match(/variable/)
 					vars.push(tok)
-				
-
-		# if we are inside tag - find the whole tag-name
-		let depth = token.stack.depth
-		while index > 0
-			let tok = tokens[--index]
-
-			if tok.type == 'tag.open' and tok.stack.depth == depth
-				context.startTag ||= tok
-			if !tok.stack.parent
-				break context.root = tok
 
 		return context
 		
@@ -744,10 +782,12 @@ export class TokenizedDocument < Component
 		var codelines = doc.content.split('\n')
 
 		var tokens = tokens
-
 		var t = Date.now!
-		var toLine = range ? range.line : (codelines.length - 1)
+		var toLine = range ? range.line : (doc.lineCount - 1)
 		var added = 0
+		var lineCount = doc.lineCount
+
+		console.log 'get tokens!!',toLine
 
 		while head.line <= toLine
 			let i = head.line
@@ -774,7 +814,7 @@ export class TokenizedDocument < Component
 
 			let scope = head.context
 
-			if (code[indent] or i == toLine) and !lineToken.stack.state.match(/string|regexp/)
+			if (code[indent] or i == lineCount) and !lineToken.stack.state.match(/string|regexp/)
 				# Need to track parens etc as well
 				while scope
 					if scope.indent >= indent and !scope.pair
@@ -792,13 +832,12 @@ export class TokenizedDocument < Component
 				# continue if tok.type == 'lookahead.imba'
 				let next = lexed.tokens[i + 1]
 				let to = next ? (next.offset - offset) : 1000000
-				if let m = tok.type.match(/keyword\.(class|def|set|get|prop|tag|if|for|while|do|elif)/)
-					tok.scope = scope = scope.sub(tok,m[1],lineToken)
-				elif tok.type == 'tag.open'
-					tok.scope = scope = scope.sub(tok,'element',lineToken)
+				let match
+				if match = tok.type.match(/keyword\.(class|def|set|get|prop|tag|if|for|while|do|elif)/)
+					tok.scope = scope = scope.sub(tok,match[1],lineToken)
+				elif TokenScopeTypes[tok.type]
+					tok.scope = scope = scope.sub(tok,TokenScopeTypes[tok.type],lineToken)
 				elif tok.type == scope.pair
-					console.log 'token is ending?!'
-					# end on specific token?
 					scope.end = tok.offset
 					scope.endIndex = tokens.length
 					scope = scope.parent
@@ -815,8 +854,7 @@ export class TokenizedDocument < Component
 		var elapsed = Date.now! - t
 		# if tokens.length < 50
 		#	console.log tokens
-		# console.log 'tokenized',elapsed,added
-
+		console.log 'tokenized',elapsed,added
 		return tokens
 
 export def parse code,prev
