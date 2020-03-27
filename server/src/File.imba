@@ -321,8 +321,8 @@ export class File < Component
 		let offset = offsetAt(pos)
 		let ctx = doc.getContextAtOffset(offset)
 		if ctx.mode == 'tag.name'
-			let info = ils.entities.getTagTypeInfo(ctx.tagName..value)
-			return info and info.location ? [info.location] : []
+			let info = ils.entities.getTagTypeInfo(ctx.scope.closest('element').name)
+			return info.map(do $1.location).filter(do $1)
 		return
 
 	def getQuickInfoAtPosition pos
@@ -331,21 +331,25 @@ export class File < Component
 		let ctx = doc.getContextAtOffset(offset)
 		let range = doc.tokens.getTokenRange(ctx.token)
 		console.log 'getting context',offset,range,ctx.token,ctx.mode
-
+		let element = ctx.scope.closest('element')
 
 		if ctx.scope.type == 'style'
 			return styleDocument.doHover(offset)
 		
-		if ctx.mode == 'tag.name'
-			let tagName = ctx.tagName..value
+		if ctx.mode == 'tag.name'			
+			let tagName = element.name or ctx.tagName..value
+			log 'tagName',element.name
+
 			range = doc.tokens.getTokenRange(ctx.tagName)
 
 			if let info = ils.entities.getTagTypeInfo(tagName)
-				log 'found tag info',info,tagName
-				let markdown = "```html\n<{tagName}>\n```\n" + info.description.value + '\n\n'
-				for ref,i in info.references
-					markdown += ' | ' if i > 0
-					markdown += "[{ref.name}]({ref.url})"
+				let markdown = ''
+				for item,k in info
+					markdown += '\n\n' if k > 0
+					markdown += "```html\n<{item.name}>\n```\n" + item.description.value + '\n\n'
+					for ref,i in item.references
+						markdown += ' | ' if i > 0
+						markdown += "[{ref.name}]({ref.url})"
 
 				return {range: range, contents: {kind: 'markdown',value: markdown}}
 
@@ -387,11 +391,17 @@ export class File < Component
 		if scope.type == 'style'
 			return styleDocument.getCompletionsAtOffset(offset,options)
 
+		if token.match('tag.flag')
+			return ils.entities.getTagFlagCompletions(context)
 		// first some tag completions
 		if token.match('tag.event')
 			log 'complete tag events!!'
 			return ils.entities.getTagEventCompletions(context)
 			return []
+
+		if mode == 'tag.attr'
+			log 'return attributes!!'
+			return ils.entities.getTagAttrCompletions(context)
 		
 		if token.match('tag.modifier')
 			return ils.entities.getTagEventModifierCompletions(context)

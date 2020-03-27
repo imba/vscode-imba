@@ -37,13 +37,46 @@ export class Entities < Component
 		let res = tags[name]
 		unless res
 			let components = @program.getWorkspaceSymbols(type: 'tag',query: name)
-			if let item = components[0]
-				return {
+			return components.map do |item|
+				{
 					name: item.name
 					description: {kind: 'markdown', value: 'custom element'}
 					location: item.location
 				}
-		return res
+		return [res]
+
+
+	def getTagAttrCompletions ctx
+		let items\CompletionItem[] = []
+
+		for item in globalAttributes
+			let desc = item.description
+			if item.name.match(/^on\w+/)
+				continue
+				entry = {
+					label: ':' + item.name.slice(2)
+					sortText: item.name.slice(2)
+					kind: CompletionItemKind.Enum
+				}
+			else
+				entry = {
+					label: item.name,
+					kind: CompletionItemKind.Enum
+				}
+
+			if desc
+				entry.documentation = desc
+
+			items.push(entry)
+
+		if let tagSchema = tags[ctx.tagName]
+			for item in tagSchema.attributes
+				items.push(
+					label: item.name
+					kind: CompletionItemKind.Enum
+				)
+		
+		return items
 		
 	def getKeywordCompletions o = {}
 		let keywords = ['yes','no','tag']
@@ -64,7 +97,7 @@ export class Entities < Component
 			items.push({
 				label: item.name.slice(2)
 				sortText: '0'
-				kind: CompletionItemKind.Field
+				kind: CompletionItemKind.EnumMember
 				data: {resolved: yes}
 			})
 		return items

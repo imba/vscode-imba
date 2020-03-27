@@ -610,13 +610,21 @@ const ScopeTypes = {
 	flow:  {closure: no}
 	root:  {closure: yes}
 	element: {closure: no}
+	value: {closure: no}
 	style: {closure: yes}
 }
 
 const TokenScopeTypes = {
 	'tag.open': 'element',
+	'tag.name.braces.open': 'value',
+	'tag.flag.braces.open': 'value',
 	'style.css.open': 'style'
 }
+
+const TokenPairs = {}
+
+for pair in ['tag.name.braces','tag.data']
+	TokenPairs[pair + '.open'] = TokenPairs[pair + '.close']
 
 const TokenContextRules = [
 	[/(def|set) [\w\$]+[\s\(]/,'params']
@@ -732,6 +740,21 @@ export class TokenizedDocument < Component
 	def getTokenRange token
 		{start: doc.positionAt(token.offset), end: doc.positionAt(token.offset + token.value.length)}
 
+	def getTokensInScope scope
+		let start = tokens.indexOf(scope.token)
+		let end = scope.endIndex or tokens.length
+		let i = start
+		let parts = []
+		while i < end
+			let tok = tokens[i++]
+			if tok.scope and tok.scope != scope
+				parts.push(tok.scope)
+				i = tok.scope.endIndex + 1
+			else
+				parts.push(tok)
+		return parts
+
+
 	def getTokenAtOffset offset
 		let pos = doc.positionAt(offset)
 		getTokens(pos) # ensure that we have tokenized all the way here
@@ -810,8 +833,16 @@ export class TokenizedDocument < Component
 			while scope.indent >= indent and !scope.pair and (scope.start < line.offset)
 				scope = scope.parent
 
-			
 
+		if let elscope = scope.closest('element')
+			let parts = getTokensInScope(elscope)
+			let tagName = ''
+			for part in parts
+				if part.type == 'tag.name'
+					tagName += part.value
+			elscope.name = tagName
+			
+			
 		if scope.type == 'element'
 			# not inside anywhere special?
 			context.tagName = after(scope.token)
@@ -878,14 +909,17 @@ export class TokenizedDocument < Component
 				let next = lexed.tokens[i + 1]
 				let to = next ? (next.offset - offset) : 1000000
 				let match
+
 				if match = tok.type.match(/keyword\.(class|def|set|get|prop|tag|if|for|while|do|elif)/)
 					tok.scope = scope = scope.sub(tok,match[1],lineToken)
 				elif TokenScopeTypes[tok.type]
 					tok.scope = scope = scope.sub(tok,TokenScopeTypes[tok.type],lineToken)
+
 				elif tok.type == scope.pair
 					scope.end = tok.offset
 					scope.endIndex = tokens.length
 					scope = scope.parent
+
 
 				tok.value = code.slice(tok.offset - offset,to)
 				tokens.push(tok)

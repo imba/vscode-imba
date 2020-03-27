@@ -66,12 +66,12 @@ def testparse code
 	let tokens = tmpdoc.tokens.getTokens!
 	let prevstack = ""
 	for tok in tokens
-		let stack = []
+		let stacks = []
 		let part = tok.stack
 		while part
-			stack.unshift(part.state)
+			stacks.unshift(part.state)
 			part = part.parent
-		stack = stack.join('>')
+		let stack = stacks.join('>')
 
 		if stack != prevstack
 			prevstack = stack
@@ -86,7 +86,7 @@ def testparse code
 		for own k,v of ctx
 			if v and v.language == 'imba'
 				ctx[k] = [v.offset,v.value,v.type]
-		console.log [ctx.state,ctx.line,ctx.vars,ctx.scope,ctx.token]
+		console.log [ctx.mode,ctx]
 
 let parses = `
 require('§fs')
@@ -214,6 +214,17 @@ if true §
 `)
 
 testparse(`<div :§click§.§stop§>`)
+
+testparse(`<div §tabindex=1>`)
+testparse(`<app-\{1}-item[1] §tabindex=1>`)
+testparse(`<\{1}-item §tabindex=1>`)
+
+testparsex(`
+var a = \{b: 10\}
+### css
+§
+###
+`)
 
 if false
 	let file = ls.getImbaFile('context.imba')
