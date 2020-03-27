@@ -334,6 +334,11 @@ export class LanguageServer < Component
 	def getDefinitionAtPosition uri, pos
 		let file = self.getImbaFile(uri)
 		let loc = self.documents.get(uri).offsetAt(pos)
+
+		let fileres = file.getDefinitionAtPosition(pos)
+
+		if fileres
+			return fileres
 		
 		unless tls
 			return []
@@ -450,7 +455,6 @@ export class LanguageServer < Component
 		# console.log "get quick info at pos {path}"
 		let file = getImbaFile(uri)
 		let res = file.getQuickInfoAtPosition(pos)
-		console.log 'quick info from file',res
 		return res
 
 	def getPathCompletions basePath, query
@@ -481,13 +485,14 @@ export class LanguageServer < Component
 	def getWorkspaceSymbols {query='',type=null} = {}
 		# indexFiles! # not after simple changes
 		let symbols = cache.symbols ||= files.reduce(&,[]) do $1.concat($2.workspaceSymbols)
-		if query
-			symbols = symbols.filter do util.matchFuzzyString(query,$1.name)
 
 		if (type instanceof Array)
 			symbols = symbols.filter do type.indexOf($1.type) >= 0
 		elif type
 			symbols = symbols.filter do $1.type == type
+		
+		if query
+			symbols = symbols.filter do util.matchFuzzyString(query,$1.name)
 		
 		return symbols
 

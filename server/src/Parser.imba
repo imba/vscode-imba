@@ -1,8 +1,7 @@
 import * as monarch from '../vendor/monarch'
 import { Component } from './Component'
 
-const newline = '¬'
-const lookahead = '¬'
+const newline = String.fromCharCode(172)
 const Token = monarch.Token
 
 var names = 
@@ -63,7 +62,7 @@ export var grammar = {
 	identifier: /[a-z_][A-Za-z\d\-\_]*/
 	variable: /[\w\$]+(?:-[\w\$]*)*/
 	varKeyword: /var|let|const/
-	newline: /\¬/
+	newline: RegExp.new(newline)
 	tagIdentifier: /-*[a-zA-Z][\w\-]*/
 	
 	regEx: /\/(?!\/\/)(?:[^\/\\]|\\.)*\/[igm]*/,
@@ -201,6 +200,8 @@ export var grammar = {
 			[/\}/, 'delimiter.bracket.close', '@pop']
 			[/(@identifier)/, 'identifier']
 			{ include: 'common' }
+			{ include: 'string_start' }
+			{ include: 'comments' }
 			[/:/,'delimiter.object.value','@object_value']
 			[/,/,'delimiter']
 		]
@@ -359,7 +360,6 @@ export var grammar = {
 					'@default': ['identifier','delimiter.access']
 				}
 			}]
-
 			[/(@ivar)(\:)(?=\w)/, [names.ivar,names.access]]
 			[/(@constant)(\:)(?=\w)/, [names.constant,names.access]]
 
@@ -764,57 +764,60 @@ export class TokenizedDocument < Component
 			scope: line.context
 		}
 
+		let scope = context.scope
+		let mode = context.mode
 		let indent = context.indent = context.textBefore.match(/^\t*/)[0].length
 
 		let m
 		if m = token.type.match(/regexp|string|comment/)
-			context.mode = m[0]
+			mode = m[0]
 			context.nested = yes
-		elif context.mode.match(/style/)
+		elif mode.match(/style/) or mode.match(/tag\.(\w+)/)
 			yes
 		else
-			while context.scope.indent >= indent and !context.scope.pair
-				context.scope = context.scope.parent
+			while scope.indent >= indent and !scope.pair
+				scope = scope.parent
 
-			if context.mode.match(/(\.(var|let|const|param))/)
-				context.mode = 'varname'
+			if mode.match(/(\.(var|let|const|param))/)
+				mode = 'varname'
 			elif m = token.type.match(/white\.(\w+)/)
-				context.mode = m[1]
+				mode = m[1]
 			else
 				for rule in TokenContextRules
 					if context.textBefore.match(rule[0])
-						break context.mode = rule[1]
+						break mode = rule[1]
 		
-		if context.mode == 'string' and context.textBefore.match(/import |from |require(\(|\s)/)
-			context.mode = 'filepath'
+		if mode == 'string' and context.textBefore.match(/import |from |require(\(|\s)/)
+			mode = 'filepath'
 
 		let vars = context.vars = []
 		
 		// Start from the first scope and collect variables up to this token
 		if let start = line.context.closure # line.scopes[line.scopes.length - 1]
 			let i = Math.max(tokens.indexOf(start.token),0)
-			while i < index
+			while i <= index
 				let tok = tokens[i++]
 				if let scop = tok.scope
 					if scop.endIndex != null and scop.endIndex < index
 						i = scop.endIndex
 						continue
-					context.scope = scop
+					scope = scop
 
 				if tok.type.match(/variable/)
 					vars.push(tok)
 		
 		if !context.nested
-			let scop = context.scope
-			while scop.indent >= indent and !scop.pair and (scop.start < line.offset)
-				scop = scop.parent
+			while scope.indent >= indent and !scope.pair and (scope.start < line.offset)
+				scope = scope.parent
 
-			context.scope = scop
+			
 
-		if context.scope.type == 'element'
+		if scope.type == 'element'
 			# not inside anywhere special?
-			context.mode 
+			context.tagName = after(scope.token)
 
+		context.scope = scope
+		context.mode = mode
 		return context
 		
 

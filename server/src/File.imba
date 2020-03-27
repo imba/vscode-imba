@@ -316,19 +316,30 @@ export class File < Component
 		let start = originalLocFor(span.start)
 		let end = originalLocFor(span.start + span.length)
 		return doc.getText!.slice(start,end)
+	
+	def getDefinitionAtPosition pos
+		let offset = offsetAt(pos)
+		let ctx = doc.getContextAtOffset(offset)
+		if ctx.mode == 'tag.name'
+			let info = ils.entities.getTagTypeInfo(ctx.tagName..value)
+			return info and info.location ? [info.location] : []
+		return
 
 	def getQuickInfoAtPosition pos
 		let offset = offsetAt(pos)
 
 		let ctx = doc.getContextAtOffset(offset)
 		let range = doc.tokens.getTokenRange(ctx.token)
-		console.log 'getting context',offset,ctx,range
+		console.log 'getting context',offset,range,ctx.token,ctx.mode
+
 
 		if ctx.scope.type == 'style'
 			return styleDocument.doHover(offset)
 		
-		if ctx.token.match('tag.name')
-			let tagName = ctx.token.value
+		if ctx.mode == 'tag.name'
+			let tagName = ctx.tagName..value
+			range = doc.tokens.getTokenRange(ctx.tagName)
+
 			if let info = ils.entities.getTagTypeInfo(tagName)
 				log 'found tag info',info,tagName
 				let markdown = "```html\n<{tagName}>\n```\n" + info.description.value + '\n\n'
@@ -338,6 +349,9 @@ export class File < Component
 
 				return {range: range, contents: {kind: 'markdown',value: markdown}}
 
+			return
+		
+		elif ctx.mode.match(/tag\./)
 			return
 
 		if let gen-offset = generatedLocFor(offset)

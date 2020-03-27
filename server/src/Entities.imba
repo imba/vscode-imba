@@ -34,7 +34,16 @@ export class Entities < Component
 		return symbols
 
 	def getTagTypeInfo name
-		return tags[name]
+		let res = tags[name]
+		unless res
+			let components = @program.getWorkspaceSymbols(type: 'tag',query: name)
+			if let item = components[0]
+				return {
+					name: item.name
+					description: {kind: 'markdown', value: 'custom element'}
+					location: item.location
+				}
+		return res
 		
 	def getKeywordCompletions o = {}
 		let keywords = ['yes','no','tag']
