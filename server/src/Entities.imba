@@ -6,6 +6,7 @@ import {convertCompletionKind,matchFuzzyString} from './utils'
 import {tags,globalAttributes} from './html-data.json'
 import {snippets} from './snippets'
 import {keywords} from './keywords'
+import { items } from '../../test/data'
 
 var globalEvents = for item in globalAttributes when item.name.match(/^on\w+/)
 	item
@@ -44,7 +45,35 @@ export class Entities < Component
 				data: { resolved: true }
 
 		return items
-		
+
+	def getTagEventCompletions o = {}
+		var items = []
+		for item in globalEvents
+			items.push({
+				label: item.name.slice(2)
+				sortText: '0'
+				kind: CompletionItemKind.Field
+				data: {resolved: yes}
+			})
+		return items
+
+	def getTagFlagCompletions o = {}
+		var items = []
+		# possibly add flags for tailwind etc
+		return items
+
+	def getTagEventModifierCompletions o = {}
+		var items = []
+		for item in EVENT_MODIFIERS
+			items.push({
+				label: item.name,
+				kind: CompletionItemKind.Enum,
+				data: {resolved: yes}
+				detail: item.description
+			})
+		return items
+
+
 	def getSnippetsForContext o = {}
 		let matches = []
 		let scope = o.scope
@@ -101,7 +130,7 @@ export class Entities < Component
 	def rewriteTSCompletions items
 		self
 
-	def getCompletionsForContext uri,pos,ctx
+	def getTagCompletions uri,pos,ctx
 		let items\CompletionItem[] = []
 		let entry\CompletionItem
 

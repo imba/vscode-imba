@@ -3,6 +3,7 @@ import { Component } from './Component'
 
 const newline = '¬'
 const lookahead = '¬'
+const Token = monarch.Token
 
 var names = 
 	access: 'delimiter.access'
@@ -218,8 +219,6 @@ export var grammar = {
 			{include: 'expression'}
 		]
 
-		
-
 		expressions: [
 			[/\,/, 'delimiter']
 			{include: 'expression'}
@@ -246,13 +245,13 @@ export var grammar = {
 
 		object_value: [
 			eolpop
-			[/(?=,)/, 'delimiter', '@pop']
+			[/(?=,|\})/, 'delimiter', '@pop']
 			{ include: 'expression' }
 		]
 
 		var_value: [
 			eolpop
-			[/(?=,)/, 'delimiter', '@pop']
+			[/(?=,|@newline|\))/, 'delimiter', '@pop']
 			{ include: 'expression' }
 		]
 
@@ -263,6 +262,8 @@ export var grammar = {
 			[/\{/,'object.open','@var_object.$S2']
 			[/\[/,'array.open','@var_array.$S2']
 			[/,/,'delimiter']
+			[/(,)(@newline)/,['delimiter','newline']]
+			[/@newline/, token: '@rematch', next: '@pop']
 			[/(?=\n)/,'delimiter','@pop']
 			{ include: 'common' }
 			{ include: 'type_start' }
@@ -274,7 +275,7 @@ export var grammar = {
 		]
 
 		single_var_decl: [
-			[/(?=[,\)\]\n])/, 'delimiter', '@pop']
+			[/(?=[,\)\]\n]|@newline)/, 'delimiter', '@pop']
 			{include: 'var_decl'}
 		]
 
@@ -285,6 +286,7 @@ export var grammar = {
 		
 		body: [
 			{include: 'statements'}
+			[/@newline/,'newline']
 			[/(class|tag)(?=\s)/, { token: 'keyword.$1', next: '@declstart.$1'}],
 			[/(def|get|set)(?=\s)/, { token: 'keyword.$1', next: '@defstart.$1'}],
 			[/(prop|attr)(?=\s)/, { token: 'keyword.$1', next: '@propstart.$1'}],
@@ -347,7 +349,7 @@ export var grammar = {
 			[/'''/, 'string', '@herestring.\'\'\''],
 			[/"/, { token: 'string.open', next: '@string."' }],
 			[/'/, { token: 'string.open', next: '@string.\'' }],
-			[/`/, { token: 'string.open', next: '@string.\`' }],
+			[/\`/, { token: 'string.open', next: '@string.\`' }],
 		],
 		unspaced_expr: [
 			[/([a-z]\w*)(\:)(?=\w)/, {
@@ -540,7 +542,7 @@ export var grammar = {
 		],
 		
 		string: [
-			[/[^"'\{\\]+/, 'string'],
+			[/[^"'\`\{\\]+/, 'string'],
 			[/@escapes/, 'string.escape'],
 			[/\./, 'string.escape.invalid'],
 			[/\./, 'string.escape.invalid'],
@@ -688,6 +690,7 @@ export class TokenizedDocument < Component
 			state: lexer.getInitialState!
 			scopes: []
 			context: rootScope
+			match: Token.prototype.match
 		}
 	
 	# Remove tokens etc from memory
@@ -709,9 +712,21 @@ export class TokenizedDocument < Component
 	def after token
 		let idx = tokens.indexOf(token)
 		return tokens[idx + 1]
+
+	def matchToken token, match
+		if match isa RegExp
+			return token.type.match(match)
+		elif typeof match == 'string'
+			return token.type == match
+		return false
 	
-	def before token
+	def before token, match, flat
 		let idx = tokens.indexOf(token)
+		if match
+			while idx > 0
+				let tok = tokens[--idx]
+				if matchToken(tok,match)
+					return tok
 		return tokens[idx - 1]
 
 	def getTokenAtOffset offset
@@ -722,7 +737,7 @@ export class TokenizedDocument < Component
 		let token
 		let prev
 		# find the token
-		while token = tokens[++idx]
+		while token = tokens[idx++]
 			break if token.offset >= offset
 			prev = token
 		return prev or token
@@ -732,6 +747,8 @@ export class TokenizedDocument < Component
 		let token = getTokenAtOffset(offset)
 		let index = tokens.indexOf(token)
 		let line = lineTokens[pos.line]
+		let prev = tokens[index - 1]
+		let next = tokens[index + 1]
 
 		let context = {
 			offset: offset
@@ -740,24 +757,32 @@ export class TokenizedDocument < Component
 			line: line.lineContent
 			textBefore: line.lineContent.slice(0,offset - line.offset)
 			textAfter: line.lineContent.slice(offset - line.offset)
-			state: token.stack ? token.stack.state : ''
+			mode: token.stack ? token.stack.state : ''
 			scope: line.context
 		}
+
+		let indent = context.indent = context.textBefore.match(/^\t*/)[0].length
+
 		let m
 		if m = token.type.match(/regexp|string|comment/)
-			context.state = m[0]
+			context.mode = m[0]
+			context.nested = yes
+
 		else
-			if context.state.match(/(\.(var|let|const|param))/)
-				context.state = 'varname'
+			while context.scope.indent >= indent and !context.scope.pair
+				context.scope = context.scope.parent
+
+			if context.mode.match(/(\.(var|let|const|param))/)
+				context.mode = 'varname'
 			elif m = token.type.match(/white\.(\w+)/)
-				context.state = m[1]
+				context.mode = m[1]
 			else
 				for rule in TokenContextRules
 					if context.textBefore.match(rule[0])
-						break context.state = rule[1]
+						break context.mode = rule[1]
 		
-		if context.state == 'string' and context.textBefore.match(/import |from |require(\(|\s)/)
-			context.state = 'filepath'
+		if context.mode == 'string' and context.textBefore.match(/import |from |require(\(|\s)/)
+			context.mode = 'filepath'
 
 		let vars = context.vars = []
 		
@@ -766,14 +791,25 @@ export class TokenizedDocument < Component
 			let i = Math.max(tokens.indexOf(start.token),0)
 			while i < index
 				let tok = tokens[i++]
-				if tok.scope
-					if tok.scope.endIndex != null and tok.scope.endIndex < index
-						i = tok.scope.endIndex
+				if let scop = tok.scope
+					if scop.endIndex != null and scop.endIndex < index
+						i = scop.endIndex
 						continue
-					context.scope = tok.scope
+					context.scope = scop
 
 				if tok.type.match(/variable/)
 					vars.push(tok)
+		
+		if !context.nested
+			let scop = context.scope
+			while scop.indent >= indent and !scop.pair and (scop.start < line.offset)
+				scop = scop.parent
+
+			context.scope = scop
+
+		if context.scope.type == 'element'
+			# not inside anywhere special?
+			context.mode 
 
 		return context
 		
@@ -807,6 +843,7 @@ export class TokenizedDocument < Component
 				type: 'line'
 				meta: head.state.stack
 				lineContent: code
+				match: Token.prototype.match
 				value: i ? '\n' : ''
 				index: tokens.length
 				context: head.context
@@ -826,9 +863,10 @@ export class TokenizedDocument < Component
 
 			tokens.push(lineToken)
 
-			let lexed = lexer.tokenize(code,head.state,offset)
+			let lexed = lexer.tokenize(code + newline,head.state,offset)
 
 			for tok,i in lexed.tokens
+				continue if tok.type == 'newline'
 				# continue if tok.type == 'lookahead.imba'
 				let next = lexed.tokens[i + 1]
 				let to = next ? (next.offset - offset) : 1000000
@@ -900,34 +938,3 @@ export def parse code,prev
 		console.log line[0],line[1],line[2].map(do [$1.type,$1.value,$1.offset,stackname($1.stack)]),line[3] && line[3].stack.state
 
 	return {}
-
-
-export def parse2 code
-	var lexer = monarch.getLexer('imba')
-	var state = lexer.getInitialState!
-	var t = Date.now!
-
-	var res = lexer.tokenize(code.replace(/\n/g,'¬'),state,0)
-	var elapsed = Date.now! - t
-
-	var str = ""
-	var vars = res.variables = []
-	console.log 'parsed',code.length,'in',elapsed
-	# res.orig = code.replace(/\n/g,'¬')
-	for tok,i in res.tokens
-		let next = res.tokens[i + 1]
-		let to = next ? next.offset : code.length
-		let content = code.slice(tok.offset,to)
-		let typ = tok.type.replace('.imba','')
-		tok.text = content
-
-		if typ == 'variable'
-			vars.push(tok)
-
-		str += content
-
-		if typ.match(/identifier|variable|keyword/)
-			str += "({typ})"
-	res.stack = res.endState.stack
-	res.code = str
-	return res

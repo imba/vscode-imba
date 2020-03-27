@@ -3262,7 +3262,7 @@ const symbolKindToCssClass = (function () {
 
 const TokenizationRegistry = new TokenizationRegistryImpl();
 
-class Token {
+export class Token {
     constructor(offset, type, language) {
         this.offset = offset | 0;
         this.type = type;
@@ -3270,6 +3270,24 @@ class Token {
     }
     toString() {
         return '(' + this.offset + ', ' + this.type + ')';
+    }
+    match(val) {
+        if(typeof val == 'string'){
+            if(val.indexOf(' ') > 0){
+                val = val.split(' ');
+            } else if(this.type.indexOf(val) >= 0){
+                return true;
+            }
+        }
+        if(val instanceof Array){
+            for(let item of val){
+                if(this.type.indexOf(item) >= 0){ return true }
+            }
+        }
+        if(val instanceof RegExp){
+            return this.type.match(val);
+        }
+        return false;
     }
 }
 class TokenizationResult {

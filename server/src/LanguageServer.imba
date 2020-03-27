@@ -396,12 +396,16 @@ export class LanguageServer < Component
 		if ctx.context == 'tagname' and context.triggerCharacter == '<'
 			options.autoclose = yes
 			connection.sendNotification('closeAngleBracket',{location: loc,position: pos, uri: uri})
+		try
+			return file.getCompletionsAtOffset(loc,options)
+		catch e
+			log 'error from getCompletions',e
+			return []
 
-		return file.getCompletionsAtOffset(loc,options)
 
 	def doResolve item\CompletionItem
 		inspect item
-		if item and item.data.resolved
+		if item and (!item.data or item.data.resolved)
 			return item
 
 		let source = item.data.source

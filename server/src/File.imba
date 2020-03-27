@@ -5,6 +5,7 @@ import {ScriptElementKind} from 'typescript'
 import * as util from './utils'
 import { StyleDocument } from './StyleDocument'
 import { FullTextDocument } from './FullTextDocument'
+import { items } from '../../test/data'
 var ts = require 'typescript'
 
 var imbac = require 'imba/dist/compiler.js'
@@ -321,19 +322,25 @@ export class File < Component
 		# inspect ctx
 		let context = doc.getContextAtOffset(offset)
 		let items = []
-
-		
-
 		inspect context
 
-		let tls-options = {
-			triggerCharacter: options.triggerCharacter
-			includeCompletionsForModuleExports: true,
-			includeCompletionsWithInsertText: true
+		let {mode,scope,token} = context
+
+		let include = {
+			vars: 1
 		}
 
-		let mode = context.state
-		let scope = context.scope
+		// first some tag completions
+		if token.match('tag.event')
+			log 'complete tag events!!'
+			return ils.entities.getTagEventCompletions(context)
+			return []
+		
+		if token.match('tag.modifier')
+			return ils.entities.getTagEventModifierCompletions(context)
+		
+		if token.match('tag.flag')
+			return ils.entities.getTagFlagCompletions(context)
 
 		if js
 			util.findCompiledOffsetForScope(scope,js)
@@ -348,56 +355,60 @@ export class File < Component
 		if mode == 'filepath'
 			return ils.getPathCompletions(imbaPath,'')
 
+		let snippets = ils.entities.getSnippetsForContext(ctx)
+
 		let tloc = scope.closure.compiled-offset
 
-		if mode == 'superclass'
+		if mode == 'superclass' or mode == 'type'
 			tloc = 0
 
-		let snippets = ils.entities.getSnippetsForContext(ctx)
+		elif scope.type == 'tag' or scope.type == 'class'
+			return snippets
 
 		if options.triggerCharacter == '\\'
 			delete options.triggerCharacter
-
-		elif ctx.context == 'type'
-			delete tls-options.triggerCharacter
-			tloc = 0
-
-		elif ctx.scope.tag or ctx.scope.class
-			return snippets
+		
+		if context.textBefore.match(/\.[\w\$\-]*$/)
+			include = {}
 
 		# direct acceess on an object -- we need to make sure file is compiled?
-		if context.textBefore.match(/\.[\w\$\-]*$/) or ctx.context == 'object'
-			# console.log 'get completions directly',loc,options
+		if context.textBefore.match(/\.[\w\$\-]*$/) or mode == 'object' or mode == 'object_value'
+			# maybe we should still wait in many cases? And if compilation fails
+			# we want to revert to broader completion
 			$flush('emitFile')
 			tloc = generatedLocFor(offset)
+			log 'got generated loc',tloc
 
 		if typeof tloc == 'number'
 			
 			if let found = tls.getCompletionsAtPosition(lsPath,tloc,options)
 				items = util.tsp2lspCompletions(found.entries,file: self, jsLoc: tloc)
-			log 'get items from tsp',items.length
 
+			log 'get items from tsp',items.length
+			# for item in items
+			# should we always show variables, no?
+		
+		if include.vars
 			for item in context.vars
 				items.push(
 					label: item.value,
 					kind: util.convertCompletionKind('local var')
 					detail: "var {item.value}"
+					sortText: '0'
 					data: {resolved: yes, origKind: 'local var'}
 				)
 
 		# returning these
 		return items.filter do(item)
 			let kind = item.data.origKind
-			return no if item.label == '$member$'
-			return no if item.label == '$static$'
 			
-			if ctx.context == 'superclass' and item.label.match(/^[a-z]/)
+			if mode == 'superclass' and item.label.match(/^[a-z]/)
 				return no
 			
 			if item.label.match(/\$/) and (kind == 'local var' or kind == 'let')
 				return no
 
-			if ctx.context == 'type' and item.label.match(/^[a-z]/)
+			if mode == 'type' and item.label.match(/^[a-z]/)
 				return no if kind == 'let'
 				return no if kind == 'keyword'
 				return no if kind == 'local var'

@@ -6,28 +6,12 @@ import { parse,TokenizedDocument } from './Parser'
 import { FullTextDocument,ImbaTextDocument } from './FullTextDocument'
 var imbac = require 'imba/dist/compiler.js'
 
-var tests  = [
-	[`<div.one.two title=10 :click.test>`,4]
-	[`<div >`,5]
-	[`<div :click.stop .test=10>\n`,12,18,23]
-	[`<\{name\} title='a'>\n`,7]
-	[`<div :test.call(10,200)>\n`,19]
-	[`if true\n\tMath.random()\n`,2]
-	[`\n<>\n<li> 'test'`,2]
-	[`<div> <span> 'test'`,5]
-]
-
-if false
-	var file = File.new({files: {}, rootFiles: []},'index.imba')
-
-	for test in tests
-		file.content = test[0]
-		for pos in test.slice(1)
-			console.log file.getContextAtOffset(pos)
-
 var conn = {
 	sendDiagnostics: do yes
 }
+
+
+
 var rootFile = '/Users/sindre/repos/vscode-imba/test/main.js'
 var ls = LanguageServer.new(conn,null,{
 	rootUri: 'file:///Users/sindre/repos/vscode-imba/test'
@@ -36,24 +20,31 @@ var ls = LanguageServer.new(conn,null,{
 })
 ls.addFile(rootFile)
 ls.addFile('completion.js')
-# console.log ls.rootFiles
-ls.emitRootFiles()
 
-if false
-	ls.getSemanticDiagnostics()
-	ls.$updateFile('component.imba') do |content| content.replace(/@titl\b/,'@titls')
-	ls.getSemanticDiagnostics()
-	ls.$updateFile('component.imba') do |content| content.replace(/@titls\b/,'@titl')
-	ls.getSemanticDiagnostics()
-	ls.inspectProgram()
+ls.emitRootFiles!
 
-	ls.getSemanticDiagnostics()
-	console.log ls.getSymbols('util.imba')
-	
 def toffset2ioffset file, start, length
 	let iloc = file.originalLocFor(start)
 	let range = file.textSpanToRange({ start: start, length: length })
 	console.log "orig offset",start,length,iloc,range
+	
+
+if false
+	let file = ls.getImbaFile('completion.imba')
+	let compiled-offset = file.generatedLocFor(54)
+	console.log "hello",compiled-offset
+	let res = ls.tls.getCompletionsAtPosition(file.jsPath,compiled-offset,{
+		includeCompletionsWithInsertText: true
+		includeCompletionsForModuleExports: true
+		disableSuggestions: true
+	})
+	for item in res.entries
+		for own k,v of item
+			delete item[k] if v == undefined
+		if item.name.match(/status|innerWidth|onpopstate|Reflect|param|setTimeout/) or item.insertText
+			console.log item
+	# console.log res.entries
+	
 
 let tmpdoc = FullTextDocument.new('','imba',0,'')
 
@@ -61,6 +52,7 @@ def testparsex code
 	return
 
 def testparse code
+
 	console.log "\nparsing ---"
 	console.log code
 
@@ -72,9 +64,21 @@ def testparse code
 
 	tmpdoc.overwrite(code)
 	let tokens = tmpdoc.tokens.getTokens!
-
+	let prevstack = ""
 	for tok in tokens
-		console.log [tok.offset,tok.value,tok.type]
+		let stack = []
+		let part = tok.stack
+		while part
+			stack.unshift(part.state)
+			part = part.parent
+		stack = stack.join('>')
+
+		if stack != prevstack
+			prevstack = stack
+		else
+			stack = ''
+
+		console.log [tok.offset,tok.value,tok.type,stack]
 
 	for offset in locs
 		let ctx = tmpdoc.tokens.getContextAtOffset(offset)
@@ -82,24 +86,7 @@ def testparse code
 		for own k,v of ctx
 			if v and v.language == 'imba'
 				ctx[k] = [v.offset,v.value,v.type]
-		# for scope in ctx.scopes when scope.name
-		#	scope.name = scope.name.value
-		console.log ctx.state,ctx.line
-
-if false
-	let file = ls.getImbaFile('completion.imba')
-	let content = file.doc.getText!
-	let last = 0
-	let idx = 0
-
-	while (idx = content.indexOf('# |',last)) > -1
-		last = idx + 2
-		if let m = content.slice(idx + 3).match(/^\d+/)
-			idx = idx - parseInt(m[0])
-
-		console.log 'found index',idx
-		console.dir file.getContextAtOffset(idx), {depth: 7}
-
+		console.log [ctx.state,ctx.line,ctx.vars,ctx.scope,ctx.token]
 
 let parses = `
 require('§fs')
@@ -161,23 +148,72 @@ tag §app-item
 ###
 `
 
+// testparse('<div>')
+// testparse('<div.one.two :click.stop value=10>')
+// testparse('<div .one value=10 .two>')
+// testparse('<div .one=(test)>')
+// testparse('<div .one-{state}-here>')
+// testparse('<div .one-{state)}-here>')
+// testparse('<div[item]>')
+// testparse('<div title="hello">')
+// testparse('<div :test.§self.stop>')
+// testparse('<div x=(<b>) .§test>')
+
+testparse(`
 if true
-	// testparse('<div>')
-	// testparse('<div.one.two :click.stop value=10>')
-	// testparse('<div .one value=10 .two>')
-	// testparse('<div .one=(test)>')
-	// testparse('<div .one-{state}-here>')
-	// testparse('<div .one-{state)}-here>')
-	// testparse('<div[item]>')
-	// testparse('<div title="hello">')
-	// testparse('<div :test.§self.stop>')
-	// testparse('<div x=(<b>) .§test>')
-	
-	// testparse('<div x="hello there {§}">')
-	# testparse('if let y = 1\n\tlet x = true\ntrue')
-	# testparse("var x = 'a\ns§df\nsdfsd'")
-	testparse(parses)
-	# testparse("var x = '\ntest\nhello\n'")
+	let one-two = 1
+	var func = do(fone,ftwo)
+		let hello = fone
+		§
+`)
+
+testparse(`
+	let x = 1
+	for item,i in [1,2,3]
+		item§
+`)
+
+testparse(`
+	let x = 1
+	for own key,value of obj
+		key§
+`)
+
+testparse(`
+	let x = \{
+		one: 1
+		two: §
+		test: 2
+	}
+`)
+
+testparse(`
+var a = 10
+
+§
+
+let x = 20
+`)
+
+testparse(`
+var a = \{b: 10\}
+20
+`)
+
+testparse('var x\\Array§')
+
+testparse('var x = `hello`\n100')
+
+testparse(`
+if true
+	1
+
+§
+if true §
+	2
+`)
+
+testparse(`<div :§click§.§stop§>`)
 
 if false
 	let file = ls.getImbaFile('context.imba')

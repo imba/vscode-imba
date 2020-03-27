@@ -93,11 +93,12 @@ export def tsp2lspSymbolName name
 export def tsp2lspCompletions items, {file,jsLoc,meta=null}
 	let results = []
 	for entry in items
+
 		let name = entry.name
 		let kind = entry.kind
 		let modifiers = (entry.kindModifiers or '').split(/[\,\s]/)
 
-		if name.match(/[\w]Component$/)
+		if name.match(/[\w]Component$/) or name.match(/\$(member|static)\$/)
 			continue
 
 		# console.log entry
@@ -121,6 +122,9 @@ export def tsp2lspCompletions items, {file,jsLoc,meta=null}
 		for mod in modifiers when mod
 			item.data[mod] = true
 
+		if entry.kindModifiers == 'declare' and entry.sortText == '4'
+			yes
+
 		if entry.insertText
 			if entry.insertText.indexOf('this.') == 0
 				item.data.implicitSelf = yes
@@ -130,7 +134,7 @@ export def tsp2lspCompletions items, {file,jsLoc,meta=null}
 		if kind == 'function' and item.data.declare and name.match(/^[a-z]/)
 			continue
 
-		if kind == 'var' and item.data.declare and name.match(/^[a-z]/)
+		if (kind == 'var' or kind == 'parameter' or kind == 'function') and item.data.declare and name.match(/^[a-z]/)
 			continue unless globals[name]
 
 		Object.assign(item.data,meta) if meta
@@ -327,7 +331,9 @@ export def findCompiledOffsetForScope scope, javascript
 	let findFromOffset = 0
 	for scop in scope.chain
 		let match = null
-		if scop.type == 'tag'
+		if scop.type == 'root'
+			scop.compiled-offset = 0
+		elif scop.type == 'tag'
 			match = "class {pascalCase(scop.name) + 'Component'}"
 		elif scop.type == 'class'
 			match = "class {scop.name}"
