@@ -317,6 +317,46 @@ export class File < Component
 		let end = originalLocFor(span.start + span.length)
 		return doc.getText!.slice(start,end)
 
+	def getQuickInfoAtPosition pos
+		let offset = offsetAt(pos)
+
+		let ctx = doc.getContextAtOffset(offset)
+		let range = doc.tokens.getTokenRange(ctx.token)
+		console.log 'getting context',offset,ctx,range
+
+		if ctx.scope.type == 'style'
+			return styleDocument.doHover(offset)
+		
+		if ctx.token.match('tag.name')
+			let tagName = ctx.token.value
+			if let info = ils.entities.getTagTypeInfo(tagName)
+				log 'found tag info',info,tagName
+				let markdown = "```html\n<{tagName}>\n```\n" + info.description.value + '\n\n'
+				for ref,i in info.references
+					markdown += ' | ' if i > 0
+					markdown += "[{ref.name}]({ref.url})"
+
+				return {range: range, contents: {kind: 'markdown',value: markdown}}
+
+			return
+
+		if let gen-offset = generatedLocFor(offset)
+			if let info = tls.getQuickInfoAtPosition(jsPath, gen-offset)
+				let contents = [{
+					value: ts.displayPartsToString(info.displayParts)
+					language: 'typescript'
+				}]
+
+				if info.documentation
+					contents.push(value: ts.displayPartsToString(info.documentation), language: 'text')
+				return {
+					range: range
+					contents: contents
+				}
+
+		return null
+
+
 	def getCompletionsAtOffset offset, options = {}
 		let ctx = getContextAtOffset(offset)
 		# inspect ctx
@@ -329,6 +369,9 @@ export class File < Component
 		let include = {
 			vars: 1
 		}
+
+		if scope.type == 'style'
+			return styleDocument.getCompletionsAtOffset(offset,options)
 
 		// first some tag completions
 		if token.match('tag.event')

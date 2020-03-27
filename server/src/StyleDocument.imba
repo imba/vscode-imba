@@ -22,7 +22,7 @@ export class StyleDocument < Document
 				stylesheet = cssls.parseStylesheet(doc)
 		self
 
-	def getCompletionsAtPosition loc\number, options = {}
+	def getCompletionsAtOffset loc\number, options = {}
 		refresh!
 		let vals = cssls.doComplete(doc,positionAt(loc),stylesheet)
 		for item in vals.items

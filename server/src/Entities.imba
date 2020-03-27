@@ -32,6 +32,9 @@ export class Entities < Component
 				if !query or matchFuzzyString(query,symbol.name)
 					symbols.push(symbol)
 		return symbols
+
+	def getTagTypeInfo name
+		return tags[name]
 		
 	def getKeywordCompletions o = {}
 		let keywords = ['yes','no','tag']

@@ -729,6 +729,9 @@ export class TokenizedDocument < Component
 					return tok
 		return tokens[idx - 1]
 
+	def getTokenRange token
+		{start: doc.positionAt(token.offset), end: doc.positionAt(token.offset + token.value.length)}
+
 	def getTokenAtOffset offset
 		let pos = doc.positionAt(offset)
 		getTokens(pos) # ensure that we have tokenized all the way here
@@ -767,7 +770,8 @@ export class TokenizedDocument < Component
 		if m = token.type.match(/regexp|string|comment/)
 			context.mode = m[0]
 			context.nested = yes
-
+		elif context.mode.match(/style/)
+			yes
 		else
 			while context.scope.indent >= indent and !context.scope.pair
 				context.scope = context.scope.parent

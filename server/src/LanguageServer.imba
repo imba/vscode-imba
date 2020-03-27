@@ -388,10 +388,6 @@ export class LanguageServer < Component
 			includeCompletionsForModuleExports: true,
 			includeCompletionsWithInsertText: true
 		}
-
-		if ctx.context == 'css'
-			log 'inside css block'
-			return file.styleDocument.getCompletionsAtPosition(loc,options)
 	
 		if ctx.context == 'tagname' and context.triggerCharacter == '<'
 			options.autoclose = yes
@@ -452,31 +448,10 @@ export class LanguageServer < Component
 		# force the js imba file for conversion\
 		# let path = util.uriToPath(file.url or file).replace('.imba','.js')
 		# console.log "get quick info at pos {path}"
-
 		let file = getImbaFile(uri)
-		let loc = file.offsetAt(pos)
-		let ctx = file.getContextAtOffset(loc)
-
-		if ctx.context == 'css'
-			return file.styleDocument.doHover(loc)
-		
-		# @type {number}
-		let loc2 = file.generatedLocFor(loc)
-		let info = loc2 and tls.getQuickInfoAtPosition(String(file.lsPath), loc2)
-
-		# console.log pos2
-		if info
-			let contents = [{
-				value: ts.displayPartsToString(info.displayParts)
-				language: 'typescript'
-			}]
-
-			if info.documentation
-				contents.push(value: ts.displayPartsToString(info.documentation), language: 'text')
-			return {
-				range: file.textSpanToRange(info.textSpan)
-				contents: contents
-			}
+		let res = file.getQuickInfoAtPosition(pos)
+		console.log 'quick info from file',res
+		return res
 
 	def getPathCompletions basePath, query
 		# index all files in the project
