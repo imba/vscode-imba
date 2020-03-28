@@ -92,6 +92,7 @@ export def tsp2lspSymbolName name
 
 export def tsp2lspCompletions items, {file,jsLoc,meta=null}
 	let results = []
+	let map = {}
 	for entry in items
 
 		let name = entry.name
@@ -139,6 +140,16 @@ export def tsp2lspCompletions items, {file,jsLoc,meta=null}
 
 		Object.assign(item.data,meta) if meta
 		results.push(item)
+
+	# add self
+	results.push({
+		label: 'self',
+		kind: CompletionItemKind.Variable,
+		sortText: '3'
+		data: {
+			resolved: yes
+		}
+	})
 
 	return results
 

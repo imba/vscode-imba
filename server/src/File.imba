@@ -338,7 +338,10 @@ export class File < Component
 			return styleDocument.doHover(offset)
 
 		elif ctx.mode == 'tag.attr'
-			log 'tag attribute',ctx.token.value
+			let info = ils.entities.getTagAttrInfo(ctx.token.value,element..name)
+			log 'tag attribute',ctx.token.value,info
+			if info
+				return {range: range, contents: info.description}
 		
 		elif ctx.mode == 'tag.name'
 			let tagName = element.name or ctx.tagName..value
@@ -380,16 +383,17 @@ export class File < Component
 
 
 	def getCompletionsAtOffset offset, options = {}
-		let ctx = getContextAtOffset(offset)
-		# inspect ctx
+
 		let context = doc.getContextAtOffset(offset)
 		let items = []
+		
 		inspect context
 
 		let {mode,scope,token} = context
+		let elscope = scope.closest('element')
 
 		let include = {
-			vars: 1
+			vars: yes
 		}
 
 		if scope.type == 'style'
@@ -422,21 +426,19 @@ export class File < Component
 		if mode == 'filepath'
 			return ils.getPathCompletions(imbaPath,'')
 
-		let snippets = ils.entities.getSnippetsForContext(ctx)
-
 		let tloc = scope.closure.compiled-offset
 
 		if mode == 'superclass' or mode == 'type'
 			tloc = 0
 
 		elif scope.type == 'tag' or scope.type == 'class'
-			return snippets
+			return []
 
 		if options.triggerCharacter == '\\'
 			delete options.triggerCharacter
 		
 		if context.textBefore.match(/\.[\w\$\-]*$/)
-			include = {}
+			include.vars = no
 
 		# direct acceess on an object -- we need to make sure file is compiled?
 		if context.textBefore.match(/\.[\w\$\-]*$/) or mode == 'object' or mode == 'object_value'
@@ -447,13 +449,13 @@ export class File < Component
 			log 'got generated loc',tloc
 
 		if typeof tloc == 'number'
-			
-			if let found = tls.getCompletionsAtPosition(lsPath,tloc,options)
+			let tls-options = {
+				triggerCharacter: options.triggerCharacter
+				includeCompletionsForModuleExports: true,
+				includeCompletionsWithInsertText: true
+			}
+			if let found = tls.getCompletionsAtPosition(lsPath,tloc,tls-options)
 				items = util.tsp2lspCompletions(found.entries,file: self, jsLoc: tloc)
-
-			log 'get items from tsp',items.length
-			# for item in items
-			# should we always show variables, no?
 		
 		if include.vars
 			for item in context.vars

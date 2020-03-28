@@ -69,9 +69,6 @@ export class FullTextDocument < Component
 		document.update(changes,version)
 		return document
 
-	static def applyEdits document,edits
-		self
-
 	def constructor uri, languageId, version, content
 		super
 		uri = uri
@@ -79,6 +76,7 @@ export class FullTextDocument < Component
 		version = version
 		content = content
 		cache = {}
+		connection = null
 
 		if languageId == 'imba'
 			tokens = TokenizedDocument.new(self)
@@ -95,6 +93,11 @@ export class FullTextDocument < Component
 			var end = offsetAt(range.end)
 			return content.substring(start, end)
 		return content
+
+	def getLineText line
+		let start = lineOffsets[line]
+		let end = lineOffsets[line + 1]
+		return content.substring(start, end)
 	
 	def positionAt offset
 		offset = Math.max(Math.min(offset, content.length), 0)

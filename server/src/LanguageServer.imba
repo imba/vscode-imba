@@ -385,20 +385,9 @@ export class LanguageServer < Component
 	def getCompletionsAtPosition uri, pos, context = {}
 		let file = getImbaFile(uri)
 		let loc = typeof pos == 'number' ? pos : documents.get(uri).offsetAt(pos)
-		log 'completion',loc,pos
-		let ctx = file.getContextAtOffset(loc)
 
-		let options = {
-			triggerCharacter: context.triggerCharacter
-			includeCompletionsForModuleExports: true,
-			includeCompletionsWithInsertText: true
-		}
-	
-		if ctx.context == 'tagname' and context.triggerCharacter == '<'
-			options.autoclose = yes
-			connection.sendNotification('closeAngleBracket',{location: loc,position: pos, uri: uri})
 		try
-			return file.getCompletionsAtOffset(loc,options)
+			return file.getCompletionsAtOffset(loc,context)
 		catch e
 			log 'error from getCompletions',e
 			return []

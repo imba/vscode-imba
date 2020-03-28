@@ -700,7 +700,7 @@ export class TokenizedDocument < Component
 			context: rootScope
 			match: Token.prototype.match
 		}
-	
+
 	# Remove tokens etc from memory
 	def prune
 		self
@@ -715,7 +715,18 @@ export class TokenizedDocument < Component
 		self
 	
 	def applyEdit change,version,changes
-		invalidateFromLine(change.range.start.line)
+		let line = change.range.start.line
+		let caret = change.range.start.character + 1
+		invalidateFromLine(line)
+		if changes.length == 1 and change.text == '<'
+			let text = doc.getLineText(line)
+			let matcher = text.slice(0,caret) + '§' + text.slice(caret)
+			log 'wrote opening angle bracket!!',JSON.stringify([text,matcher])
+			# not inside string
+			if matcher.match(/(^\t*|[\=\>]\s+)\<\§(?!\s*\>)/)
+				if doc.connection
+					doc.connection.sendNotification('closeAngleBracket',{uri: doc.uri})
+		return
 
 	def after token
 		let idx = tokens.indexOf(token)

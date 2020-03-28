@@ -45,8 +45,16 @@ export class Entities < Component
 				}
 		return [res]
 
+	def getTagAttrInfo attrName, tagName
+		let schema = tags[tagName]
+		let match = schema and schema.attributes.find do $1.name == attrName
+		match ||= globalAttributes.find do $1.name == attrName
 
-	def getTagAttrCompletions ctx
+		if match
+			return match
+
+	def getTagAttrCompletions context
+		let el = context.scope..closest('element')
 		let items\CompletionItem[] = []
 
 		for item in globalAttributes
@@ -69,11 +77,12 @@ export class Entities < Component
 
 			items.push(entry)
 
-		if let tagSchema = tags[ctx.tagName]
+		if let tagSchema = tags[el and el.name]
 			for item in tagSchema.attributes
 				items.push(
 					label: item.name
 					kind: CompletionItemKind.Enum
+					documentation: item.description
 				)
 		
 		return items
@@ -136,9 +145,6 @@ export class Entities < Component
 			})
 
 		return matches
-
-		# completion.insertText = name + '($1)$0'
-		# completion.insertTextFormat = InsertTextFormat.Snippet
 	
 	def getTagNameCompletions o = {}
 
