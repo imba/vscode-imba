@@ -332,11 +332,15 @@ export class File < Component
 		let range = doc.tokens.getTokenRange(ctx.token)
 		console.log 'getting context',offset,range,ctx.token,ctx.mode
 		let element = ctx.scope.closest('element')
+		let elinfo = element and element.name and ils.entities.getTagTypeInfo(element.name)
 
 		if ctx.scope.type == 'style'
 			return styleDocument.doHover(offset)
+
+		elif ctx.mode == 'tag.attr'
+			log 'tag attribute',ctx.token.value
 		
-		if ctx.mode == 'tag.name'			
+		elif ctx.mode == 'tag.name'
 			let tagName = element.name or ctx.tagName..value
 			log 'tagName',element.name
 

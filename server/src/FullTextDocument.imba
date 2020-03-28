@@ -187,8 +187,8 @@ export class FullTextDocument < Component
 		content = content.substring(0, change.range.start.offset) + change.text + content.substring(change.range.end.offset, content.length)
 		tokens.applyEdit(change,version,changes) if tokens
 
-	def getContextAtOffset offset
-		tokens.getContextAtOffset(offset)
+	def getContextAtOffset offset, forward = false
+		tokens.getContextAtOffset(offset,forward)
 
 
 export class ImbaTextDocument < FullTextDocument
