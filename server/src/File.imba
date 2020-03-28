@@ -229,14 +229,8 @@ export class File < Component
 	def $indexWorkspaceSymbols
 		cache.symbols ||= util.fastExtractSymbols(doc.getText!)
 		cache.workspaceSymbols ||= cache.symbols.map do |sym|
-			{
-				kind: sym.kind
-				location: Location.create(uri,sym.span)
-				name: sym.name
-				containerName: sym.containerName
-				type: sym.type
-				ownName: sym.ownName
-			}
+			sym.location = Location.create(uri,sym.span)
+			sym
 		return self
 	
 	get workspaceSymbols
@@ -342,6 +336,10 @@ export class File < Component
 			log 'tag attribute',ctx.token.value,info
 			if info
 				return {range: range, contents: info.description}
+
+		elif ctx.mode == 'tag.event'
+			let info = ils.entities.getTagEventInfo(ctx.token.value,element..name)
+			return {range: range, contents: info.description} if info
 		
 		elif ctx.mode == 'tag.name'
 			let tagName = element.name or ctx.tagName..value

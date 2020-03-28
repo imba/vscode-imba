@@ -80,7 +80,14 @@ connection.onDocumentSymbol do |event|
 	return server ? server.getSymbols(event.textDocument.uri) : []
 
 connection.onWorkspaceSymbol do |event|
-	return server ? server.getWorkspaceSymbols(event) : []
+	let symbols = server ? server.getWorkspaceSymbols(event) : []
+	return symbols.map do(sym)
+		{
+			kind: sym.kind
+			location: sym.location
+			name: sym.name
+			containerName: sym.containerName
+		}
 
 
 connection.onDefinition do |event|

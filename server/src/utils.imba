@@ -204,6 +204,7 @@ export def fastExtractSymbols text
 				start: {line: i, character: m[1].length}
 				end: {line: i, character: m[0].length}
 			}
+
 			let symbol = {
 				kind: SYMBOL_KIND_MAP[kind]
 				ownName: name
@@ -214,10 +215,14 @@ export def fastExtractSymbols text
 				children: []
 				parent: scope == root ? null : scope
 				type: kind
+				data: {}
 			}
 
 			if mods.indexOf('static') >= 0
 				symbol.containerName = 'static'
+			
+			if kind == 'tag' and m = line.match(/\<\s+([\w\-\$\:]+(?:\.[\w\-\$]+)?)/)
+				symbol.superclass = m[1]
 
 			scope.children.push(symbol)
 			scope = symbol

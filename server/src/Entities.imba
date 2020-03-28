@@ -18,14 +18,15 @@ export class Entities < Component
 
 	def constructor program
 		super
-		@program = program
-		@symbols = {}
+		program = program
+		symbols = {}
 		$cache = {}
+
 
 	# cache based on project version
 	def getWorkspaceSymbols query
 		# only recollect if program has updated
-		let files = @program.files
+		let files = program.files
 		let symbols = []
 		for file in files
 			for symbol in file.symbols
@@ -36,7 +37,7 @@ export class Entities < Component
 	def getTagTypeInfo name
 		let res = tags[name]
 		unless res
-			let components = @program.getWorkspaceSymbols(type: 'tag',query: name)
+			let components = program.getWorkspaceSymbols(type: 'tag',query: name)
 			return components.map do |item|
 				{
 					name: item.name
@@ -52,9 +53,12 @@ export class Entities < Component
 
 		if match
 			return match
+	
+	def getTagEventInfo eventName, tagName
+		getTagAttrInfo "on{eventName}",tagName
 
 	def getTagAttrCompletions context
-		let el = context.scope..closest('element')
+		let el = context.scope..closest('element') || {}
 		let items\CompletionItem[] = []
 
 		for item in globalAttributes
@@ -77,14 +81,27 @@ export class Entities < Component
 
 			items.push(entry)
 
-		if let tagSchema = tags[el and el.name]
+		if let tagSchema = tags[el.name]
 			for item in tagSchema.attributes
 				items.push(
 					label: item.name
 					kind: CompletionItemKind.Enum
 					documentation: item.description
 				)
-		
+		elif el.name
+			let tagtype = program.getWorkspaceSymbol(el.name)
+
+			while tagtype
+				let symbols = program.getWorkspaceSymbols(prefix: tagtype.name+'.',type: 'prop')
+				console.log 'found symbols for tag',symbols,el.name,tagtype
+				for sym in symbols
+					items.push(
+						label: sym.ownName
+						kind: CompletionItemKind.Enum
+						detail: "(property) {tagtype.name}"
+						# documentation: item.description
+					)
+				tagtype = tagtype.superclass && program.getWorkspaceSymbol(tagtype.superclass)
 		return items
 		
 	def getKeywordCompletions o = {}
@@ -108,6 +125,7 @@ export class Entities < Component
 				sortText: '0'
 				kind: CompletionItemKind.EnumMember
 				data: {resolved: yes}
+				documentation: item.description
 			})
 		return items
 
@@ -180,69 +198,6 @@ export class Entities < Component
 		
 	def rewriteTSCompletions items
 		self
-
-	def getTagCompletions uri,pos,ctx
-		let items\CompletionItem[] = []
-		let entry\CompletionItem
-
-		let mode =  ctx.stack[0]
-		if mode == 'tag'
-			items = @getTagNameCompletions()
-
-		elif mode == 'event'
-			for item in globalEvents
-				entry =
-					label: ':' + item.name.slice(2)
-					sortText: item.name.slice(2)
-					kind: CompletionItemKind.Field
-				items.push(entry)
-
-		elif mode == 'modifier'
-			for item in EVENT_MODIFIERS
-				items.push({
-					label: item.name,
-					kinds: CompletionItemKind.Enum,
-					detail: item.description or ''
-				})
-
-		elif mode == 'attr'
-			for item in globalAttributes
-				let desc = item.description
-				if item.name.match(/^on\w+/)
-					continue
-					entry = {
-						label: ':' + item.name.slice(2)
-						sortText: item.name.slice(2)
-						kind: CompletionItemKind.Field
-					}
-				else
-					entry = {label: item.name}
-
-				if desc
-					entry.detail = desc.value
-
-				items.push(entry)
-
-			if let tagSchema = tags[ctx.tagName]
-				for item in tagSchema.attributes
-					items.push(label: item.name)
-
-		for item in items
-			item.kind ||= CompletionItemKind.Field
-			item.data ||= { resolved: true }
-
-			if typeof item.kind == 'string'
-				item.kind = convertCompletionKind(item.kind)
-
-			if item.label[0] == ':'
-				item.kind = CompletionItemKind.Function
-				item.sortText = item.label.slice(1)
-
-			if mode == 'event' and item.label[0] == ':'
-				item.insertText = item.label.slice(1)
-				item.commitCharacters = ['.']
-
-		return items
 		
 	def normalizeCompletions items, ctx
 		let results = for item in items
@@ -255,11 +210,6 @@ export class Entities < Component
 			
 			# item.sortText = item.label
 			item
-		
-		# results = results.sort do |a,b|
-		# 	# a.sortText.localeCompare(b.sortText)
-		# 	b.label.localeCompare(a.label)
-
 		return results
 
 

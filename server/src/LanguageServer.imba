@@ -471,19 +471,34 @@ export class LanguageServer < Component
 		
 		return items
 			
-	def getWorkspaceSymbols {query='',type=null} = {}
+	def getWorkspaceSymbols options = {}
 		# indexFiles! # not after simple changes
 		let symbols = cache.symbols ||= files.reduce(&,[]) do $1.concat($2.workspaceSymbols)
 
-		if (type instanceof Array)
-			symbols = symbols.filter do type.indexOf($1.type) >= 0
-		elif type
-			symbols = symbols.filter do $1.type == type
+		unless cache.symbolmap
+			cache.symbolmap = {}
+			for sym in symbols
+				cache.symbolmap[sym.name] = sym
+
+		if (options.type instanceof Array)
+			symbols = symbols.filter do options.type.indexOf($1.type) >= 0
+		elif options.type
+			symbols = symbols.filter do $1.type == options.type
+
+		if options.prefix
+			symbols = symbols.filter do $1.name.indexOf(options.prefix) == 0
 		
-		if query
-			symbols = symbols.filter do util.matchFuzzyString(query,$1.name)
+		if options.query isa RegExp
+			symbols = symbols.filter do options.query.test($1.name)
+			
+		elif options.query
+			symbols = symbols.filter do util.matchFuzzyString(options.query,$1.name)
 		
 		return symbols
+
+	def getWorkspaceSymbol name
+		getWorkspaceSymbols!
+		return cache.symbolmap[name]
 
 	def onReferences params\ReferenceParams
 		return [] unless tls
