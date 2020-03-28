@@ -328,7 +328,7 @@ export class File < Component
 	def getQuickInfoAtPosition pos
 		let offset = offsetAt(pos)
 
-		let ctx = doc.getContextAtOffset(offset)
+		let ctx = doc.getContextAtOffset(offset,true)
 		let range = doc.tokens.getTokenRange(ctx.token)
 		console.log 'getting context',offset,range,ctx.token,ctx.mode
 		let element = ctx.scope.closest('element')
@@ -391,23 +391,22 @@ export class File < Component
 		if scope.type == 'style'
 			return styleDocument.getCompletionsAtOffset(offset,options)
 
-		if token.match('tag.flag')
+		if mode == 'tag.name' or mode == 'supertag'
+			return ils.entities.getTagNameCompletions(options)
+
+		if mode == 'tag.flag'
 			return ils.entities.getTagFlagCompletions(context)
-		// first some tag completions
-		if token.match('tag.event')
+
+		if mode == 'tag.event'
 			log 'complete tag events!!'
 			return ils.entities.getTagEventCompletions(context)
-			return []
 
 		if mode == 'tag.attr'
 			log 'return attributes!!'
 			return ils.entities.getTagAttrCompletions(context)
 		
-		if token.match('tag.modifier')
+		if mode == 'tag.modifier'
 			return ils.entities.getTagEventModifierCompletions(context)
-		
-		if token.match('tag.flag')
-			return ils.entities.getTagFlagCompletions(context)
 
 		if js
 			util.findCompiledOffsetForScope(scope,js)
@@ -415,9 +414,6 @@ export class File < Component
 		if mode.match(/regexp|string|comment|varname|naming|params/)
 			log 'skip completions in context',mode
 			return []
-
-		if mode == 'supertag' or mode == 'tagname'
-			return ils.entities.getTagNameCompletions(options)
 
 		if mode == 'filepath'
 			return ils.getPathCompletions(imbaPath,'')

@@ -180,7 +180,7 @@ export var grammar = {
 		]
 
 		forin_statement: [
-			[/for( own)? /, 'keyword', '@forin_var_decl']
+			[/for( own)? /, 'keyword.for', '@forin_var_decl']
 		]
 
 		def_statement: [
@@ -755,7 +755,7 @@ export class TokenizedDocument < Component
 		return parts
 
 
-	def getTokenAtOffset offset
+	def getTokenAtOffset offset,forwardLooking = no
 		let pos = doc.positionAt(offset)
 		getTokens(pos) # ensure that we have tokenized all the way here
 		let line = lineTokens[pos.line]
@@ -764,13 +764,16 @@ export class TokenizedDocument < Component
 		let prev
 		# find the token
 		while token = tokens[idx++]
+			if forwardLooking and token.offset == offset
+				return token
+
 			break if token.offset >= offset
 			prev = token
 		return prev or token
 
-	def getContextAtOffset offset
+	def getContextAtOffset offset, forwardLooking = no
 		let pos = doc.positionAt(offset)
-		let token = getTokenAtOffset(offset)
+		let token = getTokenAtOffset(offset,forwardLooking)
 		let index = tokens.indexOf(token)
 		let line = lineTokens[pos.line]
 		let prev = tokens[index - 1]

@@ -77,7 +77,8 @@ def testparse code
 			prevstack = stack
 		else
 			stack = ''
-
+		if tok.type == 'white'
+			continue
 		console.log [tok.offset,tok.value,tok.type,stack]
 
 	for offset in locs
@@ -218,6 +219,23 @@ testparse(`<div :§click§.§stop§>`)
 testparse(`<div §tabindex=1>`)
 testparse(`<app-\{1}-item[1] §tabindex=1>`)
 testparse(`<\{1}-item §tabindex=1>`)
+testparse(`<§>`)
+
+testparse(`
+def mount
+	if true
+		let something = 10
+		let other = 20
+
+	if true
+		let again = 1
+		let fn = do(a,b,c) a + b + c
+		let test = again + 2
+		for rev,k in repo.children
+			test + 10 + k + §1
+		let regex = /tester/
+		regex + test + §
+	`)
 
 testparsex(`
 var a = \{b: 10\}
