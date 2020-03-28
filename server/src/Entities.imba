@@ -47,8 +47,15 @@ export class Entities < Component
 		return [res]
 
 	def getTagAttrInfo attrName, tagName
-		let schema = tags[tagName]
-		let match = schema and schema.attributes.find do $1.name == attrName
+		let symbol
+		let schema
+		let match
+
+		while !match and symbol = program.getWorkspaceSymbol(tagName)
+			match = program.getWorkspaceSymbol(symbol.name + '.' + attrName)
+			tagName = symbol.superclass
+
+		match || tags[tagName] and tags[tagName].attributes.find do $1.name == attrName
 		match ||= globalAttributes.find do $1.name == attrName
 
 		if match

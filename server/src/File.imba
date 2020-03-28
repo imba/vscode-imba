@@ -315,8 +315,12 @@ export class File < Component
 		let offset = offsetAt(pos)
 		let ctx = doc.getContextAtOffset(offset)
 		if ctx.mode == 'tag.name'
-			let info = ils.entities.getTagTypeInfo(ctx.scope.closest('element').name)
+			let info = ils.entities.getTagTypeInfo(ctx.tag.name)
 			return info.map(do $1.location).filter(do $1)
+		elif ctx.mode == 'tag.attr'
+			let info = ils.entities.getTagAttrInfo(ctx.token.value,ctx.tag.name)
+			log 'tag attr info',info
+			return info ? [info.location] : null
 		return
 
 	def getQuickInfoAtPosition pos
@@ -324,21 +328,21 @@ export class File < Component
 
 		let ctx = doc.getContextAtOffset(offset,true)
 		let range = doc.tokens.getTokenRange(ctx.token)
-		console.log 'getting context',offset,range,ctx.token,ctx.mode
-		let element = ctx.scope.closest('element')
-		let elinfo = element and element.name and ils.entities.getTagTypeInfo(element.name)
+		log 'getting context',offset,range,ctx.token,ctx.mode
+		let element = ctx.tag
+		let elinfo = ctx.tag and ctx.tag.name and ils.entities.getTagTypeInfo(ctx.tag.name)
 
 		if ctx.scope.type == 'style'
 			return styleDocument.doHover(offset)
 
 		elif ctx.mode == 'tag.attr'
-			let info = ils.entities.getTagAttrInfo(ctx.token.value,element..name)
+			let info = ils.entities.getTagAttrInfo(ctx.token.value,ctx.tag.name)
 			log 'tag attribute',ctx.token.value,info
 			if info
-				return {range: range, contents: info.description}
+				return {range: range, contents: info.description or info.name}
 
 		elif ctx.mode == 'tag.event'
-			let info = ils.entities.getTagEventInfo(ctx.token.value,element..name)
+			let info = ils.entities.getTagEventInfo(ctx.token.value,ctx.tag.name)
 			return {range: range, contents: info.description} if info
 		
 		elif ctx.mode == 'tag.name'

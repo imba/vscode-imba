@@ -863,6 +863,7 @@ export class TokenizedDocument < Component
 
 		context.scope = scope
 		context.mode = mode
+		context.tag = scope.closest('element')
 		return context
 		
 
