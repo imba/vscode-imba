@@ -199,6 +199,7 @@ export def fastExtractSymbols text
 			let name = m[4]
 			let ns = scope.name ? scope.name + '.' : ''
 			let mods = m[2].trim().split(/\s+/)
+			let md = ''
 
 			let span = {
 				start: {line: i, character: m[1].length}
@@ -223,6 +224,10 @@ export def fastExtractSymbols text
 			
 			if kind == 'tag' and m = line.match(/\<\s+([\w\-\$\:]+(?:\.[\w\-\$]+)?)/)
 				symbol.superclass = m[1]
+
+			if scope.type == 'tag'
+				md = "```html\n<{scope.name} {name}>\n```\n"
+				symbol.description = {kind: 'markdown',value: md}
 
 			scope.children.push(symbol)
 			scope = symbol

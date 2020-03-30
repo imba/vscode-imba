@@ -412,7 +412,6 @@ export class File < Component
 			return ils.entities.getTagEventCompletions(context)
 
 		if mode == 'tag.attr'
-			log 'return attributes!!'
 			return ils.entities.getTagAttrCompletions(context)
 		
 		if mode == 'tag.modifier'

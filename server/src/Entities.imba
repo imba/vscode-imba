@@ -64,24 +64,29 @@ export class Entities < Component
 	def getTagEventInfo eventName, tagName
 		getTagAttrInfo "on{eventName}",tagName
 
+	def getTagSymbols tagName, options = {}
+		let items = []
+		let tagtype
+
+		while tagtype = program.getWorkspaceSymbol(tagName)
+			let symbols = program.getWorkspaceSymbols(prefix: tagtype.name+'.',type: options.type, query: options.query)
+			for sym in symbols
+				items.push(sym)
+			tagName = tagtype.superclass
+		return items
+
 	def getTagAttrCompletions context
 		let el = context.scope..closest('element') || {}
 		let items\CompletionItem[] = []
 
 		for item in globalAttributes
 			let desc = item.description
-			if item.name.match(/^on\w+/)
-				continue
-				entry = {
-					label: ':' + item.name.slice(2)
-					sortText: item.name.slice(2)
-					kind: CompletionItemKind.Enum
-				}
-			else
-				entry = {
-					label: item.name,
-					kind: CompletionItemKind.Enum
-				}
+			continue if item.name.match(/^on\w+/)
+			
+			entry = {
+				label: item.name,
+				kind: CompletionItemKind.Enum
+			}
 
 			if desc
 				entry.documentation = desc
@@ -96,19 +101,14 @@ export class Entities < Component
 					documentation: item.description
 				)
 		elif el.name
-			let tagtype = program.getWorkspaceSymbol(el.name)
-
-			while tagtype
-				let symbols = program.getWorkspaceSymbols(prefix: tagtype.name+'.',type: 'prop')
-				console.log 'found symbols for tag',symbols,el.name,tagtype
-				for sym in symbols
-					items.push(
-						label: sym.ownName
-						kind: CompletionItemKind.Enum
-						detail: "(property) {tagtype.name}"
-						# documentation: item.description
-					)
-				tagtype = tagtype.superclass && program.getWorkspaceSymbol(tagtype.superclass)
+			let symbols = getTagSymbols(el.name,type: 'prop')
+			for sym in symbols
+				items.push(
+					label: sym.ownName
+					kind: CompletionItemKind.Enum
+					detail: "(property) {sym.name}"
+					# documentation: item.description
+				)
 		return items
 		
 	def getKeywordCompletions o = {}
@@ -141,7 +141,7 @@ export class Entities < Component
 		# possibly add flags for tailwind etc
 		return items
 
-	def getTagEventModifierCompletions o = {}
+	def getTagEventModifierCompletions context
 		var items = []
 		for item in EVENT_MODIFIERS
 			items.push({
@@ -150,6 +150,16 @@ export class Entities < Component
 				data: {resolved: yes}
 				detail: item.description
 			})
+		
+		if context.tagScope
+			let symbols = getTagSymbols(context.tagScope.name,type: 'def')
+			for sym in symbols
+				items.push(
+					label: sym.ownName
+					kind: CompletionItemKind.Method
+					detail: "(method) {sym.name}"
+				)
+
 		return items
 
 

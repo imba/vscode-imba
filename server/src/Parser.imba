@@ -864,6 +864,13 @@ export class TokenizedDocument < Component
 		context.scope = scope
 		context.mode = mode
 		context.tag = scope.closest('element')
+		context.tagScope = scope.closest('tag')
+		context.classScope = scope.closest('class')
+
+		if context.tag and context.tag.name == 'self'
+			if scope.closest('tag')
+				context.tag.name = scope.closest('tag').name
+
 		return context
 		
 
