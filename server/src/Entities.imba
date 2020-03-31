@@ -14,6 +14,19 @@ var globalEvents = for item in globalAttributes when item.name.match(/^on\w+/)
 for tagItem in tags
 	tags[tagItem.name] = tagItem
 
+class TagQuery
+	def constructor program, tagName
+		# ought to go all the way up to <element>?
+		program = program
+		types = program.entities.getTagTypesForNamePattern(tagName)
+		let regex = RegExp.new("^({types.map(do $1.name).join('|')})(\\.|$)")
+		symbols = program.getWorkspaceSymbols(query: regex)
+		self
+
+	def filter cb
+		symbols.filter(cb)
+		
+
 export class Entities < Component
 
 	def constructor program
@@ -22,6 +35,8 @@ export class Entities < Component
 		symbols = {}
 		$cache = {}
 
+	def getTagQuery name
+		TagQuery.new(program,name)
 
 	# cache based on project version
 	def getWorkspaceSymbols query
@@ -34,10 +49,29 @@ export class Entities < Component
 					symbols.push(symbol)
 		return symbols
 
+	def getTagTypesForNamePattern name
+		let types = []
+		let query = RegExp.new("^{name.replace(/\*/g,'[\\w\\-]+')}$")
+		if name.indexOf('*') >= 0
+			let matches = program.getWorkspaceSymbols(type: 'tag',query: query)
+			for match in matches
+				for item in getTagTypesForNamePattern(match.name)
+					types.push(item) unless types.indexOf(item) >= 0
+		else
+			let type = program.getWorkspaceSymbol(name)
+			types.push(type)
+			while type && type.superclass
+				type = program.getWorkspaceSymbol(type.superclass)
+				types.push(type) if type
+
+		return types
+
 	def getTagTypeInfo name
 		let res = tags[name]
 		unless res
-			let components = program.getWorkspaceSymbols(type: 'tag',query: name)
+			let query = RegExp.new("^{name.replace(/\*/g,'[\\w\\-]+')}$")
+
+			let components = program.getWorkspaceSymbols(type: 'tag',query: query)
 			return components.map do |item|
 				{
 					name: item.name
@@ -47,13 +81,15 @@ export class Entities < Component
 		return [res]
 
 	def getTagAttrInfo attrName, tagName
-		let symbol
 		let schema
-		let match
 
-		while !match and symbol = program.getWorkspaceSymbol(tagName)
-			match = program.getWorkspaceSymbol(symbol.name + '.' + attrName)
-			tagName = symbol.superclass
+		let symbols = getTagQuery(tagName).filter do
+			!$1.static and $1.ownName == attrName
+
+		let match = symbols[0]
+		# while !match and symbol = program.getWorkspaceSymbol(tagName)
+		#	match = program.getWorkspaceSymbol(symbol.name + '.' + attrName)
+		#	tagName = symbol.superclass
 
 		match || tags[tagName] and tags[tagName].attributes.find do $1.name == attrName
 		match ||= globalAttributes.find do $1.name == attrName
@@ -79,6 +115,7 @@ export class Entities < Component
 	def getTagAttrCompletions context
 		let el = context.scope..closest('element') || {}
 		let items\CompletionItem[] = []
+		let mapping = {}
 
 		for item in globalAttributes
 			let desc = item.description
@@ -102,7 +139,8 @@ export class Entities < Component
 					documentation: item.description
 				)
 		elif el.name
-			let symbols = getTagSymbols(el.name,type: 'prop')
+			let symbols = getTagQuery(el.name).symbols.filter do $1.type == 'prop'
+			# let symbols = getTagSymbols(el.name,type: 'prop')
 			for sym in symbols
 				items.push(
 					label: sym.ownName

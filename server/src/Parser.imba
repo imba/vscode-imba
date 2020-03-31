@@ -648,6 +648,7 @@ class TokenScope
 		if token.type.match(/(\w+)\.open/)
 			pair = token.type.replace('open','close')
 
+
 		if let m = (meta.matcher and line.lineContent.match(meta.matcher))
 			name = m[m.length - 1]
 			for mod in m.slice(1,-1)
@@ -861,9 +862,18 @@ export class TokenizedDocument < Component
 		if let elscope = scope.closest('element')
 			let parts = getTokensInScope(elscope)
 			let tagName = ''
+			let tagNameStart
+			let tagNameEnd
 			for part in parts
 				if part.type == 'tag.name'
 					tagName += part.value
+					tagNameStart ||= part
+					tagNameEnd = part
+				if part.token and part.token.type == 'tag.name.braces.open'
+					tagName += '*'
+					tagNameStart ||= part.token
+					tagNameEnd = part.token
+
 			elscope.name = tagName
 			
 			

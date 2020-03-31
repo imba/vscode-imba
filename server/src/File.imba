@@ -318,9 +318,12 @@ export class File < Component
 			let info = ils.entities.getTagTypeInfo(ctx.tag.name)
 			return info.map(do $1.location).filter(do $1)
 		elif ctx.mode == 'tag.attr'
-			let info = ils.entities.getTagAttrInfo(ctx.token.value,ctx.tag.name)
-			log 'tag attr info',info
-			return info ? [info.location] : null
+			# let info = ils.entities.getTagAttrInfo(ctx.token.value,ctx.tag.name)
+			let matches = ils.entities.getTagQuery(ctx.tag.name).filter do
+				!$1.static and $1.ownName == ctx.token.value and $1.type == 'prop'
+			return matches.map do $1.location
+			# log 'tag attr info',info
+			# return info ? [info.location] : null
 		elif ctx.mode == 'tag.modifier'
 			let items = ils.entities.getTagEventModifierCompletions(ctx)
 			let item = items.find do $1.label == ctx.token.value
@@ -359,6 +362,8 @@ export class File < Component
 		elif ctx.mode == 'tag.name'
 			let tagName = element.name or ctx.tagName..value
 			log 'tagName',element.name
+			let types = ils.entities.getTagTypesForNamePattern(ctx.tag.name)
+			log 'potential types',types.map do $1.name
 
 			range = doc.tokens.getTokenRange(ctx.tagName)
 
