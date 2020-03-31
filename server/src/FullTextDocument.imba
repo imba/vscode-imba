@@ -69,6 +69,13 @@ export class FullTextDocument < Component
 		document.update(changes,version)
 		return document
 
+	static def isFull e
+		return e !== undefined && e !== null && typeof e.text === 'string' && e.range === undefined
+
+	static def isIncremental e
+		return !isFull(e) && (e.rangeLength === undefined or typeof e.rangeLength === 'number')
+
+
 	def constructor uri, languageId, version, content
 		super
 		uri = uri
@@ -144,6 +151,13 @@ export class FullTextDocument < Component
 		# handle specific smaller changes in an optimized fashion
 		# many changes will be a single character etc
 		for change,i in changes
+			if FullTextDocument.isFull(change)
+				content = change.text
+				_lineOffsets = null
+				log 'full textdocument change',version
+				tokens.invalidateFromLine(0) if tokens
+				continue
+
 			var range = getWellformedRange(change.range)
 			var startOffset = offsetAt(range.start)
 			var endOffset = offsetAt(range.end)
