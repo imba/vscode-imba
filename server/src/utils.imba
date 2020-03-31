@@ -217,9 +217,10 @@ export def fastExtractSymbols text
 				parent: scope == root ? null : scope
 				type: kind
 				data: {}
+				static: mods.indexOf('static') >= 0
 			}
 
-			if mods.indexOf('static') >= 0
+			if symbol.static
 				symbol.containerName = 'static'
 			
 			if kind == 'tag' and m = line.match(/\<\s+([\w\-\$\:]+(?:\.[\w\-\$]+)?)/)

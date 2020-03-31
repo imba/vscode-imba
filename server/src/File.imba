@@ -321,6 +321,11 @@ export class File < Component
 			let info = ils.entities.getTagAttrInfo(ctx.token.value,ctx.tag.name)
 			log 'tag attr info',info
 			return info ? [info.location] : null
+		elif ctx.mode == 'tag.modifier'
+			let items = ils.entities.getTagEventModifierCompletions(ctx)
+			let item = items.find do $1.label == ctx.token.value
+			if item and item.data.location
+				return [item.data.location]
 		return
 
 	def getQuickInfoAtPosition pos
@@ -344,6 +349,12 @@ export class File < Component
 		elif ctx.mode == 'tag.event'
 			let info = ils.entities.getTagEventInfo(ctx.token.value,ctx.tag.name)
 			return {range: range, contents: info.description} if info
+
+		elif ctx.mode == 'tag.modifier'
+			let items = ils.entities.getTagEventModifierCompletions(ctx)
+			let item = items.find do $1.label == ctx.token.value
+			if item
+				return {range: range, contents: (item.detail or item.label)}
 		
 		elif ctx.mode == 'tag.name'
 			let tagName = element.name or ctx.tagName..value

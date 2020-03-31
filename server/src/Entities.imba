@@ -60,6 +60,7 @@ export class Entities < Component
 
 		if match
 			return match
+
 	
 	def getTagEventInfo eventName, tagName
 		getTagAttrInfo "on{eventName}",tagName
@@ -154,14 +155,17 @@ export class Entities < Component
 		if context.tagScope
 			let symbols = getTagSymbols(context.tagScope.name,type: 'def')
 			for sym in symbols
+				continue if sym.ownName.match(/^(unmount|mount|render|setup)/)
+				continue if sym.static
+
 				items.push(
 					label: sym.ownName
 					kind: CompletionItemKind.Method
 					detail: "(method) {sym.name}"
+					data: {resolved: yes, location: sym.location}
 				)
 
 		return items
-
 
 	def getSnippetsForContext o = {}
 		let matches = []

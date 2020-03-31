@@ -492,7 +492,8 @@ export class LanguageServer < Component
 			symbols = symbols.filter do options.query.test($1.name)
 			
 		elif options.query
-			symbols = symbols.filter do util.matchFuzzyString(options.query,$1.name)
+			let q = options.query.toLowerCase!
+			symbols = symbols.filter do util.matchFuzzyString(q,$1.name)
 		
 		return symbols
 
