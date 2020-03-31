@@ -415,11 +415,13 @@ export var grammar = {
 				'$S2==modifier': {token: 'tag.modifier.start', switchTo: 'tag.modifier'}
 				'@default': {token: 'tag.flag.start', switchTo: 'tag.flag'}
 			}}]
+			
 			[/(\s*\=\s*)/,token: 'tag.operator.equals', next: 'tag_value']
 			[/\:/,token: 'tag.event.start', switchTo: 'tag.event']
 			[/\{/,token: 'tag.$S2.braces.open', next: '@tag_interpolation.$S2']
 			[/\[/,token: 'tag.data.open', next: '@tag_data']
 			[/\s+/,token: 'white', switchTo: 'tag.attr']
+			[/\@(@tagIdentifier)/,token: 'tag.reference']
 		]
 		
 		tag_interpolation: [
