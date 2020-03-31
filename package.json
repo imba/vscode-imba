@@ -19,7 +19,8 @@
 		"Programming Languages"
 	],
 	"activationEvents": [
-		"onLanguage:imba"
+		"onLanguage:imba",
+		"workspaceContains:**/imbaconfig.json"
 	],
 	"contributes": {
 		"semanticTokenTypes": [
