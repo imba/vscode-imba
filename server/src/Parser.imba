@@ -638,7 +638,6 @@ const TokenContextRules = [
 
 class TokenScope
 	def constructor {doc,parent,token,type,line}
-		doc = doc
 		type = type
 		indent = line.indent
 		start = token.offset
@@ -663,7 +662,7 @@ class TokenScope
 		ScopeTypes[type] or ScopeTypes.flow
 
 	def sub token,type,line
-		TokenScope.new(doc: doc, parent: self, token: token, type: type, line: line)
+		TokenScope.new(doc: null, parent: self, token: token, type: type, line: line)
 
 	get chain
 		let items = [self]
@@ -689,7 +688,11 @@ class TokenScope
 
 	get closure
 		closest('closure')
-				
+		
+	def toJSON
+		{type: type, start: start, end: end}
+
+const lexer = monarch.getLexer('imba')
 
 export class TokenizedDocument < Component
 	def constructor document
@@ -697,7 +700,6 @@ export class TokenizedDocument < Component
 		doc = document
 		lineTokens = []
 		tokens = []
-		lexer = monarch.getLexer('imba')
 		rootScope = TokenScope.new(doc: self, token: {offset: 0, type: 'root'}, type: 'root', line: {indent: -1}, parent: null)
 		head = start = {
 			index: 0
