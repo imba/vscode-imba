@@ -637,12 +637,12 @@ const TokenContextRules = [
 ]
 
 class TokenScope
-	def constructor {parent,token,type,line}
+	def constructor {doc,parent,token,type,line}
+		doc = doc
 		type = type
 		indent = line.indent
 		start = token.offset
 		token = token
-		parent = parent
 		end = null
 		endIndex = null
 
@@ -653,6 +653,9 @@ class TokenScope
 			name = m[m.length - 1]
 			for mod in m.slice(1,-1)
 				self[mod] = true if mod
+		
+		parent = parent
+
 		return self
 		# token: tok, start: tok.offset, indent: indent, type: m[1]
 	
@@ -660,7 +663,7 @@ class TokenScope
 		ScopeTypes[type] or ScopeTypes.flow
 
 	def sub token,type,line
-		TokenScope.new(parent: self, token: token, type: type, line: line)
+		TokenScope.new(doc: doc, parent: self, token: token, type: type, line: line)
 
 	get chain
 		let items = [self]
@@ -678,6 +681,12 @@ class TokenScope
 			scope = scope.parent
 		return null
 
+	def reopen
+		end = null
+		endIndex = null
+		parent.reopen! if parent
+		self
+
 	get closure
 		closest('closure')
 				
@@ -689,14 +698,13 @@ export class TokenizedDocument < Component
 		lineTokens = []
 		tokens = []
 		lexer = monarch.getLexer('imba')
-		rootScope = TokenScope.new(token: {offset: 0, type: 'root'}, type: 'root', line: {indent: -1}, parent: null)
+		rootScope = TokenScope.new(doc: self, token: {offset: 0, type: 'root'}, type: 'root', line: {indent: -1}, parent: null)
 		head = start = {
 			index: 0
 			line: 0
 			offset: 0
 			type: 'line'
 			state: lexer.getInitialState!
-			scopes: []
 			context: rootScope
 			match: Token.prototype.match
 		}
@@ -711,7 +719,7 @@ export class TokenizedDocument < Component
 			if state
 				tokens.length = state.index
 				head = state
-
+				state.context.reopen!
 		self
 	
 	def applyEdit change,version,changes
@@ -721,7 +729,7 @@ export class TokenizedDocument < Component
 		if changes.length == 1 and change.text == '<'
 			let text = doc.getLineText(line)
 			let matcher = text.slice(0,caret) + '§' + text.slice(caret)
-			log 'wrote opening angle bracket!!',JSON.stringify([text,matcher])
+			# log 'wrote opening angle bracket!!',JSON.stringify([text,matcher])
 			# not inside string
 			if matcher.match(/(^\t*|[\=\>]\s+)\<\§(?!\s*\>)/)
 				if doc.connection
@@ -883,8 +891,6 @@ export class TokenizedDocument < Component
 		var added = 0
 		var lineCount = doc.lineCount
 
-		console.log 'get tokens!!',toLine
-
 		while head.line <= toLine
 			let i = head.line
 			let offset = head.offset
@@ -955,7 +961,7 @@ export class TokenizedDocument < Component
 		var elapsed = Date.now! - t
 		# if tokens.length < 50
 		#	console.log tokens
-		console.log 'tokenized',elapsed,added
+		# console.log 'tokenized',elapsed,added
 		return tokens
 
 export def parse code,prev
