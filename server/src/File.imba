@@ -115,7 +115,7 @@ export class File < Component
 			let msg = entry.messageText
 			let start = doc.positionAt(lstart)
 			let end = doc.positionAt(originalLocFor(entry.start + entry.length) or (lstart + entry.length))
-			let sev = [DiagnosticSeverity.Warning,DiagnosticSeverity.Error,DiagnosticSeverity.Information][entry.category]
+			let sev = [DiagnosticSeverity.Warning,DiagnosticSeverity.Warning,DiagnosticSeverity.Information][entry.category]
 			# console.log 'converting diagnostic',entry.category,entry.messageText
 			{
 				severity: sev
@@ -320,7 +320,7 @@ export class File < Component
 		elif ctx.mode == 'tag.attr'
 			# let info = ils.entities.getTagAttrInfo(ctx.token.value,ctx.tag.name)
 			let matches = ils.entities.getTagQuery(ctx.tag.name).filter do
-				!$1.static and $1.ownName == ctx.token.value and $1.type == 'prop'
+				!$1.static and $1.ownName == ctx.token.value and ($1.type == 'prop' or $1.type == 'set')
 			return matches.map do $1.location
 			# log 'tag attr info',info
 			# return info ? [info.location] : null
@@ -418,7 +418,7 @@ export class File < Component
 			return styleDocument.getCompletionsAtOffset(offset,options)
 
 		if mode == 'tag.name' or mode == 'supertag'
-			return ils.entities.getTagNameCompletions(options)
+			return ils.entities.getTagNameCompletions(context)
 
 		if mode == 'tag.flag'
 			return ils.entities.getTagFlagCompletions(context)
@@ -454,11 +454,11 @@ export class File < Component
 		if options.triggerCharacter == '\\'
 			delete options.triggerCharacter
 		
-		if context.textBefore.match(/\.[\w\$\-]*$/)
+		if mode == 'access'
 			include.vars = no
 
 		# direct acceess on an object -- we need to make sure file is compiled?
-		if context.textBefore.match(/\.[\w\$\-]*$/) or mode == 'object' or mode == 'object_value'
+		if mode == 'access' or mode == 'object' or mode == 'object_value'
 			# maybe we should still wait in many cases? And if compilation fails
 			# we want to revert to broader completion
 			$flush('emitFile')

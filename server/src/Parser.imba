@@ -184,7 +184,7 @@ export var grammar = {
 		]
 
 		def_statement: [
-			[/(def|set|get)(\s)(@identifier)(\s)(?=\{|\w|\[)/, [{token: 'keyword.$1'},'white.propname',{token: 'identifier.$1.name'},{token: 'white.params', next: '@var_decl.param'}]],
+			[/(def|set|get)(\s)(@identifier)(\s)(?=\{|\w|\[|\.\.\.)/, [{token: 'keyword.$1'},'white.propname',{token: 'identifier.$1.name'},{token: 'white.params', next: '@var_decl.param'}]],
 			[/(def|set|get)(\s)(@identifier)(\()/, [{token: 'keyword.$1'},'white.propname',{token: 'identifier.$1.name'},{token: 'params.param.open', next: '@var_parens.param'}]],
 		]
 
@@ -814,6 +814,8 @@ export class TokenizedDocument < Component
 			scope: line.context
 		}
 
+		# context.tokenBefore = offset >= token.offset
+
 		let scope = context.scope
 		let mode = context.mode
 		let indent = context.indent = context.textBefore.match(/^\t*/)[0].length
@@ -892,7 +894,11 @@ export class TokenizedDocument < Component
 		if context.tag and context.tag.name == 'self'
 			if scope.closest('tag')
 				context.tag.name = scope.closest('tag').name
-
+		
+		if context.mode.match(/^(var_value|object_value|root)/)
+			if context.textBefore.match(/([^\.]\.\.|[^\.]\.)([\w\-\$]*)$/) 
+				context.mode = 'access'
+			yes
 		return context
 		
 
@@ -952,7 +958,7 @@ export class TokenizedDocument < Component
 				let to = next ? (next.offset - offset) : 1000000
 				let match
 
-				if match = tok.type.match(/keyword\.(class|def|set|get|prop|tag|if|for|while|do|elif)/)
+				if match = tok.type.match(/keyword\.(class|def|set|get|prop|tag|if|for|while|do|elif|unless)/)
 					tok.scope = scope = scope.sub(tok,match[1],lineToken)
 				elif TokenScopeTypes[tok.type]
 					tok.scope = scope = scope.sub(tok,TokenScopeTypes[tok.type],lineToken)

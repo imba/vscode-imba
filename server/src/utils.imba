@@ -191,7 +191,7 @@ export def fastExtractSymbols text
 		while scope.indent >= indent
 			scope = scope.parent or root 
 
-		m = line.match(/^(\t*((?:export )?(?:static )?)(class|tag|def|get|set|prop|attr) )([\w\-\$\:]+(?:\.[\w\-\$]+)?)/)
+		m = line.match(/^(\t*((?:export )?(?:static )?(?:extend )?)(class|tag|def|get|set|prop|attr) )([\w\-\$\:]+(?:\.[\w\-\$]+)?)/)
 		# m ||= line.match(/^(.*(def|get|set|prop|attr) )([\w\-\$]+)/)
 
 		if m
@@ -218,10 +218,14 @@ export def fastExtractSymbols text
 				type: kind
 				data: {}
 				static: mods.indexOf('static') >= 0
+				extends: mods.indexOf('extend') >= 0
 			}
 
 			if symbol.static
 				symbol.containerName = 'static'
+			
+			symbol.containerName = m[2] + m[3]
+				
 			
 			if kind == 'tag' and m = line.match(/\<\s+([\w\-\$\:]+(?:\.[\w\-\$]+)?)/)
 				symbol.superclass = m[1]

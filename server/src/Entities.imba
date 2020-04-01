@@ -19,7 +19,7 @@ class TagQuery
 		# ought to go all the way up to <element>?
 		program = program
 		types = program.entities.getTagTypesForNamePattern(tagName)
-		let regex = RegExp.new("^({types.map(do $1.name).join('|')})(\\.|$)")
+		let regex = RegExp.new("^({types.map(do $1.name).join('|')}|element|htmlelement)(\\.|$)")
 		symbols = program.getWorkspaceSymbols(query: regex)
 		self
 
@@ -59,7 +59,7 @@ export class Entities < Component
 					types.push(item) unless types.indexOf(item) >= 0
 		else
 			let type = program.getWorkspaceSymbol(name)
-			types.push(type)
+			types.push(type) if type
 			while type && type.superclass
 				type = program.getWorkspaceSymbol(type.superclass)
 				types.push(type) if type
@@ -139,7 +139,7 @@ export class Entities < Component
 					documentation: item.description
 				)
 		elif el.name
-			let symbols = getTagQuery(el.name).symbols.filter do $1.type == 'prop'
+			let symbols = getTagQuery(el.name).symbols.filter do $1.type == 'prop' or $1.type == 'set'
 			# let symbols = getTagSymbols(el.name,type: 'prop')
 			for sym in symbols
 				items.push(
@@ -235,10 +235,6 @@ export class Entities < Component
 			}
 		
 		let components = @program.getWorkspaceSymbols(type: 'tag')
-		# $cache.components = for item in @getWorkspaceSymbols()
-		# 	console.log 'workspace item',item
-		# 	continue unless item.type == 'tag'
-		# 	item
 		
 		for item in components # $cache.components
 			items.push {
@@ -248,10 +244,13 @@ export class Entities < Component
 				data: {resolved: true}
 			}
 
-		for item in items
-			if o.autoclose
-				item.insertText = item.label + '$0>'
-				item.insertTextFormat = InsertTextFormat.Snippet
+		unless o.mode == 'supertag'
+			items.push {
+				label: 'self'
+				kind: CompletionItemKind.Field,
+				sortText: 'self'
+				data: {resolved: true}
+			}
 
 		return items
 		
