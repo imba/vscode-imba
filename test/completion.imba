@@ -1,4 +1,14 @@
+var status = 1
+
 class Hello
+	def setup param\String
+		true
+		return param.charAt(0)
+
+	prop name
+
+	def clone
+		yes
 
 tag test-here
 	prop test

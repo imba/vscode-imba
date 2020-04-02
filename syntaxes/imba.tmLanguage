@@ -252,7 +252,7 @@
             <key>name</key>
             <string>meta.tagtree.imba</string>
             <key>begin</key>
-            <string>^(\s*)(?=\&lt;[\w\{\[\.\#\$])</string>
+            <string>^(\s*)(?=\&lt;[\w\{\[\.\#\$\@])</string>
             <key>end</key>
             <string>^(?!(\1\s+|\s*$))</string>
             <key>patterns</key>
@@ -277,7 +277,7 @@
             <key>name</key>
             <string>meta.tag.imba</string>
             <key>begin</key>
-            <string>(&lt;)(?=[\w\{\[\.\#\$])</string>
+            <string>(&lt;)(?=[\w\{\[\.\#\$\@])</string>
             <key>beginCaptures</key>
             <dict>
               <key>1</key>
@@ -335,6 +335,10 @@
           <dict>
             <key>include</key>
             <string>#tag-classname</string>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#tag-ref</string>
           </dict>
           <dict>
             <key>include</key>
@@ -480,6 +484,13 @@
         <key>contentName</key>
         <string>entity.other.attribute-name.class.css</string>
       </dict>
+      <key>tag-ref</key>
+      <dict>
+        <key>match</key>
+        <string>(\@[_$[:alpha:]][_$[:alnum:]]*(?:\-[_$[:alnum:]]+)*[\?\!]?)</string>
+        <key>name</key>
+        <string>entity.other.attribute-name.reference.css</string>
+      </dict>
       <key>tag-event-handler</key>
       <dict>
         <key>begin</key>
@@ -497,6 +508,10 @@
           <dict>
             <key>include</key>
             <string>#tag-interpolated-content</string>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#tag-interpolated-parens</string>
           </dict>
           <dict>
             <key>name</key>
@@ -2146,7 +2161,7 @@
   (?:\b[0-9][0-9_]*(\.)(n)?\B)|                                  # 1.
   (?:\B(\.)[0-9][0-9_]*(n)?\b)|                                  # .1
   (?:\b[0-9][0-9_]*(n)?\b(?!\.))                                 # 1
-)(?!\$))|(\#?[_$[:alpha:]][_$[:alnum:]]*(?:\-[_$[:alnum:]]+)*[\?\!]?)|(\'([^\'\\]|\\.)*\')|(\"([^\"\\]|\\.)*\")|(\`([^\`\\]|\\.)*\`)|(\[([^\[\]]|\[[^\[\]]*\])+\]))\s*(?:(?:(\?)|(\!))\s*)?(=|:|;|,|\}|\\|$|\s\#\s|\s\/\/))</string>
+)(?!\$))|(\#?[_$[:alpha:]][_$[:alnum:]]*(?:\-[_$[:alnum:]]+)*[\?\!]?)|(\'([^\'\\]|\\.)*\')|(\"([^\"\\]|\\.)*\")|(\`([^\`\\]|\\.)*\`)|(\[([^\[\]]|\[[^\[\]]*\])+\]))\s*(=|:|;|,|\}|\\|$|\s\#\s|\s\/\/))</string>
         <key>beginCaptures</key>
         <dict>
           <key>1</key>
@@ -2959,7 +2974,7 @@
               </dict>
             </dict>
             <key>end</key>
-            <string>\|</string>
+            <string>(\||$)</string>
             <key>endCaptures</key>
             <dict>
               <key>0</key>
@@ -3026,7 +3041,7 @@
             <key>name</key>
             <string>meta.class.imba</string>
             <key>begin</key>
-            <string>(\t*)(?&lt;![_$[:alnum:]])(?:(?&lt;=\.\.\.)|(?&lt;!\.))(?:(\bexport)\s+)?\b(tag)\s+(\w+(?:\-\w+)*)\s+(\&lt;)\s+(\w+(?:\-\w+)*)</string>
+            <string>(\t*)(?&lt;![_$[:alnum:]])(?:(?&lt;=\.\.\.)|(?&lt;!\.))(?:(\bexport)\s+)?\b(tag)\s+(\w+(?:\-\w+)*(?:\:\w+(?:\-\w+)*)*)\s+(\&lt;)\s+(\w+(?:\-\w+)*(?:\:\w+(?:\-\w+)*)*)</string>
             <key>beginCaptures</key>
             <dict>
               <key>2</key>
@@ -3069,7 +3084,7 @@
             <key>name</key>
             <string>meta.class.imba</string>
             <key>begin</key>
-            <string>(\t*)(?&lt;![_$[:alnum:]])(?:(?&lt;=\.\.\.)|(?&lt;!\.))(?:(\bexport)\s+)?(?:(extend)\s+)?\b(tag)\s+(\w+(?:\-\w+)*)</string>
+            <string>(\t*)(?&lt;![_$[:alnum:]])(?:(?&lt;=\.\.\.)|(?&lt;!\.))(?:(\bexport)\s+)?(?:(extend)\s+)?\b(tag)\s+(\w+(?:\-\w+)*(?:\:\w+(?:\-\w+)*)*)</string>
             <key>beginCaptures</key>
             <dict>
               <key>2</key>
@@ -8459,18 +8474,13 @@
           </dict>
         </dict>
         <key>end</key>
-        <string>(")|((?:[^\\\n])$)</string>
+        <string>"</string>
         <key>endCaptures</key>
         <dict>
-          <key>1</key>
+          <key>0</key>
           <dict>
             <key>name</key>
             <string>punctuation.definition.string.end.imba</string>
-          </dict>
-          <key>2</key>
-          <dict>
-            <key>name</key>
-            <string>invalid.illegal.newline.imba</string>
           </dict>
         </dict>
         <key>patterns</key>
@@ -8637,7 +8647,7 @@
         <key>name</key>
         <string>meta.template.expression.imba</string>
         <key>begin</key>
-        <string>\{</string>
+        <string>(?&lt;!\\)\{</string>
         <key>beginCaptures</key>
         <dict>
           <key>0</key>

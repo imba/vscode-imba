@@ -6,6 +6,7 @@ import {convertCompletionKind,matchFuzzyString} from './utils'
 import {tags,globalAttributes} from './html-data.json'
 import {snippets} from './snippets'
 import {keywords} from './keywords'
+import { items } from '../../test/data'
 
 var globalEvents = for item in globalAttributes when item.name.match(/^on\w+/)
 	item
@@ -13,24 +14,141 @@ var globalEvents = for item in globalAttributes when item.name.match(/^on\w+/)
 for tagItem in tags
 	tags[tagItem.name] = tagItem
 
+class TagQuery
+	def constructor program, tagName
+		# ought to go all the way up to <element>?
+		program = program
+		types = program.entities.getTagTypesForNamePattern(tagName)
+		let regex = RegExp.new("^({types.map(do $1.name).join('|')}|element|htmlelement)(\\.|$)")
+		symbols = program.getWorkspaceSymbols(query: regex)
+		self
+
+	def filter cb
+		symbols.filter(cb)
+		
+
 export class Entities < Component
 
 	def constructor program
 		super
-		@program = program
-		@symbols = {}
+		program = program
+		symbols = {}
 		$cache = {}
+
+	def getTagQuery name
+		TagQuery.new(program,name)
 
 	# cache based on project version
 	def getWorkspaceSymbols query
 		# only recollect if program has updated
-		let files = @program.files
+		let files = program.files
 		let symbols = []
 		for file in files
 			for symbol in file.symbols
 				if !query or matchFuzzyString(query,symbol.name)
 					symbols.push(symbol)
 		return symbols
+
+	def getTagTypesForNamePattern name
+		let types = []
+		let query = RegExp.new("^{name.replace(/\*/g,'[\\w\\-]+')}$")
+		if name.indexOf('*') >= 0
+			let matches = program.getWorkspaceSymbols(type: 'tag',query: query)
+			for match in matches
+				for item in getTagTypesForNamePattern(match.name)
+					types.push(item) unless types.indexOf(item) >= 0
+		else
+			let type = program.getWorkspaceSymbol(name)
+			types.push(type) if type
+			while type && type.superclass
+				type = program.getWorkspaceSymbol(type.superclass)
+				types.push(type) if type
+
+		return types
+
+	def getTagTypeInfo name
+		let res = tags[name]
+		unless res
+			let query = RegExp.new("^{name.replace(/\*/g,'[\\w\\-]+')}$")
+
+			let components = program.getWorkspaceSymbols(type: 'tag',query: query)
+			return components.map do |item|
+				{
+					name: item.name
+					description: {kind: 'markdown', value: 'custom element'}
+					location: item.location
+				}
+		return [res]
+
+	def getTagAttrInfo attrName, tagName
+		let schema
+
+		let symbols = getTagQuery(tagName).filter do
+			!$1.static and $1.ownName == attrName
+
+		let match = symbols[0]
+		# while !match and symbol = program.getWorkspaceSymbol(tagName)
+		#	match = program.getWorkspaceSymbol(symbol.name + '.' + attrName)
+		#	tagName = symbol.superclass
+
+		match || tags[tagName] and tags[tagName].attributes.find do $1.name == attrName
+		match ||= globalAttributes.find do $1.name == attrName
+
+		if match
+			return match
+
+	
+	def getTagEventInfo eventName, tagName
+		getTagAttrInfo "on{eventName}",tagName
+
+	def getTagSymbols tagName, options = {}
+		let items = []
+		let tagtype
+
+		while tagtype = program.getWorkspaceSymbol(tagName)
+			let symbols = program.getWorkspaceSymbols(prefix: tagtype.name+'.',type: options.type, query: options.query)
+			for sym in symbols
+				items.push(sym)
+			tagName = tagtype.superclass
+		return items
+
+	def getTagAttrCompletions context
+		let el = context.scope..closest('element') || {}
+		let items\CompletionItem[] = []
+		let mapping = {}
+
+		for item in globalAttributes
+			let desc = item.description
+			continue if item.name.match(/^on\w+/)
+			
+			entry = {
+				label: item.name,
+				kind: CompletionItemKind.Enum
+			}
+
+			if desc
+				entry.documentation = desc
+
+			items.push(entry)
+
+		if let tagSchema = tags[el.name]
+			for item in tagSchema.attributes
+				items.push(
+					label: item.name
+					kind: CompletionItemKind.Enum
+					documentation: item.description
+				)
+		elif el.name
+			let symbols = getTagQuery(el.name).symbols.filter do $1.type == 'prop' or $1.type == 'set'
+			# let symbols = getTagSymbols(el.name,type: 'prop')
+			for sym in symbols
+				items.push(
+					label: sym.ownName
+					kind: CompletionItemKind.Enum
+					detail: "(property) {sym.name}"
+					# documentation: item.description
+				)
+		return items
 		
 	def getKeywordCompletions o = {}
 		let keywords = ['yes','no','tag']
@@ -44,7 +162,49 @@ export class Entities < Component
 				data: { resolved: true }
 
 		return items
+
+	def getTagEventCompletions o = {}
+		var items = []
+		for item in globalEvents
+			items.push({
+				label: item.name.slice(2)
+				sortText: '0'
+				kind: CompletionItemKind.EnumMember
+				data: {resolved: yes}
+				documentation: item.description
+			})
+		return items
+
+	def getTagFlagCompletions o = {}
+		var items = []
+		# possibly add flags for tailwind etc
+		return items
+
+	def getTagEventModifierCompletions context
+		var items = []
+		for item in EVENT_MODIFIERS
+			items.push({
+				label: item.name,
+				kind: CompletionItemKind.Enum,
+				data: {resolved: yes}
+				detail: item.description
+			})
 		
+		if context.tagScope
+			let symbols = getTagSymbols(context.tagScope.name,type: 'def')
+			for sym in symbols
+				continue if sym.ownName.match(/^(unmount|mount|render|setup)/)
+				continue if sym.static
+
+				items.push(
+					label: sym.ownName
+					kind: CompletionItemKind.Method
+					detail: "(method) {sym.name}"
+					data: {resolved: yes, location: sym.location}
+				)
+
+		return items
+
 	def getSnippetsForContext o = {}
 		let matches = []
 		let scope = o.scope
@@ -62,9 +222,6 @@ export class Entities < Component
 			})
 
 		return matches
-
-		# completion.insertText = name + '($1)$0'
-		# completion.insertTextFormat = InsertTextFormat.Snippet
 	
 	def getTagNameCompletions o = {}
 
@@ -78,10 +235,6 @@ export class Entities < Component
 			}
 		
 		let components = @program.getWorkspaceSymbols(type: 'tag')
-		# $cache.components = for item in @getWorkspaceSymbols()
-		# 	console.log 'workspace item',item
-		# 	continue unless item.type == 'tag'
-		# 	item
 		
 		for item in components # $cache.components
 			items.push {
@@ -91,78 +244,18 @@ export class Entities < Component
 				data: {resolved: true}
 			}
 
-		for item in items
-			if o.autoclose
-				item.insertText = item.label + '$0>'
-				item.insertTextFormat = InsertTextFormat.Snippet
+		unless o.mode == 'supertag'
+			items.push {
+				label: 'self'
+				kind: CompletionItemKind.Field,
+				sortText: 'self'
+				data: {resolved: true}
+			}
 
 		return items
 		
 	def rewriteTSCompletions items
 		self
-
-	def getCompletionsForContext uri,pos,ctx
-		let items\CompletionItem[] = []
-		let entry\CompletionItem
-
-		let mode =  ctx.stack[0]
-		if mode == 'tag'
-			items = @getTagNameCompletions()
-
-		elif mode == 'event'
-			for item in globalEvents
-				entry =
-					label: ':' + item.name.slice(2)
-					sortText: item.name.slice(2)
-					kind: CompletionItemKind.Field
-				items.push(entry)
-
-		elif mode == 'modifier'
-			for item in EVENT_MODIFIERS
-				items.push({
-					label: item.name,
-					kinds: CompletionItemKind.Enum,
-					detail: item.description or ''
-				})
-
-		elif mode == 'attr'
-			for item in globalAttributes
-				let desc = item.description
-				if item.name.match(/^on\w+/)
-					continue
-					entry = {
-						label: ':' + item.name.slice(2)
-						sortText: item.name.slice(2)
-						kind: CompletionItemKind.Field
-					}
-				else
-					entry = {label: item.name}
-
-				if desc
-					entry.detail = desc.value
-
-				items.push(entry)
-
-			if let tagSchema = tags[ctx.tagName]
-				for item in tagSchema.attributes
-					items.push(label: item.name)
-
-		for item in items
-			item.kind ||= CompletionItemKind.Field
-			item.data ||= { resolved: true }
-
-			if typeof item.kind == 'string'
-				item.kind = convertCompletionKind(item.kind)
-
-			if item.label[0] == ':'
-				item.kind = CompletionItemKind.Function
-				item.sortText = item.label.slice(1)
-
-			if mode == 'event' and item.label[0] == ':'
-				item.insertText = item.label.slice(1)
-				item.commitCharacters = ['.']
-
-		return items
 		
 	def normalizeCompletions items, ctx
 		let results = for item in items
@@ -175,11 +268,6 @@ export class Entities < Component
 			
 			# item.sortText = item.label
 			item
-		
-		# results = results.sort do |a,b|
-		# 	# a.sortText.localeCompare(b.sortText)
-		# 	b.label.localeCompare(a.label)
-
 		return results
 
 

@@ -88,7 +88,6 @@ export class LanguageServer < Component
 
 		for item in imbaConfig.entries
 			if let file = getImbaFile(item.input)
-				# self.rootFiles.push(item.input)
 				yes
 
 		createTypeScriptService!
@@ -216,7 +215,7 @@ export class LanguageServer < Component
 		if let file = self.files[fileName]
 			let t = Date.now!
 			log 'found file!',fileName,file.version
-			file.getSourceContent!
+			file.doc.getText!
 			if append isa Function
 				file.content = append(file.content)
 			elif typeof append == 'string'
@@ -335,6 +334,11 @@ export class LanguageServer < Component
 	def getDefinitionAtPosition uri, pos
 		let file = self.getImbaFile(uri)
 		let loc = self.documents.get(uri).offsetAt(pos)
+
+		let fileres = file.getDefinitionAtPosition(pos)
+
+		if fileres
+			return fileres
 		
 		unless tls
 			return []
@@ -381,27 +385,17 @@ export class LanguageServer < Component
 	def getCompletionsAtPosition uri, pos, context = {}
 		let file = getImbaFile(uri)
 		let loc = typeof pos == 'number' ? pos : documents.get(uri).offsetAt(pos)
-		let ctx = file.getContextAtLoc(loc)
 
-		let options = {
-			triggerCharacter: context.triggerCharacter
-			includeCompletionsForModuleExports: true,
-			includeCompletionsWithInsertText: true
-		}
+		try
+			return file.getCompletionsAtOffset(loc,context)
+		catch e
+			log 'error from getCompletions',e
+			return []
 
-		if ctx.context == 'css'
-			log 'inside css block'
-			return file.styleDocument.getCompletionsAtPosition(loc,options)
-	
-		if ctx.context == 'tagname' and context.triggerCharacter == '<'
-			options.autoclose = yes
-			connection.sendNotification('closeAngleBracket',{location: loc,position: pos, uri: uri})
-
-		return file.getCompletionsAtPosition(loc,options)
 
 	def doResolve item\CompletionItem
 		inspect item
-		if item and item.data.resolved
+		if item and (!item.data or item.data.resolved)
 			return item
 
 		let source = item.data.source
@@ -448,31 +442,9 @@ export class LanguageServer < Component
 		# force the js imba file for conversion\
 		# let path = util.uriToPath(file.url or file).replace('.imba','.js')
 		# console.log "get quick info at pos {path}"
-
 		let file = getImbaFile(uri)
-		let loc = file.offsetAt(pos)
-		let ctx = file.getContextAtLoc(loc)
-
-		if ctx.context == 'css'
-			return file.styleDocument.doHover(loc)
-		
-		# @type {number}
-		let loc2 = file.generatedLocFor(loc)
-		let info = loc2 and tls.getQuickInfoAtPosition(String(file.lsPath), loc2)
-
-		# console.log pos2
-		if info
-			let contents = [{
-				value: ts.displayPartsToString(info.displayParts)
-				language: 'typescript'
-			}]
-
-			if info.documentation
-				contents.push(value: ts.displayPartsToString(info.documentation), language: 'text')
-			return {
-				range: file.textSpanToRange(info.textSpan)
-				contents: contents
-			}
+		let res = file.getQuickInfoAtPosition(pos)
+		return res
 
 	def getPathCompletions basePath, query
 		# index all files in the project
@@ -499,18 +471,35 @@ export class LanguageServer < Component
 		
 		return items
 			
-	def getWorkspaceSymbols {query='',type=null} = {}
+	def getWorkspaceSymbols options = {}
 		# indexFiles! # not after simple changes
 		let symbols = cache.symbols ||= files.reduce(&,[]) do $1.concat($2.workspaceSymbols)
-		if query
-			symbols = symbols.filter do util.matchFuzzyString(query,$1.name)
 
-		if (type instanceof Array)
-			symbols = symbols.filter do type.indexOf($1.type) >= 0
-		elif type
-			symbols = symbols.filter do $1.type == type
+		unless cache.symbolmap
+			cache.symbolmap = {}
+			for sym in symbols
+				cache.symbolmap[sym.name] = sym
+
+		if (options.type instanceof Array)
+			symbols = symbols.filter do options.type.indexOf($1.type) >= 0
+		elif options.type
+			symbols = symbols.filter do $1.type == options.type
+
+		if options.prefix
+			symbols = symbols.filter do $1.name.indexOf(options.prefix) == 0
+		
+		if options.query isa RegExp
+			symbols = symbols.filter do options.query.test($1.name)
+			
+		elif options.query
+			let q = options.query.toLowerCase!
+			symbols = symbols.filter do util.matchFuzzyString(q,$1.name)
 		
 		return symbols
+
+	def getWorkspaceSymbol name
+		getWorkspaceSymbols!
+		return cache.symbolmap[name]
 
 	def onReferences params\ReferenceParams
 		return [] unless tls

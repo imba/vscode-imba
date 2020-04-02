@@ -17,7 +17,7 @@ export default [{
     plugins: [
         imba({target: 'node'}),
         resolve({
-            extensions: ['.imba','.json'],
+            extensions: ['.imba','.js','.json'],
             preferBuiltins: true
         }),
         commonjs(),
@@ -37,7 +37,7 @@ export default [{
     plugins: [
         imba({target: 'node'}),
         resolve({
-            extensions: ['.imba','.json'],
+            extensions: ['.imba','.js','.json'],
             preferBuiltins: true
         }),
         commonjs(),
@@ -57,7 +57,7 @@ export default [{
     plugins: [
         imba({target: 'node'}),
         resolve({
-            extensions: ['.imba','.json'],
+            extensions: ['.imba','.js','.json'],
             preferBuiltins: true
         }),
         commonjs(),

@@ -3,21 +3,20 @@ import { TextDocument } from 'vscode-languageserver-textdocument'
 import {LanguageServer} from './LanguageServer'
 
 import {snippets} from './snippets'
+import { FullTextDocument } from './FullTextDocument'
 
 var connection = process.argv.length <= 2 ? createConnection(process.stdin, process.stdout) : createConnection()
 
-# Create a simple text document manager. The text document manager
-# supports full document sync only
-const documents = TextDocuments.new(TextDocument)
+const documents = TextDocuments.new(FullTextDocument)
 documents.listen(connection)
 
 var server\LanguageServer
 
 documents.onDidOpen do |event|
+	event.document.connection = connection
 	server.onDidOpen(event) if server
 
 documents.onDidChangeContent do |change|
-	# console.log 'changed content',change.contentChanges
 	server.onDidChangeContent(change) if server
 	return
 
@@ -33,10 +32,10 @@ connection.onInitialize do |params|
 
 	return {
 		capabilities: {
-			textDocumentSync: TextDocumentSyncKind.Full
+			textDocumentSync: TextDocumentSyncKind.Incremental
 			completionProvider: {
 				resolveProvider: true,
-				triggerCharacters: ['.', ':', '<', '"', '/', '@', '*','%','\\',"'"]
+				triggerCharacters: ['.', ':', '"', '/', '@', '*','%','\\',"'"]
 			},
 			# signatureHelpProvider: { triggerCharacters: ['('] },
 			signatureHelpProvider: false,
@@ -81,7 +80,14 @@ connection.onDocumentSymbol do |event|
 	return server ? server.getSymbols(event.textDocument.uri) : []
 
 connection.onWorkspaceSymbol do |event|
-	return server ? server.getWorkspaceSymbols(event) : []
+	let symbols = server ? server.getWorkspaceSymbols(event) : []
+	return symbols.map do(sym)
+		{
+			kind: sym.kind
+			location: sym.location
+			name: sym.name
+			containerName: sym.containerName
+		}
 
 
 connection.onDefinition do |event|

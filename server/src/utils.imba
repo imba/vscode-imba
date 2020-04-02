@@ -1,6 +1,7 @@
 import {CompletionItemKind,SymbolKind} from 'vscode-languageserver-types'
 import {URI} from 'vscode-uri'
 import {globals} from './constants'
+import { parse } from './Parser'
 
 export def uriToPath uri
 	return uri if uri[0] == '/' or uri.indexOf('://') == -1
@@ -91,12 +92,14 @@ export def tsp2lspSymbolName name
 
 export def tsp2lspCompletions items, {file,jsLoc,meta=null}
 	let results = []
+	let map = {}
 	for entry in items
+
 		let name = entry.name
 		let kind = entry.kind
 		let modifiers = (entry.kindModifiers or '').split(/[\,\s]/)
 
-		if name.match(/[\w]Component$/)
+		if name.match(/[\w]Component$/) or name.match(/\$(member|static)\$/)
 			continue
 
 		# console.log entry
@@ -120,6 +123,9 @@ export def tsp2lspCompletions items, {file,jsLoc,meta=null}
 		for mod in modifiers when mod
 			item.data[mod] = true
 
+		if entry.kindModifiers == 'declare' and entry.sortText == '4'
+			yes
+
 		if entry.insertText
 			if entry.insertText.indexOf('this.') == 0
 				item.data.implicitSelf = yes
@@ -129,11 +135,21 @@ export def tsp2lspCompletions items, {file,jsLoc,meta=null}
 		if kind == 'function' and item.data.declare and name.match(/^[a-z]/)
 			continue
 
-		if kind == 'var' and item.data.declare and name.match(/^[a-z]/)
+		if (kind == 'var' or kind == 'parameter' or kind == 'function') and item.data.declare and name.match(/^[a-z]/)
 			continue unless globals[name]
 
 		Object.assign(item.data,meta) if meta
 		results.push(item)
+
+	# add self
+	results.push({
+		label: 'self',
+		kind: CompletionItemKind.Variable,
+		sortText: '3'
+		data: {
+			resolved: yes
+		}
+	})
 
 	return results
 
@@ -175,7 +191,7 @@ export def fastExtractSymbols text
 		while scope.indent >= indent
 			scope = scope.parent or root 
 
-		m = line.match(/^(\t*((?:export )?(?:static )?)(class|tag|def|get|set|prop|attr) )([\w\-\$\:]+(?:\.[\w\-\$]+)?)/)
+		m = line.match(/^(\t*((?:export )?(?:static )?(?:extend )?)(class|tag|def|get|set|prop|attr) )([\w\-\$\:]+(?:\.[\w\-\$]+)?)/)
 		# m ||= line.match(/^(.*(def|get|set|prop|attr) )([\w\-\$]+)/)
 
 		if m
@@ -183,11 +199,13 @@ export def fastExtractSymbols text
 			let name = m[4]
 			let ns = scope.name ? scope.name + '.' : ''
 			let mods = m[2].trim().split(/\s+/)
+			let md = ''
 
 			let span = {
 				start: {line: i, character: m[1].length}
 				end: {line: i, character: m[0].length}
 			}
+
 			let symbol = {
 				kind: SYMBOL_KIND_MAP[kind]
 				ownName: name
@@ -198,10 +216,23 @@ export def fastExtractSymbols text
 				children: []
 				parent: scope == root ? null : scope
 				type: kind
+				data: {}
+				static: mods.indexOf('static') >= 0
+				extends: mods.indexOf('extend') >= 0
 			}
 
-			if mods.indexOf('static') >= 0
+			if symbol.static
 				symbol.containerName = 'static'
+			
+			symbol.containerName = m[2] + m[3]
+				
+			
+			if kind == 'tag' and m = line.match(/\<\s+([\w\-\$\:]+(?:\.[\w\-\$]+)?)/)
+				symbol.superclass = m[1]
+
+			if scope.type == 'tag'
+				md = "```html\n<{scope.name} {name}>\n```\n"
+				symbol.description = {kind: 'markdown',value: md}
 
 			scope.children.push(symbol)
 			scope = symbol
@@ -321,15 +352,37 @@ export def stripNonStyleBlocks code
 			console.log line.length, JSON.stringify(line)
 			console.log lines2[i].length, JSON.stringify(lines2[i])
 	return css
+
+export def findCompiledOffsetForScope scope, javascript
+	let findFromOffset = 0
+	for scop in scope.chain
+		let match = null
+		if scop.type == 'root'
+			scop.compiled-offset = 0
+		elif scop.type == 'tag'
+			match = "class {pascalCase(scop.name) + 'Component'}"
+		elif scop.type == 'class'
+			match = "class {scop.name}"
+		elif scop.type.match(/get|set|def|prop/)
+			match = scop.static ? '$static$(){' : '$member$(){'
+
+		if match
+			if let res = locationInString(javascript,match,findFromOffset)
+				findFromOffset = res.offset
+				scop.compiled-offset = res.offset
+	return scope
+		
+
 	
 
-export def fastExtractContext code, loc, compiled = ''
+export def fastExtractContext code, loc, tokens, compiled = ''
 	let lft = loc
 	let rgt = loc
 	let len = code.length
 	let chr
 	let res = {
 		loc: loc
+		tokenState: ''
 	}
 
 	let styleBlocks = findStyleBlocks(code)
@@ -350,19 +403,29 @@ export def fastExtractContext code, loc, compiled = ''
 	
 	let currIndent = res.textBefore.match(/^\t*/)[0].length
 	let maxIndent = currIndent
-	let indents = [res.textBefore.slice(currIndent)]
 	res.indent = currIndent
 	
 	let ln = linesBefore.length
 	res.lineAbove = linesBefore[ln - 2]
+
+	let lineLoc = loc
+	currIndent += 1
+
+	let indents = []
+	
 	while ln > 0
 		let line = linesBefore[--ln]
-		continue if line.match(/^[\t\s]*$/)
-		let ind = line.match(/^\t*/)[0].length
+		lineLoc -= line.length
+		if line.match(/^[\t\s]*$/) and indents.length
+			lineLoc -= 1
+			continue
 
+		let ind = line.match(/^\t*/)[0].length
+	
 		if ind < currIndent
 			currIndent = ind
-			indents.unshift(line.slice(ind))
+			indents.unshift({loc: lineLoc, text: line.slice(ind)})
+		lineLoc -= 1
 	
 	res.indents = indents
 	res.scope = {type: 'root',root: yes,body: yes,tloc: {offset: 0}}
@@ -370,7 +433,7 @@ export def fastExtractContext code, loc, compiled = ''
 	res.path = ""
 
 	# trace pairings etc
-	let pre = res.indents.join('  ')
+	let pre = res.indents.map(do $1.text).join('  ')
 	let ctx = fastParseCode(pre,res.textAfter)
 	res.ctxBefore = ctx.content
 	
@@ -394,13 +457,14 @@ export def fastExtractContext code, loc, compiled = ''
 			if ctx.content.match(/\:\s*([^\s]*)$/)
 				res.context = 'code'
 
-	# find variables before this position?
-
 	let findFromIndex = 0
-	for line in indents
+	let tokenizeFromLoc = -1
+	for indent in indents
+		let line = indent.text
 		let scope
 		let match = null
 		if let m = line.match(/^(export )?(tag|class) ([\w\-\:]+)/)
+			tokenizeFromLoc = -1
 			scope = {type: m[2], name: m[3],parent: res.scope, tloc: null}
 			scope[m[2]] = m[3]
 			let name = res.className = m[3]
@@ -412,11 +476,11 @@ export def fastExtractContext code, loc, compiled = ''
 			match = "class {name}"
 			
 		elif let m = line.match(/^(static )?(def|get|set|prop) ([\w\-\$]+)/)
+			tokenizeFromLoc = -1
 			scope = {type: m[2], name: m[3],body: yes,parent: res.scope,static: !!m[1]}
 			scope[m[2]] = m[3]
 			let name = res.methodName = m[3]
 			res.path += (m[1] ? '.' : '#') + m[3]
-
 
 			if scope.type == 'prop'
 				match = m[1] ? '$static$(){' : '$member$(){' # "{name}"
@@ -427,6 +491,9 @@ export def fastExtractContext code, loc, compiled = ''
 
 			match = m[1] + match if m[1]
 
+		elif let m = line.match(/^(if|unless|while|for|try$) /)
+			if tokenizeFromLoc == -1
+				tokenizeFromLoc = indent.loc
 
 		elif let m = line.match(/^\<([\w\-]+)/)
 			# find something
@@ -442,5 +509,14 @@ export def fastExtractContext code, loc, compiled = ''
 			# res.scopes.push(scope)
 			res.scope = scope
 
-	
+	if tokenizeFromLoc >= 0 and false
+		let tokens = parse(code.slice(tokenizeFromLoc,loc))
+		# res.tokens = tokens.tokens
+		res.tokens = tokens.tokens
+		res.stack = tokens.stack
+		res.variables = tokens.variables
+		# res.tokens = tokens.code
+		# res.tokstate = tokens.endState
+		# res.tokenized = tokens
+
 	return res

@@ -16,13 +16,13 @@ export class StyleDocument < Document
 	def refresh
 		if version < script.version
 			version = script.version
-			let body = utils.stripNonStyleBlocks(script.getSourceContent!)
+			let body = utils.stripNonStyleBlocks(script.doc.getText!)
 			if body != content
 				doc = TextDocument.create(uri,'css',version,content = body)
 				stylesheet = cssls.parseStylesheet(doc)
 		self
 
-	def getCompletionsAtPosition loc\number, options = {}
+	def getCompletionsAtOffset loc\number, options = {}
 		refresh!
 		let vals = cssls.doComplete(doc,positionAt(loc),stylesheet)
 		for item in vals.items
