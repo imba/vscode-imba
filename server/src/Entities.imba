@@ -234,7 +234,7 @@ export class Entities < Component
 				data: { resolved: true }
 			}
 		
-		let components = @program.getWorkspaceSymbols(type: 'tag')
+		let components = program.getWorkspaceSymbols(type: 'tag')
 		
 		for item in components # $cache.components
 			items.push {

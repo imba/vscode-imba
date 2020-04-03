@@ -218,10 +218,12 @@ testparse(`<div :§click§.§stop§>`)
 
 testparse(`<div §tabindex=1>`)
 testparse(`<app-\{1}-item[1] §tabindex=1>`)
-testparse(`<\{1}-item §tabindex=1>`)
-testparse(`<§>`)
+testparsex(`<\{1}-item §tabindex=1>`)
+testparsex(`<§>`)
 
-testparse(`
+testparse(`dom.appendChild (<div§.left-shadow>).dom`)
+
+testparsex(`
 def mount
 	if true
 		let something = 10
@@ -244,12 +246,28 @@ var a = \{b: 10\}
 ###
 `)
 
+testparse(`
+if let x = a.find(do(y,z) y > z)
+	true
+	§
+`)
+
+testparse(`hello.§test`)
+testparse(`<hello.§test>`)
+testparse(`var x = a.§test`)
+testparse(`\{x: a.§test}`)
+testparse(`"t\{a.§test}"`)
+testparse(`"t\{a...§test}"`)
+
+testparse(`class One
+	@§watch prop hello
+	@§ prop test
+`)
+
 if false
 	let file = ls.getImbaFile('context.imba')
 	let doc = ImbaTextDocument.new('file://test.imba','imba',0,file.doc.getText!)
-	# console.log doc.tokens.getTokens(line: 2)
-	# console.log doc.tokens.getTokens(line: 100)
-	# console.log doc.tokens.getTokens(line: 103)
+
 	let locs = [
 		22,25,86,119,155,161,
 		200,229,239,277,

@@ -90,7 +90,12 @@ export def tsp2lspSymbolName name
 		return kebabCase(name.slice(0,-9))
 	return name
 
-export def tsp2lspCompletions items, {file,jsLoc,meta=null}
+export def tjs2imba text
+	text = text.replace(/decorator\$/g,'@')
+	text = text.replace(/\;/g,'')
+	return text
+
+export def tsp2lspCompletions items, {file,jsLoc,additions=null}
 	let results = []
 	let map = {}
 	for entry in items
@@ -98,47 +103,50 @@ export def tsp2lspCompletions items, {file,jsLoc,meta=null}
 		let name = entry.name
 		let kind = entry.kind
 		let modifiers = (entry.kindModifiers or '').split(/[\,\s]/)
-
+		let meta = {
+			loc: jsLoc
+			path: file.lsPath
+			origKind: kind
+			kindModifiers: entry.kindModifiers
+			source: entry.source
+		}
 		if name.match(/[\w]Component$/) or name.match(/\$(member|static)\$/)
 			continue
 
 		# console.log entry
 		if name.match(/^is([A-Z])/)
 			name = name[2].toLowerCase! + name.slice(3) + '?'
-		# elif name.match(/^do([A-Z])/)
-		#	name = name[2].toLowerCase() + name.slice(3) + '!'
-			
+		elif name.match(/^decorator\$(.+)/)
+			meta.origKind = 'decorator'
+			meta.origName = name
+			name = name.slice(10)
+
 		let item = {
 			label: name,
 			kind: convertCompletionKind(kind,entry),
 			sortText: entry.sortText
-			data: {
-				loc: jsLoc
-				path: file.lsPath
-				origKind: kind
-				kindModifiers: entry.kindModifiers
-				source: entry.source
-			}
+			data: meta
 		}
+
 		for mod in modifiers when mod
-			item.data[mod] = true
+			meta[mod] = true
 
 		if entry.kindModifiers == 'declare' and entry.sortText == '4'
 			yes
 
 		if entry.insertText
 			if entry.insertText.indexOf('this.') == 0
-				item.data.implicitSelf = yes
+				meta.implicitSelf = yes
 				
 
 		# only drop these in certain cases
-		if kind == 'function' and item.data.declare and name.match(/^[a-z]/)
+		if kind == 'function' and meta.declare and name.match(/^[a-z]/)
 			continue
 
 		if (kind == 'var' or kind == 'parameter' or kind == 'function') and item.data.declare and name.match(/^[a-z]/)
 			continue unless globals[name]
 
-		Object.assign(item.data,meta) if meta
+		Object.assign(meta,additions) if additions
 		results.push(item)
 
 	# add self
@@ -191,7 +199,7 @@ export def fastExtractSymbols text
 		while scope.indent >= indent
 			scope = scope.parent or root 
 
-		m = line.match(/^(\t*((?:export )?(?:static )?(?:extend )?)(class|tag|def|get|set|prop|attr) )([\w\-\$\:]+(?:\.[\w\-\$]+)?)/)
+		m = line.match(/^(\t*((?:export )?(?:static )?(?:extend )?)(class|tag|def|get|set|prop|attr) )(\@?[\w\-\$\:]+(?:\.[\w\-\$]+)?)/)
 		# m ||= line.match(/^(.*(def|get|set|prop|attr) )([\w\-\$]+)/)
 
 		if m

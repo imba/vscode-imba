@@ -60,6 +60,7 @@ export var grammar = {
 	className: /[A-Z][A-Za-z\d\-\_]*|[A-Za-z\d\-\_]+/
 	methodName: /[A-Za-z\_][A-Za-z\d\-\_]*\=?/
 	identifier: /[a-z_][A-Za-z\d\-\_]*/
+	anyIdentifier: /[A-Za-z_\$][A-Za-z\d\-\_\$]*/
 	variable: /[\w\$]+(?:-[\w\$]*)*/
 	varKeyword: /var|let|const/
 	newline: RegExp.new(newline)
@@ -306,7 +307,7 @@ export var grammar = {
 			}],
 
 			# identifiers and keywords
-			[/\@[a-zA-Z_]\w*/, 'variable.instance'],
+			[/\@(@anyIdentifier)?/, 'decorator'],
 			[/\$\w+\$/, 'identifier.env'],
 			[/\$\d+/, 'identifier.special'],
 			[/\$[a-zA-Z_]\w*/, 'identifier.sys'],
@@ -821,7 +822,7 @@ export class TokenizedDocument < Component
 		let indent = context.indent = context.textBefore.match(/^\t*/)[0].length
 
 		let m
-		if m = token.type.match(/regexp|string|comment/)
+		if m = token.type.match(/regexp|string|comment|decorator/)
 			mode = m[0]
 			context.nested = yes
 		elif mode.match(/style/) or mode.match(/tag\.(\w+)/)

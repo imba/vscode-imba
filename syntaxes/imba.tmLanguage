@@ -694,7 +694,7 @@
         <key>name</key>
         <string>meta.decorator.imba</string>
         <key>begin</key>
-        <string>(?&lt;![_$[:alnum:]])(?:(?&lt;=\.\.\.)|(?&lt;!\.))\@\@</string>
+        <string>(?&lt;![_$[:alnum:]])(?:(?&lt;=\.\.\.)|(?&lt;!\.))\@</string>
         <key>beginCaptures</key>
         <dict>
           <key>0</key>
@@ -2371,7 +2371,7 @@
         <key>name</key>
         <string>meta.function.imba</string>
         <key>begin</key>
-        <string>^(\t*)(?:(export)\s+)?(?:(static)\s+)?(def|get|set)(?=\s[_$[:alpha:]][_$[:alnum:]]*(?:\-[_$[:alnum:]]+)*[\?\!]?)</string>
+        <string>^(\t*)(?:(export)\s+)?(?:(static)\s+)?(def|get|set)(?=\s\@?[_$[:alpha:]][_$[:alnum:]]*(?:\-[_$[:alnum:]]+)*[\?\!]?)</string>
         <key>beginCaptures</key>
         <dict>
           <key>2</key>
@@ -2398,7 +2398,7 @@
             <key>name</key>
             <string>meta.function.head</string>
             <key>begin</key>
-            <string>(?&lt;=def|get|set)\s([_$[:alpha:]][_$[:alnum:]]*(?:\-[_$[:alnum:]]+)*[\?\!]?)((\.)[_$[:alpha:]][_$[:alnum:]]*(?:\-[_$[:alnum:]]+)*[\?\!]?)?</string>
+            <string>(?&lt;=def|get|set)\s(\@?[_$[:alpha:]][_$[:alnum:]]*(?:\-[_$[:alnum:]]+)*[\?\!]?)((\.)[_$[:alpha:]][_$[:alnum:]]*(?:\-[_$[:alnum:]]+)*[\?\!]?)?</string>
             <key>beginCaptures</key>
             <dict>
               <key>1</key>
