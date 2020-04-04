@@ -399,7 +399,6 @@ export class File < Component
 
 		return null
 
-
 	def getCompletionsAtOffset offset, options = {}
 
 		let context = doc.getContextAtOffset(offset)
@@ -412,6 +411,7 @@ export class File < Component
 
 		let include = {
 			vars: yes
+			decorators: no
 		}
 
 		if scope.type == 'style'
@@ -445,7 +445,7 @@ export class File < Component
 
 		let tloc = scope.closure.compiled-offset
 
-		if mode == 'superclass' or mode == 'type'
+		if mode == 'superclass' or mode == 'type' or mode == 'decorator'
 			tloc = 0
 
 		elif scope.type == 'tag' or scope.type == 'class'
@@ -487,6 +487,9 @@ export class File < Component
 		# returning these
 		return items.filter do(item)
 			let kind = item.data.origKind
+			if mode == 'decorator'
+				return kind == 'decorator'
+			return no if kind == 'decorator'
 			
 			if mode == 'superclass' and item.label.match(/^[a-z]/)
 				return no

@@ -399,6 +399,7 @@ export class LanguageServer < Component
 			return item
 
 		let source = item.data.source
+		let name = item.data.origName or item.label
 	
 		let prefs\UserPreferences = {
 			includeCompletionsForModuleExports: true,
@@ -407,7 +408,8 @@ export class LanguageServer < Component
 			importModuleSpecifierEnding: "minimal"
 		}
 
-		let details = tls.getCompletionEntryDetails(item.data.path,item.data.loc,item.label,{},source,prefs)
+		let details = tls.getCompletionEntryDetails(item.data.path,item.data.loc,name,{},source,prefs)
+
 		if details
 			inspect details
 			item.detail = ts.displayPartsToString(details.displayParts)
@@ -420,8 +422,9 @@ export class LanguageServer < Component
 				actionDescs += action.description + '\n'
 				if let m = action.description.match(/Change '([^']+)' to '([^']+)'/)
 					log 'change action',m
+
 					if m[1] == (item.insertText or item.label)
-						item.insertText = m[2]
+						item.insertText = util.tjs2imba(m[2])
 						continue
 
 				for change in action.changes
@@ -430,7 +433,7 @@ export class LanguageServer < Component
 					for textedit in change.textChanges
 						let range = file.textSpanToRange(textedit.span)
 						log 'additional change here',textedit,range
-						let text = textedit.newText.replace(/\;/g,'')
+						let text = util.tjs2imba(textedit.newText)
 						additionalEdits.push(range: range, newText: text)
 			item.detail = actionDescs + item.detail
 			item.additionalTextEdits = additionalEdits

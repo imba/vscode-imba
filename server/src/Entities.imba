@@ -233,8 +233,8 @@ export class Entities < Component
 				sortText: name
 				data: { resolved: true }
 			}
-		
-		let components = @program.getWorkspaceSymbols(type: 'tag')
+
+		let components = program.getWorkspaceSymbols(type: 'tag')
 		
 		for item in components # $cache.components
 			items.push {

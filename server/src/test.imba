@@ -180,19 +180,6 @@ testparse(`
 		key§
 `)
 
-testparse(`
-	let x = \{
-		one: 1
-		two: §
-		test: 2
-	}
-`)
-
-testparse(`
-var a = 10
-
-§
-
 let x = 20
 `)
 
@@ -218,9 +205,6 @@ testparse(`<div :§click§.§stop§>`)
 
 testparse(`<div §tabindex=1>`)
 testparse(`<app-\{1}-item[1] §tabindex=1>`)
-testparse(`<\{1}-item §tabindex=1>`)
-testparse(`<§>`)
-
 testparse(`
 def mount
 	if true
@@ -247,9 +231,7 @@ var a = \{b: 10\}
 if false
 	let file = ls.getImbaFile('context.imba')
 	let doc = ImbaTextDocument.new('file://test.imba','imba',0,file.doc.getText!)
-	# console.log doc.tokens.getTokens(line: 2)
-	# console.log doc.tokens.getTokens(line: 100)
-	# console.log doc.tokens.getTokens(line: 103)
+
 	let locs = [
 		22,25,86,119,155,161,
 		200,229,239,277,
