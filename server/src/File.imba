@@ -399,7 +399,6 @@ export class File < Component
 
 		return null
 
-
 	def getCompletionsAtOffset offset, options = {}
 
 		let context = doc.getContextAtOffset(offset)
@@ -490,7 +489,6 @@ export class File < Component
 			let kind = item.data.origKind
 			if mode == 'decorator'
 				return kind == 'decorator'
-			
 			return no if kind == 'decorator'
 			
 			if mode == 'superclass' and item.label.match(/^[a-z]/)

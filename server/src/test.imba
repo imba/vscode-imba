@@ -180,19 +180,6 @@ testparse(`
 		key§
 `)
 
-testparse(`
-	let x = \{
-		one: 1
-		two: §
-		test: 2
-	}
-`)
-
-testparse(`
-var a = 10
-
-§
-
 let x = 20
 `)
 
@@ -218,12 +205,7 @@ testparse(`<div :§click§.§stop§>`)
 
 testparse(`<div §tabindex=1>`)
 testparse(`<app-\{1}-item[1] §tabindex=1>`)
-testparsex(`<\{1}-item §tabindex=1>`)
-testparsex(`<§>`)
-
-testparse(`dom.appendChild (<div§.left-shadow>).dom`)
-
-testparsex(`
+testparse(`
 def mount
 	if true
 		let something = 10
@@ -244,24 +226,6 @@ var a = \{b: 10\}
 ### css
 §
 ###
-`)
-
-testparse(`
-if let x = a.find(do(y,z) y > z)
-	true
-	§
-`)
-
-testparse(`hello.§test`)
-testparse(`<hello.§test>`)
-testparse(`var x = a.§test`)
-testparse(`\{x: a.§test}`)
-testparse(`"t\{a.§test}"`)
-testparse(`"t\{a...§test}"`)
-
-testparse(`class One
-	@§watch prop hello
-	@§ prop test
 `)
 
 if false

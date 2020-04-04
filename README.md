@@ -7,4 +7,4 @@ This extension provides you with
 
 - Contextual Syntax highlighting, discover errors easier.
 - A Scrimba theme that a good default look if you want.
-- TODO: mention auto completion and other bits.
+- Better autocompletion, it even works for CSS blocks.

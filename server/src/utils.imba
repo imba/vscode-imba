@@ -103,6 +103,7 @@ export def tsp2lspCompletions items, {file,jsLoc,additions=null}
 		let name = entry.name
 		let kind = entry.kind
 		let modifiers = (entry.kindModifiers or '').split(/[\,\s]/)
+
 		let meta = {
 			loc: jsLoc
 			path: file.lsPath
@@ -110,6 +111,7 @@ export def tsp2lspCompletions items, {file,jsLoc,additions=null}
 			kindModifiers: entry.kindModifiers
 			source: entry.source
 		}
+
 		if name.match(/[\w]Component$/) or name.match(/\$(member|static)\$/)
 			continue
 
@@ -130,6 +132,9 @@ export def tsp2lspCompletions items, {file,jsLoc,additions=null}
 
 		for mod in modifiers when mod
 			meta[mod] = true
+
+		if entry.kindModifiers == 'declare' and entry.sortText == '4'
+			yes
 
 		if entry.kindModifiers == 'declare' and entry.sortText == '4'
 			yes
