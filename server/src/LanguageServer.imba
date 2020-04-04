@@ -435,8 +435,10 @@ export class LanguageServer < Component
 						log 'additional change here',textedit,range
 						let text = util.tjs2imba(textedit.newText)
 						additionalEdits.push(range: range, newText: text)
-			item.detail = actionDescs + item.detail
+
+			item.detail = util.tjs2imba(actionDescs + item.detail)
 			item.additionalTextEdits = additionalEdits
+
 			log item
 			delete item.data
 		return item
