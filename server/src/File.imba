@@ -1,5 +1,5 @@
 import {Component} from './Component'
-import {CompletionItemKind,DiagnosticSeverity,SymbolKind} from 'vscode-languageserver-types'
+import {CompletionItemKind,DiagnosticSeverity,SymbolKind, InsertTextFormat} from 'vscode-languageserver-types'
 import {Location} from 'vscode-languageserver'
 import {ScriptElementKind} from 'typescript'
 import * as util from './utils'
@@ -406,7 +406,7 @@ export class File < Component
 		
 		inspect context
 
-		let {mode,scope,token} = context
+		let {mode,scope,token,textBefore,textAfter} = context
 		let elscope = scope.closest('element')
 
 		let include = {
@@ -488,6 +488,10 @@ export class File < Component
 		return items.filter do(item)
 			let kind = item.data.origKind
 			if mode == 'decorator'
+				if kind == 'decorator' and textAfter.match(/^(prop |get |set |def |attr |\@\w)/)
+					item.insertText = item.label + '$0 '
+					item.insertTextFormat = InsertTextFormat.Snippet
+
 				return kind == 'decorator'
 			return no if kind == 'decorator'
 			
