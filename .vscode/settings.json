@@ -2,6 +2,7 @@
     "search.exclude": {
         "**/node_modules": true
     },
+    "imba.verbose": true,
     "[imba]": {
         "editor.insertSpaces": false,
         "editor.tabSize": 4,

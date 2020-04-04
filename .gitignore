@@ -2,6 +2,7 @@
 npm-debug.log
 node_modules/
 server/index.js
+server/test.js
 client/index.js
 tmp/
 *.vsix
