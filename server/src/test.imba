@@ -149,62 +149,7 @@ tag §app-item
 ###
 `
 
-// testparse('<div>')
-// testparse('<div.one.two :click.stop value=10>')
-// testparse('<div .one value=10 .two>')
-// testparse('<div .one=(test)>')
-// testparse('<div .one-{state}-here>')
-// testparse('<div .one-{state)}-here>')
-// testparse('<div[item]>')
-// testparse('<div title="hello">')
-// testparse('<div :test.§self.stop>')
-// testparse('<div x=(<b>) .§test>')
 
-testparse(`
-if true
-	let one-two = 1
-	var func = do(fone,ftwo)
-		let hello = fone
-		§
-`)
-
-testparse(`
-	let x = 1
-	for item,i in [1,2,3]
-		item§
-`)
-
-testparse(`
-	let x = 1
-	for own key,value of obj
-		key§
-`)
-
-let x = 20
-`)
-
-testparse(`
-var a = \{b: 10\}
-20
-`)
-
-testparse('var x\\Array§')
-
-testparse('var x = `hello`\n100')
-
-testparse(`
-if true
-	1
-
-§
-if true §
-	2
-`)
-
-testparse(`<div :§click§.§stop§>`)
-
-testparse(`<div §tabindex=1>`)
-testparse(`<app-\{1}-item[1] §tabindex=1>`)
 testparse(`
 def mount
 	if true
@@ -219,39 +164,4 @@ def mount
 			test + 10 + k + §1
 		let regex = /tester/
 		regex + test + §
-	`)
-
-testparsex(`
-var a = \{b: 10\}
-### css
-§
-###
 `)
-
-if false
-	let file = ls.getImbaFile('context.imba')
-	let doc = ImbaTextDocument.new('file://test.imba','imba',0,file.doc.getText!)
-
-	let locs = [
-		22,25,86,119,155,161,
-		200,229,239,277,
-		300,331,364,365,368,
-		411,432,463,479,480,492,493,
-		510,532,544,554,622,304,632,639,644,651,
-		677
-		]
-	for offset in locs
-		let pos = doc.positionAt(offset)
-		let ctx = doc.tokens.getContextAtOffset(offset)
-		let line = doc.tokens.lineTokens[pos.line]
-		let idx = offset - line.offset
-		let prev = doc.tokens.lineTokens[pos.line - 1]
-		let str = line.lineContent.slice(0,idx) + '|' + line.lineContent.slice(idx)
-		console.log ['---',prev.lineContent,str,'---'].join('\n').replace(/\t/g,'  ')
-		console.log ctx.value,ctx.type,ctx.stack.state
-		# console.dir [ctx.value,ctx.type,ctx.stack.state], depth: 1
-
-
-# ls.getCompletionsAtPosition('completion.imba',88)
-# console.log ls.getImbaFile('completion.imba').getContextAtLoc(89)
-# ls.emitDiagnostics()
