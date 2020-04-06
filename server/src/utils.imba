@@ -1,7 +1,6 @@
 import {CompletionItemKind,SymbolKind} from 'vscode-languageserver-types'
 import {URI} from 'vscode-uri'
 import {globals} from './constants'
-import { parse } from './Parser'
 
 export def uriToPath uri
 	return uri if uri[0] == '/' or uri.indexOf('://') == -1
@@ -521,15 +520,5 @@ export def fastExtractContext code, loc, tokens, compiled = ''
 		if scope
 			# res.scopes.push(scope)
 			res.scope = scope
-
-	if tokenizeFromLoc >= 0 and false
-		let tokens = parse(code.slice(tokenizeFromLoc,loc))
-		# res.tokens = tokens.tokens
-		res.tokens = tokens.tokens
-		res.stack = tokens.stack
-		res.variables = tokens.variables
-		# res.tokens = tokens.code
-		# res.tokstate = tokens.endState
-		# res.tokenized = tokens
 
 	return res

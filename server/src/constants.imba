@@ -1,3 +1,18 @@
+export const keywords = [
+	'if'
+	'else'
+	'elif'
+	'switch'
+	'return'
+	'class'
+	'var'
+	'let'
+	'const'
+	'export'
+	'import'
+]
+
+
 export const globals = {
 	'global': 1
 	'imba': 1

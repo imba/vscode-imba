@@ -2,15 +2,13 @@ var content = `<div.one.two title=10 :click.test>`
 import {File} from './File'
 import {LanguageServer} from './LanguageServer'
 import * as util from './utils'
-import { parse,TokenizedDocument } from './Parser'
+import { TokenizedDocument } from './Parser'
 import { FullTextDocument,ImbaTextDocument } from './FullTextDocument'
 var imbac = require 'imba/dist/compiler.js'
 
 var conn = {
 	sendDiagnostics: do yes
 }
-
-
 
 var rootFile = '/Users/sindre/repos/vscode-imba/test/main.js'
 var ls = LanguageServer.new(conn,null,{

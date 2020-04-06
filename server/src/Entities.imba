@@ -1,11 +1,10 @@
 import {Component} from './Component'
-import {TAG_NAMES,TAG_TYPES,EVENT_MODIFIERS} from './constants'
+import {TAG_NAMES,TAG_TYPES,EVENT_MODIFIERS,keywords} from './constants'
 import {CompletionItemKind,SymbolKind,InsertTextFormat,CompletionItem} from 'vscode-languageserver-types'
 import {convertCompletionKind,matchFuzzyString} from './utils'
 
 import {tags,globalAttributes} from './html-data.json'
 import {snippets} from './snippets'
-import {keywords} from './keywords'
 import { items } from '../../test/data'
 
 var globalEvents = for item in globalAttributes when item.name.match(/^on\w+/)

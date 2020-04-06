@@ -1,4 +1,3 @@
-import { Document } from './TextDocument'
 import { TokenizedDocument } from './Parser'
 import { Component } from './Component'
 
