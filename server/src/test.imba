@@ -2,8 +2,7 @@ var content = `<div.one.two title=10 :click.test>`
 import {File} from './File'
 import {LanguageServer} from './LanguageServer'
 import * as util from './utils'
-import { TokenizedDocument } from './Parser'
-import { FullTextDocument,ImbaTextDocument } from './FullTextDocument'
+import { FullTextDocument } from './FullTextDocument'
 var imbac = require 'imba/dist/compiler.js'
 
 var conn = {

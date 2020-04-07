@@ -1,5 +1,5 @@
-import { TokenizedDocument } from './Parser'
 import { Component } from './Component'
+import { ImbaDocument } from 'imba-document'
 
 def computeLineOffsets text, isAtLineStart, textOffset
 	if textOffset === undefined
@@ -85,7 +85,7 @@ export class FullTextDocument < Component
 		connection = null
 
 		if languageId == 'imba'
-			tokens = TokenizedDocument.new(self)
+			tokens = ImbaDocument.new(uri,languageId,version,content)
 
 	get lineCount
 		lineOffsets.length
@@ -194,6 +194,8 @@ export class FullTextDocument < Component
 					k++
 		
 		updated(changes,version)
+		if tokens
+			tokens.update(changes,version)
 
 	def updated changes,version
 		version = version
@@ -201,13 +203,7 @@ export class FullTextDocument < Component
 
 	def applyEdit change, version, changes
 		content = content.substring(0, change.range.start.offset) + change.text + content.substring(change.range.end.offset, content.length)
-		tokens.applyEdit(change,version,changes) if tokens
+		// tokens.applyEdit(change,version,changes) if tokens
 
 	def getContextAtOffset offset, forward = false
-		tokens.getContextAtOffset(offset,forward)
-
-
-export class ImbaTextDocument < FullTextDocument
-
-	def constructor ...params
-		super
+		tokens.getContextAtOffset(offset,forward) if tokens

@@ -73,7 +73,8 @@ export class LanguageServer < Component
 
 	def constructor(connection\IConnection, documents\TextDocuments, params\InitializeParams, o = {})
 		super
-		self.files = []
+		files\File[] = []
+
 		self.documents = documents
 		self.connection = connection
 		self.entities = Entities.new(self)

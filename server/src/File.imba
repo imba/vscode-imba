@@ -1,11 +1,12 @@
 import {Component} from './Component'
 import {CompletionItemKind,DiagnosticSeverity,SymbolKind, InsertTextFormat} from 'vscode-languageserver-types'
 import {Location} from 'vscode-languageserver'
-import {ScriptElementKind} from 'typescript'
+import {ScriptElementKind,Diagnostic} from 'typescript'
 import * as util from './utils'
 import { StyleDocument } from './StyleDocument'
 import { FullTextDocument } from './FullTextDocument'
 import { items } from '../../test/data'
+
 var ts = require 'typescript'
 
 var imbac = require 'imba/dist/compiler.js'
@@ -107,7 +108,7 @@ export class File < Component
 		tls.getEmitOutput(lsPath) if tls
 
 
-	def updateDiagnostics items = []
+	def updateDiagnostics items\Diagnostic[] = []
 		
 		# need to check if they are the same
 		let out = for entry in items
@@ -115,8 +116,8 @@ export class File < Component
 			let msg = entry.messageText
 			let start = doc.positionAt(lstart)
 			let end = doc.positionAt(originalLocFor(entry.start + entry.length) or (lstart + entry.length))
-			let sev = [DiagnosticSeverity.Warning,DiagnosticSeverity.Warning,DiagnosticSeverity.Information][entry.category]
-			# console.log 'converting diagnostic',entry.category,entry.messageText
+			let sev = [DiagnosticSeverity.Warning,DiagnosticSeverity.Error,DiagnosticSeverity.Information,DiagnosticSeverity.Information][entry.category]
+
 			{
 				severity: sev
 				message: msg.messageText or msg

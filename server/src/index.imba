@@ -13,7 +13,10 @@ documents.listen(connection)
 var server\LanguageServer
 
 documents.onDidOpen do |event|
-	event.document.connection = connection
+	let doc = event.document
+	doc.connection = connection
+	if doc.tokens
+		doc.tokens.connection = connection
 	server.onDidOpen(event) if server
 
 documents.onDidChangeContent do |change|
