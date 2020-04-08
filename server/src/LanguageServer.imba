@@ -45,6 +45,7 @@ var tsServiceOptions\CompilerOptions = {
 	incremental: true
 	target: ts.ScriptTarget.Latest
 	lib: ['lib.es6.d.ts']
+	types: ['node']
 	forceConsistentCasingInFileNames: true
 	moduleResolution: ts.ModuleResolutionKind.NodeJs
 }
@@ -448,9 +449,13 @@ export class LanguageServer < Component
 		# force the js imba file for conversion\
 		# let path = util.uriToPath(file.url or file).replace('.imba','.js')
 		# console.log "get quick info at pos {path}"
-		let file = getImbaFile(uri)
-		let res = file.getQuickInfoAtPosition(pos)
-		return res
+		try
+			let file = getImbaFile(uri)
+			let res = file.getQuickInfoAtPosition(pos)
+			return res
+		catch e
+			log 'getQuickInfoAtPosition error',e,uri,pos
+			return null
 
 	def getPathCompletions basePath, query
 		# index all files in the project

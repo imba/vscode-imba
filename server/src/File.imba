@@ -473,7 +473,7 @@ export class File < Component
 				includeCompletionsWithInsertText: true
 			}
 			if let found = tls.getCompletionsAtPosition(lsPath,tloc,tls-options)
-				items = util.tsp2lspCompletions(found.entries,file: self, jsLoc: tloc)
+				items = util.tsp2lspCompletions(found.entries,file: self, jsLoc: tloc, isMemberCompletion: found.isMemberCompletion)
 		
 		if include.vars
 			for item in context.vars

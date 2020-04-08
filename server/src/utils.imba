@@ -94,7 +94,7 @@ export def tjs2imba text
 	text = text.replace(/\;/g,'')
 	return text
 
-export def tsp2lspCompletions items, {file,jsLoc,additions=null}
+export def tsp2lspCompletions items, {file,jsLoc,additions=null,isMemberCompletion=no}
 	let results = []
 	let map = {}
 	for entry in items
@@ -141,13 +141,12 @@ export def tsp2lspCompletions items, {file,jsLoc,additions=null}
 		if entry.insertText
 			if entry.insertText.indexOf('this.') == 0
 				meta.implicitSelf = yes
-				
 
 		# only drop these in certain cases
-		if kind == 'function' and meta.declare and name.match(/^[a-z]/)
+		if kind == 'function' and meta.declare and name.match(/^[a-z]/) and entry.sortText == '4' and !isMemberCompletion
 			continue
 
-		if (kind == 'var' or kind == 'parameter' or kind == 'function') and item.data.declare and name.match(/^[a-z]/)
+		if (kind == 'var' or kind == 'parameter' or kind == 'function') and meta.declare and name.match(/^[a-z]/) and !isMemberCompletion
 			continue unless globals[name]
 
 		Object.assign(meta,additions) if additions
@@ -377,8 +376,10 @@ export def findCompiledOffsetForScope scope, javascript
 			match = "class {scop.name}"
 		elif scop.type.match(/get|set|def|prop/)
 			match = scop.static ? '$static$(){' : '$member$(){'
+			if scop.parent and scop.parent.type == 'root'
+				scop.compiled-offset = 0
 
-		if match
+		if match and scop.compiled-offset == undefined
 			if let res = locationInString(javascript,match,findFromOffset)
 				findFromOffset = res.offset
 				scop.compiled-offset = res.offset
