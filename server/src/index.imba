@@ -12,23 +12,23 @@ documents.listen(connection)
 
 var server\LanguageServer
 
-documents.onDidOpen do |event|
+documents.onDidOpen do(event)
 	let doc = event.document
 	doc.connection = connection
 	if doc.tokens
 		doc.tokens.connection = connection
 	server.onDidOpen(event) if server
 
-documents.onDidChangeContent do |change|
+documents.onDidChangeContent do(change)
 	server.onDidChangeContent(change) if server
 	return
 
-documents.onDidSave do |event|
+documents.onDidSave do(event)
 	server.onDidSave(event) if server
 
 documents.listen(connection)
 
-connection.onInitialize do |params|
+connection.onInitialize do(params)
 	// Could this start a single instance for multiple workspaces?
 	# connection.console.log("[Server({process.pid}) {params.rootUri}] Started and initialize received")
 	server = LanguageServer.new(connection,documents,params)
@@ -61,28 +61,28 @@ connection.onInitialize do |params|
 		}
 	}
 
-connection.onInitialized do |params|
+connection.onInitialized do(params)
 	# console.log 'on initialized'
 
-	connection.onNotification('onDidRenameFiles') do |event|
+	connection.onNotification('onDidRenameFiles') do(event)
 		server.onDidRenameFiles(event)
 		# console.log 'service.onDidRenameFiles',event
-	connection.onNotification('onDidDeleteFiles') do |event|
+	connection.onNotification('onDidDeleteFiles') do(event)
 		server.onDidDeleteFiles(event)
 
-	connection.onNotification('onDidCreateFiles') do |event|
+	connection.onNotification('onDidCreateFiles') do(event)
 		server.onDidCreateFiles(event)
 		
 	# connection.onDidChangeTextDocument do |event|
 	# 	console.log 'onDidChangeTextDocument',event
 
-connection.onDidChangeConfiguration do |change|
+connection.onDidChangeConfiguration do(change)
 	server.config.update(change)
 
-connection.onDocumentSymbol do |event|
+connection.onDocumentSymbol do(event)
 	return server ? server.getSymbols(event.textDocument.uri) : []
 
-connection.onWorkspaceSymbol do |event|
+connection.onWorkspaceSymbol do(event)
 	let symbols = server ? server.getWorkspaceSymbols(event) : []
 	return symbols.map do(sym)
 		{
@@ -93,7 +93,7 @@ connection.onWorkspaceSymbol do |event|
 		}
 
 
-connection.onDefinition do |event|
+connection.onDefinition do(event)
 	# console.log 'onDefinition',event
 	let res\any[] = server.getDefinitionAtPosition(event.textDocument.uri,event.position)
 	return res
@@ -102,7 +102,7 @@ connection.onReferences do(event)
 	let res = server.onReferences(event)
 	return res
 
-connection.onTypeDefinition do |event|
+connection.onTypeDefinition do(event)
 	return undefined
 
 connection.onRenameRequest do(event)
@@ -110,14 +110,14 @@ connection.onRenameRequest do(event)
 		return server.onRenameRequest(event)
 	return
 
-connection.onHover do |event|
+connection.onHover do(event)
 	# console.log "onhover",event
 	let res = server.getQuickInfoAtPosition(event.textDocument.uri,event.position)
 	# console.log res
 	return res
 
 
-connection.onCompletion do |event|
+connection.onCompletion do(event)
 	let res\any = server.getCompletionsAtPosition(event.textDocument.uri,event.position,event.context)
 	if res isa Array
 		res = {isIncomplete: false, items: res}
@@ -125,11 +125,13 @@ connection.onCompletion do |event|
 
 	return res
 
-connection.onCompletionResolve do |item|
-	return server.doResolve(item)
+connection.onCompletionResolve do(item)
+	try
+		return server.doResolve(item)
+	catch e
+		console.log 'onCompletionResolve error',e,item
 
-connection.onDocumentHighlight do |event|
-	# console.log 'onDocumentHighlight',event
+connection.onDocumentHighlight do(event)
 	return []
 
 connection.listen()

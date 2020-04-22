@@ -65,7 +65,10 @@ export class FullTextDocument < Component
 		return self.new(uri,languageId,version,content)
 
 	static def update document, changes, version
-		document.update(changes,version)
+		try
+			document.update(changes,version)
+		catch e
+			console.log 'FullTextDocument error',document.uri,e,changes,version
 		return document
 
 	static def isFull e
