@@ -300,6 +300,29 @@
             <key>match</key>
             <string>[_$[:alpha:]][_$[:alnum:]]*(?:\-[_$[:alnum:]]+)*[\?\!]?</string>
           </dict>
+          <dict>
+            <key>name</key>
+            <string>meta.function.css</string>
+            <key>begin</key>
+            <string>(\()</string>
+            <key>beginCaptures</key>
+            <dict>
+              <key>1</key>
+              <dict>
+                <key>name</key>
+                <string>punctuation.section.function.begin.bracket.round.css</string>
+              </dict>
+            </dict>
+            <key>end</key>
+            <string>\)</string>
+            <key>patterns</key>
+            <array>
+              <dict>
+                <key>include</key>
+                <string>#style-expr</string>
+              </dict>
+            </array>
+          </dict>
         </array>
       </dict>
       <key>inline-styles</key>
@@ -312,11 +335,11 @@
           </dict>
           <dict>
             <key>include</key>
-            <string>#style-expr</string>
+            <string>#css-property-values</string>
           </dict>
           <dict>
             <key>include</key>
-            <string>#css-property-values</string>
+            <string>#style-expr</string>
           </dict>
         </array>
       </dict>
