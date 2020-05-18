@@ -9,6 +9,7 @@
     <key>fileTypes</key>
     <array>
       <string>imba</string>
+      <string>imba2</string>
     </array>
     <key>uuid</key>
     <string>ef98eb90-bf9b-11e4-bb52-0800200c9a67</string>
@@ -108,6 +109,10 @@
           <dict>
             <key>include</key>
             <string>#class-declaration</string>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#style-declaration</string>
           </dict>
           <dict>
             <key>include</key>
@@ -244,6 +249,973 @@
           </dict>
         </array>
       </dict>
+      <key>style-property</key>
+      <dict>
+        <key>match</key>
+        <string>((?:\-*[_$[:alpha:]][_$[:alnum:]]*(?:\-[_$[:alnum:]]+)*[\?\!]?)(?:\.[_$[:alpha:]][_$[:alnum:]]*(?:\-[_$[:alnum:]]+)*[\?\!]?)*)(\s*\:)</string>
+        <key>captures</key>
+        <dict>
+          <key>1</key>
+          <dict>
+            <key>name</key>
+            <string>meta.property-name.css support.type.property-name.css</string>
+          </dict>
+          <key>2</key>
+          <dict>
+            <key>name</key>
+            <string>punctuation.separator.key-value.css</string>
+          </dict>
+        </dict>
+      </dict>
+      <key>style-expr</key>
+      <dict>
+        <key>patterns</key>
+        <array>
+          <dict>
+            <key>match</key>
+            <string>(\b[0-9][0-9_]*)(\w+|%)?</string>
+            <key>captures</key>
+            <dict>
+              <key>1</key>
+              <dict>
+                <key>name</key>
+                <string>constant.numeric.integer.decimal.css</string>
+              </dict>
+              <key>2</key>
+              <dict>
+                <key>name</key>
+                <string>keyword.other.unit.css</string>
+              </dict>
+            </dict>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>support.constant.property-value.var.css</string>
+            <key>match</key>
+            <string>--[_$[:alpha:]][_$[:alnum:]]*(?:\-[_$[:alnum:]]+)*[\?\!]?</string>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>support.constant.property-value.css</string>
+            <key>match</key>
+            <string>[_$[:alpha:]][_$[:alnum:]]*(?:\-[_$[:alnum:]]+)*[\?\!]?</string>
+          </dict>
+        </array>
+      </dict>
+      <key>inline-styles</key>
+      <dict>
+        <key>patterns</key>
+        <array>
+          <dict>
+            <key>include</key>
+            <string>#style-property</string>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#style-expr</string>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#css-property-values</string>
+          </dict>
+        </array>
+      </dict>
+      <key>style-declaration</key>
+      <dict>
+        <key>name</key>
+        <string>meta.style.imba</string>
+        <key>begin</key>
+        <string>^(\t*)(?:(global|local)\s+)?(?:(scoped)\s+)?(css)\s</string>
+        <key>beginCaptures</key>
+        <dict>
+          <key>2</key>
+          <dict>
+            <key>name</key>
+            <string>keyword.control.export.imba</string>
+          </dict>
+          <key>3</key>
+          <dict>
+            <key>name</key>
+            <string>storage.modifier.imba</string>
+          </dict>
+          <key>4</key>
+          <dict>
+            <key>name</key>
+            <string>storage.type.style.imba</string>
+          </dict>
+        </dict>
+        <key>end</key>
+        <string>^(?!(\1\t|\s*$))</string>
+        <key>patterns</key>
+        <array>
+          <dict>
+            <key>include</key>
+            <string>#css-selector</string>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#nested-css-selector</string>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#inline-styles</string>
+          </dict>
+        </array>
+      </dict>
+      <key>nested-style-declaration</key>
+      <dict>
+        <key>name</key>
+        <string>meta.style.imba</string>
+        <key>begin</key>
+        <string>^(\t+)(?=[\n^]*\&amp;)</string>
+        <key>end</key>
+        <string>^(?!(\1\t|\s*$))</string>
+        <key>patterns</key>
+        <array>
+          <dict>
+            <key>include</key>
+            <string>#nested-css-selector</string>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#inline-styles</string>
+          </dict>
+        </array>
+      </dict>
+      <key>css-color-keywords</key>
+      <dict>
+        <key>patterns</key>
+        <array>
+          <dict>
+            <key>name</key>
+            <string>support.constant.color.w3c-standard-color-name.css</string>
+            <key>match</key>
+            <string>(?i)(?&lt;![\w-])(aqua|black|blue|fuchsia|gray|green|lime|maroon|navy|olive|orange|purple|red|silver|teal|white|yellow)(?![\w-])</string>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>support.constant.color.w3c-extended-color-name.css</string>
+            <key>match</key>
+            <string>(?xi) (?&lt;![\w-])
+(aliceblue|antiquewhite|aquamarine|azure|beige|bisque|blanchedalmond|blueviolet|brown|burlywood
+|cadetblue|chartreuse|chocolate|coral|cornflowerblue|cornsilk|crimson|cyan|darkblue|darkcyan
+|darkgoldenrod|darkgray|darkgreen|darkgrey|darkkhaki|darkmagenta|darkolivegreen|darkorange
+|darkorchid|darkred|darksalmon|darkseagreen|darkslateblue|darkslategray|darkslategrey|darkturquoise
+|darkviolet|deeppink|deepskyblue|dimgray|dimgrey|dodgerblue|firebrick|floralwhite|forestgreen
+|gainsboro|ghostwhite|gold|goldenrod|greenyellow|grey|honeydew|hotpink|indianred|indigo|ivory|khaki
+|lavender|lavenderblush|lawngreen|lemonchiffon|lightblue|lightcoral|lightcyan|lightgoldenrodyellow
+|lightgray|lightgreen|lightgrey|lightpink|lightsalmon|lightseagreen|lightskyblue|lightslategray
+|lightslategrey|lightsteelblue|lightyellow|limegreen|linen|magenta|mediumaquamarine|mediumblue
+|mediumorchid|mediumpurple|mediumseagreen|mediumslateblue|mediumspringgreen|mediumturquoise
+|mediumvioletred|midnightblue|mintcream|mistyrose|moccasin|navajowhite|oldlace|olivedrab|orangered
+|orchid|palegoldenrod|palegreen|paleturquoise|palevioletred|papayawhip|peachpuff|peru|pink|plum
+|powderblue|rebeccapurple|rosybrown|royalblue|saddlebrown|salmon|sandybrown|seagreen|seashell
+|sienna|skyblue|slateblue|slategray|slategrey|snow|springgreen|steelblue|tan|thistle|tomato
+|transparent|turquoise|violet|wheat|whitesmoke|yellowgreen)
+(?![\w-])</string>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>support.constant.color.current.css</string>
+            <key>match</key>
+            <string>(?i)(?&lt;![\w-])currentColor(?![\w-])</string>
+          </dict>
+        </array>
+      </dict>
+      <key>css-functions</key>
+      <dict>
+        <key>patterns</key>
+        <array>
+          <dict>
+            <key>name</key>
+            <string>meta.function.calc.css</string>
+            <key>begin</key>
+            <string>(?i)(?&lt;![\w-])(calc)(\()</string>
+            <key>beginCaptures</key>
+            <dict>
+              <key>1</key>
+              <dict>
+                <key>name</key>
+                <string>support.function.calc.css</string>
+              </dict>
+              <key>2</key>
+              <dict>
+                <key>name</key>
+                <string>punctuation.section.function.begin.bracket.round.css</string>
+              </dict>
+            </dict>
+            <key>end</key>
+            <string>\)</string>
+            <key>endCaptures</key>
+            <dict>
+              <key>0</key>
+              <dict>
+                <key>name</key>
+                <string>punctuation.section.function.end.bracket.round.css</string>
+              </dict>
+            </dict>
+            <key>patterns</key>
+            <array>
+              <dict>
+                <key>name</key>
+                <string>keyword.operator.arithmetic.css</string>
+                <key>match</key>
+                <string>[*/]|(?&lt;=\s|^)[-+](?=\s|$)</string>
+              </dict>
+              <dict>
+                <key>include</key>
+                <string>#css-property-values</string>
+              </dict>
+            </array>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>meta.function.color.css</string>
+            <key>begin</key>
+            <string>(?i)(?&lt;![\w-])(rgba?|hsla?)(\()</string>
+            <key>beginCaptures</key>
+            <dict>
+              <key>1</key>
+              <dict>
+                <key>name</key>
+                <string>support.function.misc.css</string>
+              </dict>
+              <key>2</key>
+              <dict>
+                <key>name</key>
+                <string>punctuation.section.function.begin.bracket.round.css</string>
+              </dict>
+            </dict>
+            <key>end</key>
+            <string>\)</string>
+            <key>endCaptures</key>
+            <dict>
+              <key>0</key>
+              <dict>
+                <key>name</key>
+                <string>punctuation.section.function.end.bracket.round.css</string>
+              </dict>
+            </dict>
+            <key>patterns</key>
+            <array>
+              <dict>
+                <key>include</key>
+                <string>#css-property-values</string>
+              </dict>
+            </array>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>meta.function.gradient.css</string>
+            <key>begin</key>
+            <string>(?xi) (?&lt;![\w-])
+(
+  (?:-webkit-|-moz-|-o-)?    # Accept prefixed/historical variants
+  (?:repeating-)?            # "Repeating"-type gradient
+  (?:linear|radial|conic)    # Shape
+  -gradient
+)
+(\()</string>
+            <key>beginCaptures</key>
+            <dict>
+              <key>1</key>
+              <dict>
+                <key>name</key>
+                <string>support.function.gradient.css</string>
+              </dict>
+              <key>2</key>
+              <dict>
+                <key>name</key>
+                <string>punctuation.section.function.begin.bracket.round.css</string>
+              </dict>
+            </dict>
+            <key>end</key>
+            <string>\)</string>
+            <key>endCaptures</key>
+            <dict>
+              <key>0</key>
+              <dict>
+                <key>name</key>
+                <string>punctuation.section.function.end.bracket.round.css</string>
+              </dict>
+            </dict>
+            <key>patterns</key>
+            <array>
+              <dict>
+                <key>name</key>
+                <string>keyword.operator.gradient.css</string>
+                <key>match</key>
+                <string>(?i)(?&lt;![\w-])(from|to|at)(?![\w-])</string>
+              </dict>
+              <dict>
+                <key>include</key>
+                <string>#css-property-values</string>
+              </dict>
+            </array>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>meta.function.gradient.invalid.deprecated.gradient.css</string>
+            <key>begin</key>
+            <string>(?i)(?&lt;![\w-])(-webkit-gradient)(\()</string>
+            <key>beginCaptures</key>
+            <dict>
+              <key>1</key>
+              <dict>
+                <key>name</key>
+                <string>invalid.deprecated.gradient.function.css</string>
+              </dict>
+              <key>2</key>
+              <dict>
+                <key>name</key>
+                <string>punctuation.section.function.begin.bracket.round.css</string>
+              </dict>
+            </dict>
+            <key>end</key>
+            <string>\)</string>
+            <key>endCaptures</key>
+            <dict>
+              <key>0</key>
+              <dict>
+                <key>name</key>
+                <string>punctuation.section.function.end.bracket.round.css</string>
+              </dict>
+            </dict>
+            <key>patterns</key>
+            <array>
+              <dict>
+                <key>begin</key>
+                <string>(?i)(?&lt;![\w-])(from|to|color-stop)(\()</string>
+                <key>beginCaptures</key>
+                <dict>
+                  <key>1</key>
+                  <dict>
+                    <key>name</key>
+                    <string>invalid.deprecated.function.css</string>
+                  </dict>
+                  <key>2</key>
+                  <dict>
+                    <key>name</key>
+                    <string>punctuation.section.function.begin.bracket.round.css</string>
+                  </dict>
+                </dict>
+                <key>end</key>
+                <string>\)</string>
+                <key>endCaptures</key>
+                <dict>
+                  <key>0</key>
+                  <dict>
+                    <key>name</key>
+                    <string>punctuation.section.function.end.bracket.round.css</string>
+                  </dict>
+                </dict>
+                <key>patterns</key>
+                <array>
+                  <dict>
+                    <key>include</key>
+                    <string>#css-property-values</string>
+                  </dict>
+                </array>
+              </dict>
+              <dict>
+                <key>include</key>
+                <string>#css-property-values</string>
+              </dict>
+            </array>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>meta.function.misc.css</string>
+            <key>begin</key>
+            <string>(?xi) (?&lt;![\w-])
+(annotation|attr|blur|brightness|character-variant|contrast|counters?
+|cross-fade|drop-shadow|element|fit-content|format|grayscale|hue-rotate
+|image-set|invert|local|minmax|opacity|ornaments|repeat|saturate|sepia
+|styleset|stylistic|swash|symbols)
+(\()</string>
+            <key>beginCaptures</key>
+            <dict>
+              <key>1</key>
+              <dict>
+                <key>name</key>
+                <string>support.function.misc.css</string>
+              </dict>
+              <key>2</key>
+              <dict>
+                <key>name</key>
+                <string>punctuation.section.function.begin.bracket.round.css</string>
+              </dict>
+            </dict>
+            <key>end</key>
+            <string>\)</string>
+            <key>endCaptures</key>
+            <dict>
+              <key>0</key>
+              <dict>
+                <key>name</key>
+                <string>punctuation.section.function.end.bracket.round.css</string>
+              </dict>
+            </dict>
+            <key>patterns</key>
+            <array>
+              <dict>
+                <key>name</key>
+                <string>constant.numeric.other.density.css</string>
+                <key>match</key>
+                <string>(?i)(?&lt;=[,\s"]|\*/|^)\d+x(?=[\s,"')]|/\*|$)</string>
+              </dict>
+              <dict>
+                <key>include</key>
+                <string>#css-property-values</string>
+              </dict>
+              <dict>
+                <key>name</key>
+                <string>variable.parameter.misc.css</string>
+                <key>match</key>
+                <string>[^'"),\s]+</string>
+              </dict>
+            </array>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>meta.function.shape.css</string>
+            <key>begin</key>
+            <string>(?i)(?&lt;![\w-])(circle|ellipse|inset|polygon|rect)(\()</string>
+            <key>beginCaptures</key>
+            <dict>
+              <key>1</key>
+              <dict>
+                <key>name</key>
+                <string>support.function.shape.css</string>
+              </dict>
+              <key>2</key>
+              <dict>
+                <key>name</key>
+                <string>punctuation.section.function.begin.bracket.round.css</string>
+              </dict>
+            </dict>
+            <key>end</key>
+            <string>\)</string>
+            <key>endCaptures</key>
+            <dict>
+              <key>0</key>
+              <dict>
+                <key>name</key>
+                <string>punctuation.section.function.end.bracket.round.css</string>
+              </dict>
+            </dict>
+            <key>patterns</key>
+            <array>
+              <dict>
+                <key>name</key>
+                <string>keyword.operator.shape.css</string>
+                <key>match</key>
+                <string>(?i)(?&lt;=\s|^|\*/)(at|round)(?=\s|/\*|$)</string>
+              </dict>
+              <dict>
+                <key>include</key>
+                <string>#css-property-values</string>
+              </dict>
+            </array>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>meta.function.timing-function.css</string>
+            <key>begin</key>
+            <string>(?i)(?&lt;![\w-])(cubic-bezier|steps)(\()</string>
+            <key>beginCaptures</key>
+            <dict>
+              <key>1</key>
+              <dict>
+                <key>name</key>
+                <string>support.function.timing-function.css</string>
+              </dict>
+              <key>2</key>
+              <dict>
+                <key>name</key>
+                <string>punctuation.section.function.begin.bracket.round.css</string>
+              </dict>
+            </dict>
+            <key>end</key>
+            <string>\)</string>
+            <key>endCaptures</key>
+            <dict>
+              <key>0</key>
+              <dict>
+                <key>name</key>
+                <string>punctuation.section.function.end.bracket.round.css</string>
+              </dict>
+            </dict>
+            <key>patterns</key>
+            <array>
+              <dict>
+                <key>name</key>
+                <string>support.constant.step-direction.css</string>
+                <key>match</key>
+                <string>(?i)(?&lt;![\w-])(start|end)(?=\s*\)|$)</string>
+              </dict>
+              <dict>
+                <key>include</key>
+                <string>#css-property-values</string>
+              </dict>
+            </array>
+          </dict>
+          <dict>
+            <key>begin</key>
+            <string>(?xi) (?&lt;![\w-])
+( (?:translate|scale|rotate)(?:[XYZ]|3D)?
+| matrix(?:3D)?
+| skew[XY]?
+| perspective
+)
+(\()</string>
+            <key>beginCaptures</key>
+            <dict>
+              <key>1</key>
+              <dict>
+                <key>name</key>
+                <string>support.function.transform.css</string>
+              </dict>
+              <key>2</key>
+              <dict>
+                <key>name</key>
+                <string>punctuation.section.function.begin.bracket.round.css</string>
+              </dict>
+            </dict>
+            <key>end</key>
+            <string>\)</string>
+            <key>endCaptures</key>
+            <dict>
+              <key>0</key>
+              <dict>
+                <key>name</key>
+                <string>punctuation.section.function.end.bracket.round.css</string>
+              </dict>
+            </dict>
+            <key>patterns</key>
+            <array>
+              <dict>
+                <key>include</key>
+                <string>#css-property-values</string>
+              </dict>
+            </array>
+          </dict>
+        </array>
+      </dict>
+      <key>css-numeric-values</key>
+      <dict>
+        <key>patterns</key>
+        <array>
+          <dict>
+            <key>name</key>
+            <string>constant.other.color.rgb-value.hex.css</string>
+            <key>match</key>
+            <string>(#)(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b</string>
+            <key>captures</key>
+            <dict>
+              <key>1</key>
+              <dict>
+                <key>name</key>
+                <string>punctuation.definition.constant.css</string>
+              </dict>
+            </dict>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>constant.numeric.css</string>
+            <key>match</key>
+            <string>(?xi) (?&lt;![\w-])
+[-+]?                               # Sign indicator
+
+(?:                                 # Numerals
+    [0-9]+ (?:\.[0-9]+)?           # Integer/float with leading digits
+  | \.[0-9]+                       # Float without leading digits
+)
+
+(?:                                 # Scientific notation
+  (?&lt;=[0-9])                        # Exponent must follow a digit
+  E                                 # Exponent indicator
+  [-+]?                             # Possible sign indicator
+  [0-9]+                            # Exponent value
+)?
+
+(?:                                 # Possible unit for data-type:
+  (%)                               # - Percentage
+  | ( deg|grad|rad|turn             # - Angle
+    | Hz|kHz                        # - Frequency
+    | ch|cm|em|ex|fr|in|mm|mozmm|   # - Length
+      pc|pt|px|q|rem|vh|vmax|vmin|
+      vw
+    | dpi|dpcm|dppx                 # - Resolution
+    | s|ms                          # - Time
+    )
+  \b                               # Boundary checking intentionally lax to
+)?                                  # facilitate embedding in CSS-like grammars</string>
+            <key>captures</key>
+            <dict>
+              <key>1</key>
+              <dict>
+                <key>name</key>
+                <string>keyword.other.unit.percentage.css</string>
+              </dict>
+              <key>2</key>
+              <dict>
+                <key>name</key>
+                <string>keyword.other.unit.${2:/downcase}.css</string>
+              </dict>
+            </dict>
+          </dict>
+        </array>
+      </dict>
+      <key>css-combinators</key>
+      <dict>
+        <key>patterns</key>
+        <array>
+          <dict>
+            <key>name</key>
+            <string>punctuation.separator.combinator.css</string>
+            <key>match</key>
+            <string>&gt;&gt;&gt;|&gt;&gt;|&gt;|\+|~</string>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>keyword.other.parent-selector.css</string>
+            <key>match</key>
+            <string>&amp;</string>
+          </dict>
+        </array>
+      </dict>
+      <key>css-pseudo-classes</key>
+      <dict>
+        <key>name</key>
+        <string>entity.other.attribute-name.pseudo-class.css</string>
+        <key>match</key>
+        <string>(?xi)
+(:)(:*)
+(?: active|any-link|checked|default|defined|disabled|empty|enabled|first
+  | (?:first|last|only)-(?:child|of-type)|focus|focus-visible|focus-within
+  | fullscreen|host|hover|in-range|indeterminate|invalid|left|link
+  | optional|out-of-range|placeholder-shown|read-only|read-write
+  | required|right|root|scope|target|unresolved
+  | valid|visited
+)(?![\w-]|\s*[;}])</string>
+        <key>captures</key>
+        <dict>
+          <key>1</key>
+          <dict>
+            <key>name</key>
+            <string>punctuation.definition.entity.css</string>
+          </dict>
+          <key>2</key>
+          <dict>
+            <key>name</key>
+            <string>invalid.illegal.colon.css</string>
+          </dict>
+        </dict>
+      </dict>
+      <key>css-pseudo-elements</key>
+      <dict>
+        <key>name</key>
+        <string>entity.other.attribute-name.pseudo-element.css</string>
+        <key>match</key>
+        <string>(?xi)
+(?:
+  (::?)                       # Elements using both : and :: notation
+  (?: after
+    | before
+    | first-letter
+    | first-line
+    | (?:-(?:ah|apple|atsc|epub|hp|khtml|moz
+            |ms|o|rim|ro|tc|wap|webkit|xv)
+        | (?:mso|prince))
+      -[a-z-]+
+  )
+  |
+  (::)                        # Double-colon only
+  (?: backdrop
+    | content
+    | grammar-error
+    | marker
+    | placeholder
+    | selection
+    | shadow
+    | spelling-error
+  )
+)
+(?![\w-]|\s*[;}])</string>
+        <key>captures</key>
+        <dict>
+          <key>1</key>
+          <dict>
+            <key>name</key>
+            <string>punctuation.definition.entity.css</string>
+          </dict>
+          <key>2</key>
+          <dict>
+            <key>name</key>
+            <string>punctuation.definition.entity.css</string>
+          </dict>
+        </dict>
+      </dict>
+      <key>css-commas</key>
+      <dict>
+        <key>name</key>
+        <string>punctuation.separator.list.comma.css</string>
+        <key>match</key>
+        <string>,</string>
+      </dict>
+      <key>css-escapes</key>
+      <dict>
+        <key>patterns</key>
+        <array>
+          <dict>
+            <key>name</key>
+            <string>constant.character.escape.codepoint.css</string>
+            <key>match</key>
+            <string>\\[0-9a-fA-F]{1,6}</string>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>constant.character.escape.newline.css</string>
+            <key>begin</key>
+            <string>\\$\s*</string>
+            <key>end</key>
+            <string>^(?&lt;!\G)</string>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>constant.character.escape.css</string>
+            <key>match</key>
+            <string>\\.</string>
+          </dict>
+        </array>
+      </dict>
+      <key>css-selector</key>
+      <dict>
+        <key>name</key>
+        <string>meta.selector.css</string>
+        <key>begin</key>
+        <string>(?&lt;=css\s)</string>
+        <key>end</key>
+        <string>(\s*\=|\s*$)</string>
+        <key>endCaptures</key>
+        <dict>
+          <key>0</key>
+          <dict>
+            <key>name</key>
+            <string>punctuation.separator.sel-properties.css</string>
+          </dict>
+        </dict>
+        <key>patterns</key>
+        <array>
+          <dict>
+            <key>include</key>
+            <string>#css-selector-innards</string>
+          </dict>
+        </array>
+      </dict>
+      <key>nested-css-selector</key>
+      <dict>
+        <key>name</key>
+        <string>meta.selector.css</string>
+        <key>begin</key>
+        <string>(^\t+)(?=.*\&amp;.*)</string>
+        <key>end</key>
+        <string>(\s*\=|\s*$)</string>
+        <key>endCaptures</key>
+        <dict>
+          <key>0</key>
+          <dict>
+            <key>name</key>
+            <string>punctuation.separator.sel-properties.css</string>
+          </dict>
+        </dict>
+        <key>patterns</key>
+        <array>
+          <dict>
+            <key>include</key>
+            <string>#css-selector-innards</string>
+          </dict>
+        </array>
+      </dict>
+      <key>css-selector-innards</key>
+      <dict>
+        <key>patterns</key>
+        <array>
+          <dict>
+            <key>include</key>
+            <string>#css-commas</string>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#css-escapes</string>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#css-combinators</string>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>entity.name.tag.wildcard.css</string>
+            <key>match</key>
+            <string>\*</string>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>meta.attribute-selector.css</string>
+            <key>begin</key>
+            <string>\[</string>
+            <key>beginCaptures</key>
+            <dict>
+              <key>0</key>
+              <dict>
+                <key>name</key>
+                <string>punctuation.definition.entity.begin.bracket.square.css</string>
+              </dict>
+            </dict>
+            <key>end</key>
+            <string>\]</string>
+            <key>endCaptures</key>
+            <dict>
+              <key>0</key>
+              <dict>
+                <key>name</key>
+                <string>punctuation.definition.entity.end.bracket.square.css</string>
+              </dict>
+            </dict>
+            <key>patterns</key>
+            <array>
+              <dict>
+                <key>include</key>
+                <string>#string</string>
+              </dict>
+              <dict>
+                <key>match</key>
+                <string>(?&lt;=["'\s]|^|\*/)\s*([iI])\s*(?=[\s\]]|/\*|$)</string>
+                <key>captures</key>
+                <dict>
+                  <key>1</key>
+                  <dict>
+                    <key>name</key>
+                    <string>storage.modifier.ignore-case.css</string>
+                  </dict>
+                </dict>
+              </dict>
+              <dict>
+                <key>match</key>
+                <string>(?x)(?&lt;==)\s*((?!/\*)(?:[^\\"'\s\]]|\\.)+)</string>
+                <key>captures</key>
+                <dict>
+                  <key>1</key>
+                  <dict>
+                    <key>name</key>
+                    <string>string.unquoted.attribute-value.css</string>
+                  </dict>
+                </dict>
+              </dict>
+              <dict>
+                <key>include</key>
+                <string>#css-escapes</string>
+              </dict>
+              <dict>
+                <key>name</key>
+                <string>keyword.operator.pattern.css</string>
+                <key>match</key>
+                <string>[~|^$*]?=</string>
+              </dict>
+              <dict>
+                <key>name</key>
+                <string>punctuation.separator.css</string>
+                <key>match</key>
+                <string>\|</string>
+              </dict>
+              <dict>
+                <key>match</key>
+                <string>(?x)
+# Qualified namespace prefix
+( -?(?!\d)(?:[\w-]|[^\\x00-\\x7F]|\\(?:[0-9a-fA-F]{1,6}|.))+
+| \*
+)
+# Lookahead to ensure there's a valid identifier ahead
+(?=
+  \| (?!\s|=|$|\])
+  (?: -?(?!\d)
+   |   [\\\w-]
+   |   [^\\x00-\\x7F]
+   )
+)</string>
+                <key>captures</key>
+                <dict>
+                  <key>1</key>
+                  <dict>
+                    <key>name</key>
+                    <string>entity.other.namespace-prefix.css</string>
+                  </dict>
+                </dict>
+              </dict>
+              <dict>
+                <key>match</key>
+                <string>(?x)
+(-?(?!\d)(?&gt;[\w-]|[^\\x00-\\x7F]|\\(?:[0-9a-fA-F]{1,6}|.))+)
+\s*
+(?=[~|^\]$*=]|/\*)</string>
+                <key>captures</key>
+                <dict>
+                  <key>1</key>
+                  <dict>
+                    <key>name</key>
+                    <string>entity.other.attribute-name.css</string>
+                  </dict>
+                </dict>
+              </dict>
+            </array>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#css-pseudo-classes</string>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#css-pseudo-elements</string>
+          </dict>
+        </array>
+      </dict>
+      <key>css-property-values</key>
+      <dict>
+        <key>patterns</key>
+        <array>
+          <dict>
+            <key>include</key>
+            <string>#css-commas</string>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#css-escapes</string>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#css-functions</string>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#css-numeric-values</string>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#css-color-keywords</string>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#string</string>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>keyword.other.important.css</string>
+            <key>match</key>
+            <string>!\s*important(?![\w-])</string>
+          </dict>
+        </array>
+      </dict>
       <key>tag-tree</key>
       <dict>
         <key>patterns</key>
@@ -315,6 +1287,10 @@
           <dict>
             <key>include</key>
             <string>#tag-expr-name</string>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#tag-inlined-styles</string>
           </dict>
           <dict>
             <key>include</key>
@@ -395,6 +1371,40 @@
           <dict>
             <key>include</key>
             <string>#expression</string>
+          </dict>
+        </array>
+        <key>contentName</key>
+        <string>meta.embedded.line.imba</string>
+      </dict>
+      <key>tag-inlined-styles</key>
+      <dict>
+        <key>name</key>
+        <string>meta.tag.expression.imba</string>
+        <key>begin</key>
+        <string>\.\(</string>
+        <key>beginCaptures</key>
+        <dict>
+          <key>0</key>
+          <dict>
+            <key>name</key>
+            <string>punctuation.section.tag.imba</string>
+          </dict>
+        </dict>
+        <key>end</key>
+        <string>\)</string>
+        <key>endCaptures</key>
+        <dict>
+          <key>0</key>
+          <dict>
+            <key>name</key>
+            <string>punctuation.section.tag.imba</string>
+          </dict>
+        </dict>
+        <key>patterns</key>
+        <array>
+          <dict>
+            <key>include</key>
+            <string>#inline-styles</string>
           </dict>
         </array>
         <key>contentName</key>
@@ -3456,6 +4466,10 @@
           </dict>
           <dict>
             <key>include</key>
+            <string>#style-declaration</string>
+          </dict>
+          <dict>
+            <key>include</key>
             <string>#indexer-declaration</string>
           </dict>
           <dict>
@@ -3519,6 +4533,10 @@
           <dict>
             <key>include</key>
             <string>#method-declaration</string>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#style-declaration</string>
           </dict>
           <dict>
             <key>include</key>
