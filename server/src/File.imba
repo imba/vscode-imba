@@ -325,7 +325,7 @@ export class File < Component
 			return matches.map do $1.location
 			# log 'tag attr info',info
 			# return info ? [info.location] : null
-		elif ctx.mode == 'tag.modifier'
+		elif ctx.mode == 'tag.modifier' or ctx.mode == 'tag.event-modifier'
 			let items = ils.entities.getTagEventModifierCompletions(ctx)
 			let item = items.find do $1.label == ctx.token.value
 			if item and item.data.location
@@ -354,7 +354,7 @@ export class File < Component
 			let info = ils.entities.getTagEventInfo(ctx.token.value,ctx.tag.name)
 			return {range: range, contents: info.description} if info
 
-		elif ctx.mode == 'tag.modifier'
+		elif ctx.mode == 'tag.modifier' or ctx.mode == 'tag.event-modifier'
 			let items = ils.entities.getTagEventModifierCompletions(ctx)
 			let item = items.find do $1.label == ctx.token.value
 			if item
