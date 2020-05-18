@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.1
+
+* Add basic highlighting support for new style syntax
+
 ## 1.5.2
 
 * Highlight CSS blocks in comments.
