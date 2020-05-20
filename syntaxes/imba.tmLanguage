@@ -6332,7 +6332,7 @@
       <key>ternary-expression</key>
       <dict>
         <key>begin</key>
-        <string>(?!\?\.\s*[^[:digit:]])(\?)(?!\?)</string>
+        <string>(?!\?\.\s*[^[:digit:]])(\?)(?![\?=])</string>
         <key>beginCaptures</key>
         <dict>
           <key>1</key>
@@ -7046,7 +7046,7 @@
             <key>name</key>
             <string>keyword.operator.assignment.compound.imba</string>
             <key>match</key>
-            <string>\*=|(?&lt;!\()/=|%=|\+=|\-=</string>
+            <string>\*=|(?&lt;!\()/=|%=|\+=|\-=|\?=|\?\?=</string>
           </dict>
           <dict>
             <key>name</key>
@@ -8882,7 +8882,7 @@
             <array>
               <dict>
                 <key>begin</key>
-                <string>\?</string>
+                <string>\?(?!=)</string>
                 <key>beginCaptures</key>
                 <dict>
                   <key>0</key>
@@ -9251,7 +9251,7 @@
             <key>name</key>
             <string>keyword.operator.ternary.imba</string>
             <key>match</key>
-            <string>(\?|\:)</string>
+            <string>(\?(?!=)|\:)</string>
           </dict>
           <dict>
             <key>name</key>
