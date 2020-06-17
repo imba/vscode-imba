@@ -362,6 +362,13 @@
       }
     },
     {
+      "name": "support.type.property-name.modifier",
+      "scope": "support.type.property-name.modifier",
+      "settings": {
+        "foreground": "#f394eb"
+      }
+    },
+    {
       "name": "support.type.property-name",
       "scope": "support.type.property-name",
       "settings": {
@@ -413,6 +420,13 @@
     {
       "name": "constant.other.color",
       "scope": "constant.other.color",
+      "settings": {
+        "foreground": "#a49feb"
+      }
+    },
+    {
+      "name": "meta.style.imba support.constant.color",
+      "scope": "meta.style.imba support.constant.color",
       "settings": {
         "foreground": "#a49feb"
       }
