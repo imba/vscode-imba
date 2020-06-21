@@ -25,8 +25,19 @@ for entry in cssData.properties
 	cssProperties[entry.name] = entry
 
 for own k,v of cssAliases
+	let defn = {name: k,custom: yes,expanded:v,alias:yes}
 	unless v isa Array
-		cssProperties[k] = cssProperties[v]
+		if let orig = cssProperties[v]
+			defn = Object.assign(alias: yes,expanded: orig.name,orig)
+			orig.abbr = k
+	else
+		let origs = v.map do cssProperties[$1]
+		defn.expanded = origs.map(do $1.name).join(" & ")
+
+	if defn
+		cssProperties[k] = defn
+
+
 
 class TagQuery
 	def constructor program, tagName
@@ -291,11 +302,14 @@ export class Entities < Component
 				detail = v.name
 
 			items.push {
-				label: k
+				label: v.alias ? "{k} ({v.expanded})" : k
 				insertText: k
+				# filterText: v.alias ? "{k} {v.name}" : (v.abbr ? "{v.abbr} {v.name}" : "{v.name}")
+				filterText: v.alias ? "{k}_{v.name}" : "ZZZ_{v.name}"
+				# filterText: v.alias ? k : undefined
 				kind: CompletionItemKind.Field,
 				commitCharacters: ['@',':']
-				sortText: k.replace(/^\-/,'zzz')
+				sortText: v.alias ? "-{k}" : k.replace(/^\-/,'zzz')
 				detail: detail
 				documentation: v.description
 				data: {resolved: true}
