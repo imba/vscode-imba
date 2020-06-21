@@ -145,7 +145,8 @@ export class FullTextDocument < Component
 		content = body
 		_lineOffsets = null
 		if tokens
-			tokens.invalidateFromLine(0)
+			tokens.overwrite(body)
+			# tokens.invalidateFromLine(0)
 		return self
 
 	def update changes, version

@@ -344,25 +344,17 @@ export def findStyleBlocks code
 
 
 export def stripNonStyleBlocks code
-	let css = ""
+	let style = ""
 	let blocks = findStyleBlocks(code)
 	let start = 0
 	for block in blocks
 		let text = code.slice(start,block.start)
-		css += text.replace(/\S/gm,' ')
-		css += code.slice(block.start,block.end)
+		style += text.replace(/\S/gm,' ')
+		style += code.slice(block.start,block.end)
 		start = block.end
 
-	css += code.slice(start).replace(/\S/gm,' ')
-
-	if false
-		console.log css.length,code.length
-		let lines = css.split('\n')
-		let lines2 = code.split('\n')
-		for line,i in lines
-			console.log line.length, JSON.stringify(line)
-			console.log lines2[i].length, JSON.stringify(lines2[i])
-	return css
+	style += code.slice(start).replace(/\S/gm,' ')
+	return style
 
 export def findCompiledOffsetForScope scope, javascript
 	let findFromOffset = 0

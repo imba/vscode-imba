@@ -418,6 +418,18 @@ export class File < Component
 		if scope.type == 'style'
 			return styleDocument.getCompletionsAtOffset(offset,options)
 
+		if mode == 'css_body' or mode == 'css_properties'
+			return []
+
+		if mode == 'css_selector'
+			return []
+		
+		if mode == 'css_value'
+			return []
+
+		if mode == 'css_property'
+			return []
+
 		if mode == 'tag.name' or mode == 'supertag'
 			return ils.entities.getTagNameCompletions(context)
 
