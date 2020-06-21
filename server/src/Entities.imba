@@ -7,11 +7,19 @@ import {tags,globalAttributes} from './html-data.json'
 import {snippets} from './snippets'
 import { items } from '../../test/data'
 
+import * as cssData from './css-data.json'
+
 var globalEvents = for item in globalAttributes when item.name.match(/^on\w+/)
 	item
 
 for tagItem in tags
 	tags[tagItem.name] = tagItem
+
+
+const cssProperties = {}
+
+for entry in cssData.properties
+	cssProperties[entry.name] = entry
 
 class TagQuery
 	def constructor program, tagName
@@ -234,9 +242,11 @@ export class Entities < Component
 			}
 
 		let components = program.getWorkspaceSymbols(type: 'tag')
+		let included = {}
 		
 		for item in components # $cache.components
-			items.push {
+			continue if included[item.name]
+			items.push included[item.name] = {
 				label: item.name
 				kind: CompletionItemKind.Field,
 				sortText: item.name
@@ -251,6 +261,23 @@ export class Entities < Component
 				data: {resolved: true}
 			}
 
+		return items
+
+	def getCSSValueCompletions o
+		let items\CompletionItem[] = []
+		let property = cssProperties[String(o.cssProperty)]
+
+		return [] unless property
+		
+		for val in property.values
+			items.push {
+				label: val.name
+				insertText: val.name
+				kind: CompletionItemKind.Field,
+				sortText: val.name.replace(/^\-/,'zzz')
+				detail: val.description
+				data: {resolved: true}
+			}
 		return items
 		
 	def rewriteTSCompletions items

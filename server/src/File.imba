@@ -425,7 +425,10 @@ export class File < Component
 			return []
 		
 		if mode == 'css_value'
-			return []
+			# do we alreay have a value for property?
+			let key = String(context.cssProperty)
+			let o = {}
+			return ils.entities.getCSSValueCompletions(context)
 
 		if mode == 'css_property'
 			return []
