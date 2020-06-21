@@ -418,6 +418,9 @@ export class File < Component
 		if scope.type == 'style'
 			return styleDocument.getCompletionsAtOffset(offset,options)
 
+		if context.css
+			return ils.entities.getCSSCompletions(context)
+
 		if mode == 'css_body' or mode == 'css_properties'
 			return []
 
@@ -425,13 +428,13 @@ export class File < Component
 			return []
 		
 		if mode == 'css_value'
-			# do we alreay have a value for property?
-			let key = String(context.cssProperty)
-			let o = {}
 			return ils.entities.getCSSValueCompletions(context)
 
 		if mode == 'css_property'
 			return []
+		
+		if mode == 'css_modifier'
+			return ils.entities.getCSSModifierCompletions(context)
 
 		if mode == 'tag.name' or mode == 'supertag'
 			return ils.entities.getTagNameCompletions(context)

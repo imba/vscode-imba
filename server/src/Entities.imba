@@ -9,6 +9,9 @@ import { items } from '../../test/data'
 
 import * as cssData from './css-data.json'
 
+import {aliases as cssAliases} from 'imba/src/compiler/styler'
+import {modifiers as cssModifiers} from 'imba/src/compiler/theme'
+
 var globalEvents = for item in globalAttributes when item.name.match(/^on\w+/)
 	item
 
@@ -20,6 +23,10 @@ const cssProperties = {}
 
 for entry in cssData.properties
 	cssProperties[entry.name] = entry
+
+for own k,v of cssAliases
+	unless v isa Array
+		cssProperties[k] = cssProperties[v]
 
 class TagQuery
 	def constructor program, tagName
@@ -263,6 +270,38 @@ export class Entities < Component
 
 		return items
 
+	def getCSSCompletions o
+		let items\CompletionItem[] = []
+		if o.css.property or o.css.body
+			items.push(...getCSSPropertyCompletions(o))
+			console.log 'add property completions'
+		if o.css.value
+			items.push(...getCSSValueCompletions(o))
+		if o.css.modifier
+			items.push(...getCSSModifierCompletions(o))
+
+		return items
+
+	def getCSSPropertyCompletions o
+		let items\CompletionItem[] = []
+		for own k,v of cssProperties
+			continue unless v
+			let detail = ''
+			if k != v.name
+				detail = v.name
+
+			items.push {
+				label: k
+				insertText: k
+				kind: CompletionItemKind.Field,
+				commitCharacters: ['@',':']
+				sortText: k.replace(/^\-/,'zzz')
+				detail: detail
+				documentation: v.description
+				data: {resolved: true}
+			}
+		return items
+
 	def getCSSValueCompletions o
 		let items\CompletionItem[] = []
 		let property = cssProperties[String(o.cssProperty)]
@@ -276,6 +315,18 @@ export class Entities < Component
 				kind: CompletionItemKind.Field,
 				sortText: val.name.replace(/^\-/,'zzz')
 				detail: val.description
+				data: {resolved: true}
+			}
+		return items
+
+	def getCSSModifierCompletions o
+		let items\CompletionItem[] = []
+		for own k,v of cssModifiers
+			items.push {
+				label: k
+				insertText: k
+				commitCharacters: [':']
+				kind: CompletionItemKind.Field,
 				data: {resolved: true}
 			}
 		return items
