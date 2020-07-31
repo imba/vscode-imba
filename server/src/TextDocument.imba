@@ -18,9 +18,6 @@ export class Document < Component
 
 	get tls
 		self.program.tls
-	
-	get cssls
-		self.program.cssls
 
 	get ils
 		self.program

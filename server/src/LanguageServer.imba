@@ -44,10 +44,13 @@ const tsServiceOptions\CompilerOptions = {
 	resolveJsonModule: true
 	incremental: true
 	target: ts.ScriptTarget.Latest
-	lib: ['lib.es6.d.ts']
+	# lib: ['lib.es6.d.ts']
+	# types: ['node']
 	types: ['node']
 	forceConsistentCasingInFileNames: true
+	# module: ts.ModuleKind.System
 	moduleResolution: ts.ModuleResolutionKind.NodeJs
+	inlineSources: true
 }
 
 export class LanguageServer < Component
@@ -55,7 +58,6 @@ export class LanguageServer < Component
 	prop allFiles\File[]
 	prop rootFiles\string[]
 	prop tls\LanguageService
-	prop cssls\CSSLanguageService
 
 	def resolveConfigFile dir
 		return null if !dir or (dir == path.dirname(dir))
@@ -94,14 +96,11 @@ export class LanguageServer < Component
 			if let file = getImbaFile(item.input)
 				yes
 
-		# createTypeScriptService!
-		# self.cssls = getCSSLanguageService()
-		# setTimeout(&,0) do indexFiles!
 		self
 
 	def logPath path,...params
-		if path.indexOf('.js') > 0
-			console.log(path,...params)
+		if path.match(/\.js$/) and path.match(/vscode-imba/)
+			console.log(...params,path)
 		
 
 	def updateConfiguration settings,all
@@ -134,16 +133,51 @@ export class LanguageServer < Component
 				paths[key] = [value]
 				paths[key + '/*'] = [value + '/*']
 
+		const realpath = do(path)
+			log 'realpath',path
+			return path
 
-		var servicesHost\LanguageServiceHost = {
+		const resolutionHost = {
+			fileExists: self.fileExists.bind(self)
+			readFile: self.readFile.bind(self)
+		}
+
+		const resolveModuleNames = do(moduleNames,containingFile)
+			const resolvedModules = []
+			log 'resolving',moduleNames,containingFile
+			for moduleName of moduleNames
+				
+				# try to use standard resolution
+				let result = ts.resolveModuleName(moduleName, containingFile, options, resolutionHost)
+				if result.resolvedModule
+					console.log 'resolved module',result.resolvedModule
+					resolvedModules.push(result.resolvedModule)
+				else
+					console.log 'could not resolve module!!!!',moduleName
+					# check fallback locations, for simplicity assume that module at location
+					# should be represented by '.d.ts' file
+					for location of []
+						const modulePath = path.join(location, moduleName + ".d.ts")
+						if fileExists(modulePath)
+							resolvedModules.push({ resolvedFileName: modulePath })
+
+			return resolvedModules
+
+		const servicesHost\LanguageServiceHost = {
 			getScriptFileNames:  do self.rootFiles
 			getProjectVersion:   do '' + self.version
 			getTypeRootsVersion: do 1
 			useCaseSensitiveFileNames: do yes
-
+			# realpath: realpath
+			# resolveModuleNames: resolveModuleNames
 			getScriptKind: do(fileName)
-				logPath fileName, 'getScriptKind'
-				return true
+				let file = self.files[fileName]
+				
+				if file
+					return ts.ScriptKind.JS
+				else
+					return ts.getScriptKindFromFileName(fileName)
+				
 
 			getScriptVersion: do(fileName)
 				let version = self.files[fileName] ? String(self.files[fileName].version.toString()) : "1"
@@ -165,6 +199,7 @@ export class LanguageServer < Component
 			getCurrentDirectory: do self.rootPath
 			getCompilationSettings: do options
 			getDefaultLibFileName: do(options) ts.getDefaultLibFilePath(options)
+			getSourceFile: self.getSourceFile.bind(self)
 			fileExists: self.fileExists.bind(self)
 			readFile: self.readFile.bind(self)
 			writeFile: self.writeFile.bind(self)
@@ -172,14 +207,14 @@ export class LanguageServer < Component
 			getNewLine: do '\n'
 		}
 
-		var resolutionHost = {
-			fileExists: self.fileExists.bind(self)
-			readFile: self.readFile.bind(self)
-		}
-
 		self.tls = ts.createLanguageService(servicesHost,ts.createDocumentRegistry!)
 
-		
+	def resolveModuleNames moduleNames, containingFile
+		log 'resolveModuleNames',containingFile
+
+	def getSourceFile filename, languageVersion
+		log 'getSourceFile',filename
+
 	def invalidate
 		version++
 		cache = {}
@@ -210,28 +245,33 @@ export class LanguageServer < Component
 
 	# comment about the source file?
 	def sourceFileExists fileName\string
-		if let file = self.files[fileName]
-			# What if it has been deleted?
+		let [m,ext] = (fileName.match(/\.(d\.ts|\w+)$/) or [])
+	
+		var alt = fileName.replace(/\.ts/, '.imba')
+
+		if ext == 'd.ts'
+			return false
+
+		if let file = self.files[alt]
 			return file.removed ? false : true
-
-		var alt = fileName.replace(/\.js$/, '.imba')
-
+		
 		if ((alt != fileName) or fileName.match(/\.imba$/)) && ts.sys.fileExists(alt)
-			new File(self,alt)
+			if ts.sys.fileExists(alt.replace(/\.imba$/,'.d.ts'))
+				return false
+
+			new File(self,alt,fileName)
 			return true
 		return false
 
-	def fileExists fileName 
-		
+	def fileExists fileName
 		let res = self.sourceFileExists(fileName) || ts.sys.fileExists(fileName)
-		logPath(fileName,'exists?',res)
 		return res
 
 	def readFile fileName
 		var source = self.files[fileName]
-		logPath(fileName,'readFile')
+		# logPath(fileName,'readFile')
+		# log 'readFile',fileName
 		if source
-			log("compile file {source.imbaPath}")
 			source.compile()
 			return String(source.js)
 
@@ -387,7 +427,7 @@ export class LanguageServer < Component
 			let sourceSpan = file.textSpanToRange(info.textSpan)
 			let sourceText = file.textSpanToText(info.textSpan)
 			let isLink = sourceText and sourceText.indexOf('-') >= 0
-			# console.log 'definitions!',sourceSpan,sourceText,isLink
+			console.log 'definitions!',sourceSpan,sourceText,isLink
 
 			var defs = for item of info.definitions
 				# console.log 'get definition',item

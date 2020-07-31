@@ -3,7 +3,7 @@ var path = require 'path'
 import {window, languages, IndentAction, workspace,SnippetString, SemanticTokensLegend, SemanticTokens} from 'vscode'
 import {LanguageClient, TransportKind} from 'vscode-languageclient'
 
-import {SemanticTokenTypes,SemanticTokenModifiers} from 'imba-document'
+import {SemanticTokenTypes,SemanticTokenModifiers} from 'imba/program'
 
 let debugChannel = window.createOutputChannel("Imba Debug")
 

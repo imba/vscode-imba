@@ -131,7 +131,6 @@
 	},
 	"dependencies": {
 		"imba": "^2.0.0-alpha.70",
-		"imba-document": "^0.1.11",
 		"vscode-languageclient": "^6.1.1",
 		"vscode-languageserver": "^6.1.1"
 	},

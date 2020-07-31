@@ -12,7 +12,7 @@ export default [{
         sourcemap: 'inline'
     },
     external: function(id){
-        return id[0] != '.' && id.indexOf('imba') != 0;
+        return id[0] != '.' && id.indexOf('imba') == -1;
     },
     plugins: [
         imba({target: 'node'}),
@@ -32,7 +32,7 @@ export default [{
         sourcemap: 'inline'
     },
     external: function(id){
-        return id[0] != '.' && id.indexOf('imba') != 0;
+        return id[0] != '.' && id.indexOf('imba') == -1;
     },
     plugins: [
         imba({target: 'node'}),
@@ -52,7 +52,8 @@ export default [{
         sourcemap: 'inline'
     },
     external: function(id){
-        return id[0] != '.' && id.indexOf('imba') != 0;
+        console.log('check external?',id);
+        return id[0] != '.' && id.indexOf('imba') == -1;
     },
     plugins: [
         imba({target: 'node'}),

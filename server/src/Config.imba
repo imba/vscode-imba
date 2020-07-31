@@ -1,8 +1,8 @@
 # let config = {verbose: false}
 export const config = {
-	verbose: false
+	verbose: true
+	checkImba:yes
 	suggest: { }
-	implicitProjectConfig: { checkImba:yes }
 }
 
 export def get option

@@ -3,10 +3,9 @@ import {CompletionItemKind,DiagnosticSeverity,SymbolKind, InsertTextFormat} from
 import {Location} from 'vscode-languageserver'
 import {ScriptElementKind,Diagnostic} from 'typescript'
 import * as util from './utils'
-import { StyleDocument } from './StyleDocument'
 import { FullTextDocument } from './FullTextDocument'
 import { items } from '../../test/data'
-import {Keywords,KeywordTypes,CompletionTypes} from 'imba-document/index'
+import {Keywords,KeywordTypes,CompletionTypes} from 'imba/program'
 
 
 var ts = require 'typescript'
@@ -27,30 +26,26 @@ export class File < Component
 	/**
 	@param {import("./LanguageServer").LanguageServer} program
 	*/
-	def constructor program, path
+	def constructor program, path, origPath = null
 		super
 		self.program = program
-		jsPath   = path.replace(/\.(imba|js|ts)$/,'.js')
-		imbaPath = path.replace(/\.(imba|js|ts)$/,'.imba')
-		cssPath  = path.replace(/\.(imba|js|ts)$/,'.css')
-		lsPath   = jsPath
+		imbaPath = path.replace(/\.(imba|jsx?|tsx?)$/,'.imba')
+		jsPath   = path.replace(/\.(imba|jsx?|tsx?)$/,'.js')
+		tsPath  = path.replace(/\.(imba|jsx?|tsx?)$/,'.ts')
+		lsPath   = tsPath
 
-		program.files[lsPath] = self
-		program.files[imbaPath] = self
-		program.files.push(self)
+		# should rather store without extension?
+		if lsPath.indexOf('-ts') > 0
+			lsPath = tsPath
 
 		if program && !program.rootFiles.includes(lsPath)
-			if lsPath.indexOf('check') > 0 and true
-				# tls.getEmitOutput(lsPath)
-				# let realPath = lsPath.replace('vscode-imba/node_modules/','')
-				console.log 'dont add document to rootFiles',lsPath
-				# program.files[realPath] = self
-				# program.files[realPath.replace('.js','.imba')] = self
-				# program.files['/Users/'] = self
-				# program.rootFiles.push(lsPath)
-			else
-				program.rootFiles.push(lsPath)
-		
+			program.rootFiles.push(lsPath)
+
+		program.files[lsPath] = self
+		# program.files[lsPath] = self
+		program.files[imbaPath] = self
+		program.files.push(self)
+	
 		version = 1
 		diagnostics = []
 		syntaxDiagnostics = []
@@ -63,9 +58,6 @@ export class File < Component
 	get document
 		let uri = 'file://' + imbaPath
 		program.documents.get(uri)
-	
-	get styleDocument
-		$styleDocument ||= StyleDocument.new(program,cssPath,self)
 
 	get tls
 		program.tls
@@ -340,10 +332,7 @@ export class File < Component
 		let element = ctx.tag
 		let elinfo = ctx.tag and ctx.tag.name and ils.entities.getTagTypeInfo(ctx.tag.name)
 
-		if ctx.scope.type == 'style'
-			return styleDocument.doHover(offset)
-
-		elif ctx.mode == 'tag.attr'
+		if ctx.mode == 'tag.attr'
 			let info = ils.entities.getTagAttrInfo(ctx.token.value,ctx.tag.name)
 			log 'tag attribute',ctx.token.value,info
 			if info
@@ -422,18 +411,21 @@ export class File < Component
 	def getGlobalType
 		# could be cached?
 		let prog = ils.getProgram!
-		let tsfile = prog.getSourceFile(jsPath)
+		let tsfile = prog.getSourceFile(lsPath)
 		let checker = prog.getTypeChecker!
 		let sym = checker.resolveName('globalThis',undefined,ts.SymbolFlags.Value,false)
 		checker.getTypeOfSymbolAtLocation(sym,tsfile)
 
 	def getTypeOfSymbolAtOffset offset
 		let prog = ils.getProgram!
-		let tsfile = prog.getSourceFile(jsPath)
+		let tsfile = prog.getSourceFile(lsPath)
 		let tok = ts.findPrecedingToken(generatedLocFor(offset),tsfile)
+
+		if tok and tok.kind == 24
+			tok = tok.parent.expression
+
 		let checker = prog.getTypeChecker!
 		let sym = checker.getSymbolAtLocation(tok)
-		# console.log 'found sym',sym,tok
 		let type = checker.getTypeOfSymbolAtLocation(sym,tsfile)
 		return type
 
@@ -450,7 +442,7 @@ export class File < Component
 		let filters = {kinds: []}
 		let keywordFilter = 0
 	
-		$delay('emitFile',5000)
+		# $delay('emitFile',5000)
 
 		console.log 'getCompletions',imbaPath,options,tok.type,ctx.before,suggest,!!that
 		console.log ils.config.config
@@ -482,7 +474,7 @@ export class File < Component
 		if tok.match('operator.access')
 			util.time do
 				$flush('emitFile')
-				if let type = getTypeOfSymbolAtOffset(ctx.token.offset)
+				if let type = getTypeOfSymbolAtOffset(tok.offset)
 					target = type
 				# return early
 

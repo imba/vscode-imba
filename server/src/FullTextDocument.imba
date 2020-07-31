@@ -1,5 +1,5 @@
 import { Component } from './Component'
-import { ImbaDocument } from 'imba-document'
+import { ImbaDocument } from 'imba/program'
 
 def computeLineOffsets text, isAtLineStart, textOffset
 	if textOffset === undefined
