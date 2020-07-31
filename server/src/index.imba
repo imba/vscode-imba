@@ -1,4 +1,4 @@
-import {createConnection, TextDocuments, Location,TextDocumentSyncKind} from 'vscode-languageserver'
+import {createConnection, TextDocuments, Location,TextDocumentSyncKind, Proposed} from 'vscode-languageserver'
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import {LanguageServer} from './LanguageServer'
 
@@ -29,16 +29,17 @@ documents.onDidSave do(event)
 documents.listen(connection)
 
 connection.onInitialize do(params)
+	
 	// Could this start a single instance for multiple workspaces?
 	# connection.console.log("[Server({process.pid}) {params.rootUri}] Started and initialize received")
-	server = LanguageServer.new(connection,documents,params)
+	server = new LanguageServer(connection,documents,params)
 
 	return {
 		capabilities: {
 			textDocumentSync: TextDocumentSyncKind.Incremental
 			completionProvider: {
 				resolveProvider: true,
-				triggerCharacters: ['.', ':', '"', '/', '@', '*','%','\\',"'"]
+				triggerCharacters: ['.', ':', '"', '@','%','\\',"'"]
 			},
 			# signatureHelpProvider: { triggerCharacters: ['('] },
 			signatureHelpProvider: false,
@@ -62,7 +63,12 @@ connection.onInitialize do(params)
 	}
 
 connection.onInitialized do(params)
-	# console.log 'on initialized'
+	# console.log 'on initialized',params
+	let conf = await connection.workspace.getConfiguration() # ('imba')
+	# console.log 'config',conf
+	
+
+	server.start(conf.imba)
 
 	connection.onNotification('onDidRenameFiles') do(event)
 		server.onDidRenameFiles(event)
@@ -77,7 +83,9 @@ connection.onInitialized do(params)
 	# 	console.log 'onDidChangeTextDocument',event
 
 connection.onDidChangeConfiguration do(change)
-	server.config.update(change)
+	console.log 'onDidChangeConfiguration'
+	server.updateConfiguration(change.settings.imba,change.settings)
+	# server.config.update(change)
 
 connection.onDocumentSymbol do(event)
 	return server ? server.getSymbols(event.textDocument.uri) : []
@@ -101,6 +109,9 @@ connection.onDefinition do(event)
 connection.onReferences do(event)
 	let res = server.onReferences(event)
 	return res
+
+connection.onRequest('semanticTokens') do(params)
+	return server.getSemanticTokens(params.uri)
 
 connection.onTypeDefinition do(event)
 	return undefined

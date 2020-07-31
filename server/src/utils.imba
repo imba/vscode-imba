@@ -9,6 +9,13 @@ export def uriToPath uri
 export def pathToUri path
 	'file://' + path
 
+export def time cb
+	let t = Date.now!
+	let res = cb()
+	let elapsed = Date.now! - t
+	console.log 'took',elapsed
+	return res
+
 export def rangeFromTextSpan span
 	rangeFromLocations(span.start,span.end)
 
@@ -61,12 +68,13 @@ const SYMBOL_KIND_MAP = {
 	var: SymbolKind.Variable
 	let: SymbolKind.Variable
 	function: SymbolKind.Function
-	const: SymbolKind.Constant
+	const: SymbolKind.Variable
 	module: SymbolKind.Module
 	alias: SymbolKind.Variable
 	getter: SymbolKind.Field
 	get: SymbolKind.Field
 	set: SymbolKind.Field
+	key: SymbolKind.Key
 	setter: SymbolKind.Field
 	tag: SymbolKind.Class
 }

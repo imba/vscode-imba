@@ -6,6 +6,8 @@ import * as util from './utils'
 import { StyleDocument } from './StyleDocument'
 import { FullTextDocument } from './FullTextDocument'
 import { items } from '../../test/data'
+import {Keywords,KeywordTypes,CompletionTypes} from 'imba-document/index'
+
 
 var ts = require 'typescript'
 
@@ -38,7 +40,16 @@ export class File < Component
 		program.files.push(self)
 
 		if program && !program.rootFiles.includes(lsPath)
-			program.rootFiles.push(lsPath)
+			if lsPath.indexOf('check') > 0 and true
+				# tls.getEmitOutput(lsPath)
+				# let realPath = lsPath.replace('vscode-imba/node_modules/','')
+				console.log 'dont add document to rootFiles',lsPath
+				# program.files[realPath] = self
+				# program.files[realPath.replace('.js','.imba')] = self
+				# program.files['/Users/'] = self
+				# program.rootFiles.push(lsPath)
+			else
+				program.rootFiles.push(lsPath)
 		
 		version = 1
 		diagnostics = []
@@ -67,13 +78,18 @@ export class File < Component
 	
 	get doc
 		$doc ||= FullTextDocument.create(uri,'imba',0,ts.sys.readFile(imbaPath))
+	
+	get idoc
+		doc.tokens
+
+	get tsfile
+		lis.getProgram!.getSourceFile(jsPath)
 
 	def didOpen doc
 		$doc = doc
-		if semanticTokens
-			sendSemanticTokens(semanticTokens)
 
 	def didChange doc, event = null
+		console.log('didChange',imbaPath)
 		$doc = doc
 		version = doc.version
 		cache.contexts = {}
@@ -105,8 +121,10 @@ export class File < Component
 			log 'emitFile',uri,version
 			program.invalidate!
 		
-		tls.getEmitOutput(lsPath) if tls
-
+		if tls
+			tls.getEmitOutput(lsPath)
+			console.log 'emitted file',lsPath
+		return self
 
 	def updateDiagnostics items\Diagnostic[] = []
 		
@@ -140,29 +158,6 @@ export class File < Component
 
 	def $clearSyntacticErrors
 		updateSyntaxDiagnostics([])
-		
-	def sendSemanticTokens tokens
-		# return self
-		semanticTokens = tokens
-
-		try
-			let doc = doc
-			let items = []
-			for token in tokens
-				let item = [token._value,token._scope,token._kind,token._loc,token._len]
-				continue if token._kind == 'accessor'
-
-				if doc
-					item.push(doc.positionAt(token._loc))
-					item.push(doc.positionAt(token._loc + token._len))
-					
-				items.push(item)
-			$decorations = items
-
-			if doc
-				sentTokens = items
-				program.connection.sendNotification('entities',{uri: doc.uri,version: doc.version,markers: items})
-		self
 
 	# how is this converting?
 	def positionAt offset
@@ -189,11 +184,6 @@ export class File < Component
 			var opts = Object.assign({},imbaOptions,{
 				filename: imbaPath
 				sourcePath: imbaPath
-				# selfless: yes
-				onTraversed: do |root,stack|
-					let tokens = stack.semanticTokens()
-					if tokens and tokens.length
-						sendSemanticTokens(tokens)
 			})
 
 			try
@@ -313,8 +303,11 @@ export class File < Component
 		return doc.getText!.slice(start,end)
 	
 	def getDefinitionAtPosition pos
+		console.log 'getDefinitionAtPosition',pos
+
 		let offset = offsetAt(pos)
-		let ctx = doc.getContextAtOffset(offset)
+		let ctx = idoc.getContextAtOffset(offset)
+
 		if ctx.mode == 'tag.name'
 			let info = ils.entities.getTagTypeInfo(ctx.tag.name)
 			return info.map(do $1.location).filter(do $1)
@@ -335,9 +328,15 @@ export class File < Component
 	def getQuickInfoAtPosition pos
 		let offset = offsetAt(pos)
 
-		let ctx = doc.getContextAtOffset(offset,true)
-		let range = doc.tokens.getTokenRange(ctx.token)
-		log 'getting context',offset,range,ctx.token,ctx.mode
+		let ctx = idoc.getContextAtOffset(offset)
+
+
+		if ctx.token and !ctx.token.value
+			log 'token without value',ctx.token
+
+		let range = idoc.getTokenRange(ctx.token)
+		# log 'getting context',offset,range,ctx.token,ctx.mode
+	
 		let element = ctx.tag
 		let elinfo = ctx.tag and ctx.tag.name and ils.entities.getTagTypeInfo(ctx.tag.name)
 
@@ -400,174 +399,169 @@ export class File < Component
 
 		return null
 
+	def getSelfAtOffset offset
+		let context = idoc.getContextAtOffset(offset)
+		let scope = context.scope.selfScope
+		let base = scope.closest do $1.class?
+
+		let prog = ils.getProgram!
+		let tsfile = prog.getSourceFile(jsPath)
+		let checker = prog.getTypeChecker!
+		let type = null
+
+		if base
+			if let sym = tsfile.locals.get(base.path)
+				type = checker.getTypeOfSymbolAtLocation(sym,tsfile)
+		
+		if type and scope.member? and !scope.static?
+			let sym = type.getProperty('prototype')
+			type = checker.getTypeOfSymbolAtLocation(sym,tsfile)
+
+		return type
+
+	def getGlobalType
+		# could be cached?
+		let prog = ils.getProgram!
+		let tsfile = prog.getSourceFile(jsPath)
+		let checker = prog.getTypeChecker!
+		let sym = checker.resolveName('globalThis',undefined,ts.SymbolFlags.Value,false)
+		checker.getTypeOfSymbolAtLocation(sym,tsfile)
+
+	def getTypeOfSymbolAtOffset offset
+		let prog = ils.getProgram!
+		let tsfile = prog.getSourceFile(jsPath)
+		let tok = ts.findPrecedingToken(generatedLocFor(offset),tsfile)
+		let checker = prog.getTypeChecker!
+		let sym = checker.getSymbolAtLocation(tok)
+		# console.log 'found sym',sym,tok
+		let type = checker.getTypeOfSymbolAtLocation(sym,tsfile)
+		return type
+
 	def getCompletionsAtOffset offset, options = {}
-
-		let context = doc.getContextAtOffset(offset)
 		let items = []
-		
-		inspect context
 
-		let {mode,scope,token,textBefore,textAfter} = context
-		let elscope = scope.closest('element')
+		let ctx = idoc.getContextAtOffset(offset)
+		let tok = ctx.token
+		let that = getSelfAtOffset(offset)
+		let vars = idoc.varsAtOffset(offset,yes)
+		let target = that
+		let suggest = ctx.suggest
+		let flags = suggest.flags
+		let filters = {kinds: []}
+		let keywordFilter = 0
+	
+		$delay('emitFile',5000)
 
-		let include = {
-			vars: yes
-			decorators: no
-		}
+		console.log 'getCompletions',imbaPath,options,tok.type,ctx.before,suggest,!!that
+		console.log ils.config.config
+		let opts = Object.assign({},ils.config.config.suggest,suggest)
 
-		if scope.type == 'style'
-			return styleDocument.getCompletionsAtOffset(offset,options)
-
-		if context.css
-			return ils.entities.getCSSCompletions(context)
-
-		if mode == 'css_body' or mode == 'css_properties'
+		if flags == 0
 			return []
 
-		if mode == 'css_selector'
-			return []
+		if flags & CompletionTypes.TagName
+			return ils.entities.getTagNameCompletions(ctx.group,opts)
+
+		if flags & CompletionTypes.TagProp
+			return ils.entities.getTagAttrCompletions(ctx.group,opts)
 		
-		if mode == 'css_value'
-			return ils.entities.getCSSValueCompletions(context)
-
-		if mode == 'css_property'
-			return []
+		if flags & CompletionTypes.TagEvent
+			return ils.entities.getTagEventCompletions(ctx.group,opts)
 		
-		if mode == 'css_modifier'
-			return ils.entities.getCSSModifierCompletions(context)
+		if flags & CompletionTypes.TagEventModifier
+			return ils.entities.getTagEventModifierCompletions(ctx.group,opts)
 
-		if mode == 'tag.name' or mode == 'supertag'
-			return ils.entities.getTagNameCompletions(context)
+		if flags & CompletionTypes.StyleProp
+			return ils.entities.getCSSPropertyCompletions(ctx.group,opts)
 
-		if mode == 'tag.flag'
-			return ils.entities.getTagFlagCompletions(context)
+		if flags & CompletionTypes.StyleValue
+			return ils.entities.getCSSValueCompletions(ctx.group,opts)
 
-		if mode == 'tag.event'
-			log 'complete tag events!!'
-			return ils.entities.getTagEventCompletions(context)
 
-		if mode == 'tag.attr'
-			return ils.entities.getTagAttrCompletions(context)
+		# find the access chain
+		if tok.match('operator.access')
+			util.time do
+				$flush('emitFile')
+				if let type = getTypeOfSymbolAtOffset(ctx.token.offset)
+					target = type
+				# return early
+
+		if tok.match('identifier')
+			filters.startsWith = ctx.before.token
 		
-		if mode == 'tag.modifier'
-			return ils.entities.getTagEventModifierCompletions(context)
-
-		if js
-			util.findCompiledOffsetForScope(scope,js)
-
-		if mode.match(/regexp|string|comment|varname|naming|params/)
-			log 'skip completions in context',mode
-			return []
-
-		if mode == 'filepath'
-			return ils.getPathCompletions(imbaPath,'')
-
-		let tloc = scope.closure.compiled-offset
-
-		if mode == 'superclass' or mode == 'type' or mode == 'decorator'
-			tloc = 0
-
-		elif scope.type == 'tag' or scope.type == 'class'
+		if tok.match('keyword')
+			# could include snippets
 			return []
 
-		if options.triggerCharacter == '\\'
-			delete options.triggerCharacter
-		
-		if mode == 'access'
-			include.vars = no
+		if target && !ctx.scope.class?
+			for item in target.getApparentProperties!
+				let name = item.escapedName
+				continue if name.match(/^(__@|")/)
+				continue unless item.flags & ts.SymbolFlags.Value
 
-		# direct acceess on an object -- we need to make sure file is compiled?
-		if mode == 'access' or mode == 'object' or mode == 'object_value'
-			# maybe we should still wait in many cases? And if compilation fails
-			# we want to revert to broader completion
-			$flush('emitFile')
-			tloc = generatedLocFor(offset)
-			log 'got generated loc',tloc
-
-		if typeof tloc == 'number'
-			let tls-options = {
-				triggerCharacter: options.triggerCharacter
-				includeCompletionsForModuleExports: true,
-				includeCompletionsWithInsertText: true
-			}
-			if let found = tls.getCompletionsAtPosition(lsPath,tloc,tls-options)
-				items = util.tsp2lspCompletions(found.entries,file: self, jsLoc: tloc, isMemberCompletion: found.isMemberCompletion)
-		
-		if include.vars
-			for item in context.vars
 				items.push(
-					label: item.value,
-					kind: util.convertCompletionKind('local var')
-					detail: "var {item.value}"
+					label: name
+					kind: CompletionItemKind.Method
+					detail: "self.{name} {item.flags}"
 					sortText: '0'
-					data: {resolved: yes, origKind: 'local var'}
+				)
+		
+		# if target is implicit value
+		if target == that
+			for keyword in suggest.keywords
+				items.push(
+					label: keyword
+					kind: CompletionItemKind.Keyword
+					detail: 'keyword'
+				)
+		
+		if target == that and !ctx.scope.class?
+			# also show for target?
+			let glob = getGlobalType!
+			for item in glob.getProperties!
+				let name = item.escapedName
+				continue unless name.match(/^[A-Z]/)
+				# continue unless item.flags & ts.SymbolFlags.Type
+				
+				items.push(
+					label: name
+					kind: CompletionItemKind.Variable
+					sortText: '0'
+					symbol: item
 				)
 
-		# returning these
-		return items.filter do(item)
-			let kind = item.data.origKind
-			if mode == 'decorator'
-				if kind == 'decorator' and textAfter.match(/^(prop |get |set |def |attr |\@\w)/)
-					item.insertText = item.label + '$0 '
-					item.insertTextFormat = InsertTextFormat.Snippet
+			for variable in vars
+				let sym = null
+				if variable.type == 'global'
+					sym = glob.getProperty(variable.name)
 
-				return kind == 'decorator'
-			return no if kind == 'decorator'
-			
-			if mode == 'superclass' and item.label.match(/^[a-z]/)
-				return no
-			
-			if item.label.match(/\$/) and (kind == 'local var' or kind == 'let')
-				return no
+				items.push(
+					label: variable.name
+					kind: CompletionItemKind.Variable
+					detail: "{variable.type} {variable.name}"
+					sortText: '0'
+					symbol: sym
+				)
 
-			if mode == 'type' and item.label.match(/^[a-z]/)
-				return no if kind == 'let'
-				return no if kind == 'keyword'
-				return no if kind == 'local var'
-				return no if kind == 'function'
-				return no if kind == 'property'
+		# convert to actual completions
+		let results = for item in items
+			if filters.startsWith
+				continue unless item.label.indexOf(filters.startsWith) == 0
 
-			return yes
+			if filters.kinds.length
+				continue unless filters.kinds.indexOf(item.kind) >= 0
+
+			delete item.symbol	
+			item.data ||= {resolved: yes}
+			item
+
+		return results
 
 
 	def getSymbols
-		let tree = tls.getNavigationTree(lsPath)
-		let conv = do |item|
-			return if item.kind == 'alias' or item.text == 'meta$'
-			
-			let span = item.nameSpan
-			// console.log 'converting symbol',item
-			if item.kind == 'constructor'
-				span = {start: item.spans[0].start, length: 11}
-			
-			return unless span
-			
-			let name = util.tsp2lspSymbolName(item.text)
-			let range = textSpanToRange(span)
-			let kind = util.convertSymbolKind(item.kind)
+		let outline = idoc.getOutline do(item)
+			item.kind = util.convertSymbolKind(item.kind)
+			item.range = item.span
+			item.selectionRange = item.range
 
-			return unless range and range.start
-
-			let children = item.childItems or []
-
-			if item.kind == 'method' or item.kind == 'function'
-				children = []
-
-			return {
-				kind: kind
-				name: name
-				range: range
-				selectionRange: range
-				children: children.map(conv).filter(do !!$1)
-			}
-		try
-			
-			let symbols = tree.childItems.map(conv).filter(do !!$1)
-			// console.log 'tree returned from typescript',symbols
-			return symbols
-		catch e
-			log 'getSymbols error',e
-			return []
-
-	def getContextAtOffset loc
-		return cache.contexts[loc] ||= util.fastExtractContext(doc.getText!,loc,doc.tokens,js)
+		return outline.children

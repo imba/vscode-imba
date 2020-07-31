@@ -1,96 +1,21 @@
 var path = require 'path'
 
-import {window, languages, IndentAction, workspace,SnippetString} from 'vscode'
+import {window, languages, IndentAction, workspace,SnippetString, SemanticTokensLegend, SemanticTokens} from 'vscode'
 import {LanguageClient, TransportKind} from 'vscode-languageclient'
 
-import {SemanticTokenTypes,SemanticTokenModifiers} from '../../src/protocol'
+import {SemanticTokenTypes,SemanticTokenModifiers} from 'imba-document'
 
-const DecorationsCache = {}
+let debugChannel = window.createOutputChannel("Imba Debug")
+
+def log msg,...rest
+	debugChannel.appendLine(msg)
+	if rest.length
+		debugChannel.appendLine(JSON.stringify(rest))
 
 # TODO(scanf): handle workspace folder and multiple client connections
 
-class ClientAdapter
-
-	def constructor
-		var styler = do |dark,light|
-			return window.createTextEditorDecorationType({
-				light: {color: '#509DB5'}
-				dark: {
-					# borderWidth: dark.border ? '0px 0px 1px 0px' : '0px'
-					# border: "1px {dark.color}40 dashed",
-					# borderWidth: '0px 0px 1px 0px'
-					color: dark.color
-				}
-				borderRadius: '2px'
-				rangeBehavior: 1
-			})
-	
-		var colors = {
-			yellow: '#e8e6cb'
-			pink: '#e8b8e5'
-			indigo: '#BD9AC2'
-			purple: '#c5badc'
-			blue: '#a1bcd9'
-		}
-			
-		var styles = {
-			root: {color: colors.purple}
-			method: {color: colors.yellow, border: colors.yellow}
-			flow:   {color: colors.yellow, border: colors.yellow}
-			class:  {color: colors.blue, border: colors.blue}
-		}
-		# should fetch colors from supplied theme?
-
-		self.semanticTypes = {
-			# accessor: styler(color: colors.blue)
-			global: styler(color: colors.indigo)
-			root: styler(styles.root)
-			class: styler(styles.class)
-			tag: styler(styles.class)
-			method: styler(styles.method)
-			lambda: styler(styles.method)
-			if: styler(styles.flow)
-			for: styler(styles.flow)
-			block: styler(styles.flow)
-			while: styler(styles.flow)
-		}
-		
-	def uriToEditor uri, version
-		for editor in window.visibleTextEditors
-			let doc = editor.document
-			if doc && uri === doc.uri.toString()
-				if version and doc.version != version
-					continue
-				return editor
-		return null
-
-	def decorateEditor uri, version, markers
-		let editor = self.uriToEditor(uri,version)
-		DecorationsCache[uri] = markers
-
-		# console.log 'received entities',uri,version,markers,editor
-		unless editor
-			console.log 'could not find editor for entities',uri
-			return
-		
-		var decorations = {}
-		
-		for mark in markers
-			let [name,scope,kind,loc,length,start,end] = mark		
-			let range = {start: start, end: end}
-			# range.end.character = range.start.character + 1
-
-			let group = (decorations[scope] ||= [])
-			group.push(range: range)
-
-		# console.log 'decorations',decorations
-		for own name,items of decorations
-			if let type = self.semanticTypes[name]
-				editor.setDecorations(type, items)
-
-		return
-
-var adapter = ClientAdapter.new
+let client = null
+let isReady = no
 
 languages.setLanguageConfiguration('imba',{
 	wordPattern: /(-?\d*\.\d\w*)|([^\`\~\!\@\#%\^\&\*\(\)\=\+\[\{\]\}\\\|\;\:\'\"\,\.\<\>\/\?\s]+)/g,
@@ -108,60 +33,57 @@ languages.setLanguageConfiguration('imba',{
 
 
 class SemanticTokensProvider
-	def provideDocumentSemanticTokens(document, token)
-		await []
+	def provideDocumentSemanticTokens(doc, token)
+		await true
+		let uri = doc.uri.toString!
+		unless isReady
+			await client.onReady!
+		# log("provide tokens!! {uri} {isReady}")
+		let t = Date.now!
+		let response = await client.sendRequest('semanticTokens',{uri: uri})
+		log("semanticTokens {uri} request? {response.length} - {Date.now! - t}ms")
+
+		if response
+			let out = new SemanticTokens(response)
+			return out
 		return []
 
 export def activate context
 	var serverModule = context.asAbsolutePath(path.join('server', 'index.js'))
 	var debugOptions = { execArgv: ['--nolazy', '--inspect=6005'] }
 	
+	log("activating!")
 	# console.log serverModule, debugOptions # , debugServerModule
 	
 	var serverOptions = {
-		run: {module: serverModule, transport: TransportKind.ipc, options: debugOptions }
+		run: {module: serverModule, transport: TransportKind.ipc }
 		debug: {module: serverModule, transport: TransportKind.ipc, options: debugOptions }
 	}
 	
 	var clientOptions = {
 		documentSelector: [{scheme: 'file', language: 'imba'}]
 		synchronize: { configurationSection: ['imba'] }
-		revealOutputChannelOn: 1
+		revealOutputChannelOn: 0
+		outputChannelName: 'Imba Language Client'
 		initializationOptions: {
 			something: 1
 			other: 100
 		}
-		/*
-		middleware: {
-			# Workaround for https://github.com/microsoft/vscode-languageserver-node/issues/576
-			def provideDocumentSemanticTokens(document\TextDocument, token\CancellationToken, next\DocumentSemanticsTokensSignature) 
-				let res = await next(document, token)
-				if (res === undefined) then throw Error.new('busy')
-				return res;
-		}
-		*/
 	}
 	
-	var client = LanguageClient.new('imba', 'Imba Language Server', serverOptions, clientOptions)
-	// let sematicLegend = SemanticTokensLegend.new(SemanticTokenTypes,SemanticTokenModifiers)
-	// let semanticProvider = languages.registerDocumentSemanticTokensProvider({language: 'imba'},SemanticTokensProvider.new,sematicLegend)
-	// client.registerFeature(SemanticTokensFeature.new(client))
+	client = new LanguageClient('imba', 'Imba Language Server', serverOptions, clientOptions)
+	let semanticLegend = new SemanticTokensLegend(SemanticTokenTypes,SemanticTokenModifiers)
+	let semanticProvider = languages.registerDocumentSemanticTokensProvider({language: 'imba'},new SemanticTokensProvider,semanticLegend)
 
-	var disposable = client.start()
-
-	context.subscriptions.push(disposable)
-	
+	# let disposable = client.start()
+	# context.subscriptions.push(client.start!)
+	client.start!
 	await client.onReady!
+	isReady = yes
 
-	window.onDidChangeVisibleTextEditors do |editors|
-		for editor in editors
-			try
-				let doc = editor.document
-				let uri = doc.uri.toString!
-				let version = doc.version
-				if let markers = DecorationsCache[uri]
-					adapter.decorateEditor(uri,version,markers)
-	
+	window.onDidChangeTextEditorSelection do(e)
+		log 'onDidChangeTextEditorSelection',e.kind,e.selections
+
 	workspace.onDidRenameFiles do |ev|
 		client.sendNotification('onDidRenameFiles',ev)
 
@@ -169,11 +91,14 @@ export def activate context
 		let editor = window.activeTextEditor
 
 		try
-			let str = SnippetString.new('$0>')
+			let str = new SnippetString('$0>')
 			editor.insertSnippet(str,null,{undoStopBefore: false,undoStopAfter: true})
 		catch e
 			console.log "error",e
 
-	client.onNotification('entities') do |{uri,version,markers}|
-		DecorationsCache[uri] = markers
-		adapter.decorateEditor(uri,version,markers)
+
+export def deactivate
+	if client
+		client.stop!
+		client = null
+	return undefined

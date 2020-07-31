@@ -3,6 +3,21 @@
   "type": "dark",
   "base": "vs-dark",
   "inherit": false,
+  "semanticHighlighting": true,
+  "semanticTokenColors": {
+    "variable.declaration": {
+      "fontStyle": "underline"
+    },
+    "variable.root": {
+      "foreground": "#c5badc"
+    },
+    "variable.local": {
+      "foreground": "#e8e6cb"
+    },
+    "variable.global": {
+      "foreground": "#e9e19b"
+    }
+  },
   "tokenColors": [
     {
       "name": "source.imba",

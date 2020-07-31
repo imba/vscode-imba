@@ -20,13 +20,13 @@ import * as util from './utils'
 
 import {TAG_NAMES,TAG_TYPES} from './constants'
 
-var path = require 'path'
-var fs = require 'fs'
-var ts = require 'typescript'
-var glob = require 'glob'
-var imbac = require 'imba/dist/compiler.js'
+const path = require 'path'
+const fs = require 'fs'
+const ts = require 'typescript'
+const glob = require 'glob'
+const imbac = require 'imba/dist/compiler.js' 
 
-var tsServiceOptions\CompilerOptions = {
+const tsServiceOptions\CompilerOptions = {
 	allowJs: true
 	checkJs: true
 	noEmit: true
@@ -62,7 +62,7 @@ export class LanguageServer < Component
 		
 		let src = path.resolve(dir,'imbaconfig.json')
 		if fs.existsSync(src)
-			let resolver = do |key,value|
+			let resolver = do(key,value)
 				if typeof value == 'string' and value.match(/^\.\//)
 					return path.resolve(dir,value)
 				return value
@@ -78,7 +78,7 @@ export class LanguageServer < Component
 
 		self.documents = documents
 		self.connection = connection
-		self.entities = Entities.new(self)
+		self.entities = new Entities(self)
 		self.rootPath = self.rootUri = util.uriToPath(params.rootUri)
 		self.imbaConfig = self.resolveConfigFile(self.rootPath) or {}
 		self.rootFiles = o.rootFiles || []
@@ -86,24 +86,47 @@ export class LanguageServer < Component
 		self.version = 0
 		self.debug = !!o.debug
 		self.cache = {}
+		self.settings = {}
+
 		log('imba config',imbaConfig)
 
 		for item in imbaConfig.entries
 			if let file = getImbaFile(item.input)
 				yes
 
-		createTypeScriptService!
+		# createTypeScriptService!
+		# self.cssls = getCSSLanguageService()
+		# setTimeout(&,0) do indexFiles!
+		self
 
-		self.cssls = getCSSLanguageService()
+	def logPath path,...params
+		if path.indexOf('.js') > 0
+			console.log(path,...params)
+		
+
+	def updateConfiguration settings,all
+		# console.log 'updating settings',settings
+		config.update(settings)
+
+	def start settings
+		self.settings = settings
+		# console.log 'initialized!',settings
+		
+		tslOptions = Object.assign({},tsServiceOptions)
+		if settings.checkImba !== undefined
+			tslOptions.checkJs = settings.checkImba
+
+		createTypeScriptService tslOptions
 
 		setTimeout(&,0) do indexFiles!
-		self
-		
-	def createTypeScriptService
-		return if imbaConfig.legacy
+		return self
+
 	
-		var options\CompilerOptions = Object.assign({},tsServiceOptions)
-		options.baseUrl =  self.rootPath
+		
+	def createTypeScriptService options
+		return if imbaConfig.legacy
+
+		# options.baseUrl =  self.rootPath
 
 		if imbaConfig.alias
 			let paths = options.paths = {}
@@ -111,7 +134,6 @@ export class LanguageServer < Component
 				paths[key] = [value]
 				paths[key + '/*'] = [value + '/*']
 
-		log 'starting with options',options
 
 		var servicesHost\LanguageServiceHost = {
 			getScriptFileNames:  do self.rootFiles
@@ -119,12 +141,17 @@ export class LanguageServer < Component
 			getTypeRootsVersion: do 1
 			useCaseSensitiveFileNames: do yes
 
-			getScriptVersion: do |fileName|
+			getScriptKind: do(fileName)
+				logPath fileName, 'getScriptKind'
+				return true
+
+			getScriptVersion: do(fileName)
 				let version = self.files[fileName] ? String(self.files[fileName].version.toString()) : "1"
 				return version
 
 			# @param {string} fileName
-			getScriptSnapshot: do |fileName|
+			getScriptSnapshot: do(fileName)
+				logPath fileName, 'getScriptSnapshot'
 				if !self.fileExists(fileName)
 					return undefined
 
@@ -137,7 +164,7 @@ export class LanguageServer < Component
 			
 			getCurrentDirectory: do self.rootPath
 			getCompilationSettings: do options
-			getDefaultLibFileName: do |options| ts.getDefaultLibFilePath(options)
+			getDefaultLibFileName: do(options) ts.getDefaultLibFilePath(options)
 			fileExists: self.fileExists.bind(self)
 			readFile: self.readFile.bind(self)
 			writeFile: self.writeFile.bind(self)
@@ -152,7 +179,6 @@ export class LanguageServer < Component
 
 		self.tls = ts.createLanguageService(servicesHost,ts.createDocumentRegistry!)
 
-		tls.findRenameLocations
 		
 	def invalidate
 		version++
@@ -160,13 +186,16 @@ export class LanguageServer < Component
 
 	def emitRootFiles
 		for file in self.rootFiles
+			console.log 'emit output',file
 			tls.getEmitOutput(file)
 
 	def addFile fileName
 		fileName = path.resolve(self.rootPath,fileName)
+		# sourceFileExists
 		if self.sourceFileExists(fileName)
 			self.files[fileName].emitFile()
 			# @service.getEmitOutput(@files[fileName].jsPath)
+		return self.files[fileName]
 			
 	def indexFiles
 		let t = Date.now!
@@ -188,17 +217,19 @@ export class LanguageServer < Component
 		var alt = fileName.replace(/\.js$/, '.imba')
 
 		if ((alt != fileName) or fileName.match(/\.imba$/)) && ts.sys.fileExists(alt)
-			File.new(self,alt)
+			new File(self,alt)
 			return true
 		return false
 
 	def fileExists fileName 
+		
 		let res = self.sourceFileExists(fileName) || ts.sys.fileExists(fileName)
+		logPath(fileName,'exists?',res)
 		return res
 
 	def readFile fileName
 		var source = self.files[fileName]
-
+		logPath(fileName,'readFile')
 		if source
 			log("compile file {source.imbaPath}")
 			source.compile()
@@ -333,6 +364,10 @@ export class LanguageServer < Component
 
 		return file
 
+	def getSemanticTokens uri
+		let file = self.getImbaFile(uri)
+		return file.idoc.getEncodedSemanticTokens!
+
 	def getDefinitionAtPosition uri, pos
 		let file = self.getImbaFile(uri)
 		let loc = self.documents.get(uri).offsetAt(pos)
@@ -349,7 +384,6 @@ export class LanguageServer < Component
 		let info = tls.getDefinitionAndBoundSpan(file.lsPath,jsloc)
 
 		if info and info.definitions
-
 			let sourceSpan = file.textSpanToRange(info.textSpan)
 			let sourceText = file.textSpanToText(info.textSpan)
 			let isLink = sourceText and sourceText.indexOf('-') >= 0
@@ -391,7 +425,7 @@ export class LanguageServer < Component
 		try
 			return file.getCompletionsAtOffset(loc,context)
 		catch e
-			log 'error from getCompletions',e
+			console.log 'error from getCompletions',e
 			return []
 
 
@@ -555,7 +589,9 @@ export class LanguageServer < Component
 		let file = self.getImbaFile(uri)
 		return unless file
 
-		unless tls
+		return file.getSymbols()
+
+		if !tls or true
 			file.$indexWorkspaceSymbols!
 			let conv = do |sym|
 				{

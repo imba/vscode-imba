@@ -137,8 +137,8 @@ export class Entities < Component
 			tagName = tagtype.superclass
 		return items
 
-	def getTagAttrCompletions context
-		let el = context.scope..closest('element') || {}
+	def getTagAttrCompletions el
+		# let el = context.scope..closest('element') || {}
 		let items\CompletionItem[] = []
 		let mapping = {}
 
@@ -293,7 +293,7 @@ export class Entities < Component
 
 		return items
 
-	def getCSSPropertyCompletions o
+	def getCSSPropertyCompletions ctx, o = {}
 		let items\CompletionItem[] = []
 		for own k,v of cssProperties
 			continue unless v
@@ -301,24 +301,29 @@ export class Entities < Component
 			if k != v.name
 				detail = v.name
 
-			items.push {
-				label: v.alias ? "{k} ({v.expanded})" : k
+			let item = {
+				label: k # v.alias ? "{k} ({v.expanded})" : k
 				insertText: k
-				# filterText: v.alias ? "{k} {v.name}" : (v.abbr ? "{v.abbr} {v.name}" : "{v.name}")
-				filterText: v.alias ? "{k}_{v.name}" : "ZZZ_{v.name}"
-				# filterText: v.alias ? k : undefined
-				kind: CompletionItemKind.Field,
+				kind: CompletionItemKind.Field
 				commitCharacters: ['@',':']
-				sortText: v.alias ? "-{k}" : k.replace(/^\-/,'zzz')
+				sortText: v.alias ? "-{k}" : k.replace(/^\-/,'Z')
 				detail: detail
 				documentation: v.description
 				data: {resolved: true}
 			}
+
+			if o.shorthandStyleProperties
+				if v.abbr
+					item.filterText = item.label
+					item.label = "{item.label} ({v.abbr})"
+					item.insertText = v.abbr
+
+			items.push item
 		return items
 
-	def getCSSValueCompletions o
+	def getCSSValueCompletions ctx,o = {}
 		let items\CompletionItem[] = []
-		let property = cssProperties[String(o.cssProperty)]
+		let property = cssProperties[String(o.styleProperty)]
 
 		return [] unless property
 		

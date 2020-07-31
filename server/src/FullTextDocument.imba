@@ -211,3 +211,7 @@ export class FullTextDocument < Component
 
 	def getContextAtOffset offset, forward = false
 		tokens.getContextAtOffset(offset,forward) if tokens
+
+	def getNavigationTree
+		tokens.getNavigationTree() if tokens
+

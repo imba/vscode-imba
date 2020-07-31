@@ -7151,13 +7151,13 @@
             <key>name</key>
             <string>keyword.operator.assignment.compound.imba</string>
             <key>match</key>
-            <string>\*=|(?&lt;!\()/=|%=|\+=|\-=|\?=|\?\?=</string>
+            <string>\*=|(?&lt;!\()/=|%=|\+=|\-=|\?=|\?\?=|=\?</string>
           </dict>
           <dict>
             <key>name</key>
             <string>keyword.operator.assignment.compound.bitwise.imba</string>
             <key>match</key>
-            <string>\&amp;=|\^=|&lt;&lt;=|&gt;&gt;=|&gt;&gt;&gt;=|\|=</string>
+            <string>\^=\?|\|=\?|\~=\?|\&amp;=|\^=|&lt;&lt;=|&gt;&gt;=|&gt;&gt;&gt;=|\|=</string>
           </dict>
           <dict>
             <key>name</key>
