@@ -5,10 +5,16 @@
   "inherit": false,
   "semanticHighlighting": true,
   "semanticTokenColors": {
-    "variable.declaration": {
-      "fontStyle": "underline"
+    "variable": {
+      "foreground": "#e8e6cb"
     },
-    "variable.root": {
+    "function.declaration": {
+      "foreground": "#8ab9ff"
+    },
+    "*.root": {
+      "foreground": "#c5badc"
+    },
+    "*.import": {
       "foreground": "#c5badc"
     },
     "variable.local": {
@@ -206,6 +212,13 @@
       "scope": "meta.embedded.line",
       "settings": {
         "foreground": "#edf2f7"
+      }
+    },
+    {
+      "name": "entity.name.function",
+      "scope": "entity.name.function",
+      "settings": {
+        "foreground": "#8ab9ff"
       }
     },
     {

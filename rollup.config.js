@@ -52,7 +52,7 @@ export default [{
         sourcemap: 'inline'
     },
     external: function(id){
-        console.log('check external?',id);
+        // console.log('check external?',id);
         return id[0] != '.' && id.indexOf('imba') == -1;
     },
     plugins: [

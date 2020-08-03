@@ -145,7 +145,7 @@ export class FullTextDocument < Component
 		content = body
 		_lineOffsets = null
 		if tokens
-			tokens.overwrite(body)
+			tokens.overwrite(body,version)
 			# tokens.invalidateFromLine(0)
 		return self
 
@@ -158,7 +158,7 @@ export class FullTextDocument < Component
 				content = change.text
 				_lineOffsets = null
 				log 'full textdocument change',version
-				tokens.invalidateFromLine(0) if tokens
+				# tokens.invalidateFromLine(0) if tokens
 				continue
 
 			var range = getWellformedRange(change.range)
@@ -169,7 +169,6 @@ export class FullTextDocument < Component
 			change.length = endOffset - startOffset
 			range.start.offset = startOffset
 			range.end.offset = endOffset
-			# console.log 'update',startOffset,endOffset,change.text,JSON.stringify(content)
 			# content = content.substring(0, startOffset) + change.text + content.substring(endOffset, content.length)
 			applyEdit(change,version,changes)
 
@@ -208,10 +207,3 @@ export class FullTextDocument < Component
 	def applyEdit change, version, changes
 		content = content.substring(0, change.range.start.offset) + change.text + content.substring(change.range.end.offset, content.length)
 		// tokens.applyEdit(change,version,changes) if tokens
-
-	def getContextAtOffset offset, forward = false
-		tokens.getContextAtOffset(offset,forward) if tokens
-
-	def getNavigationTree
-		tokens.getNavigationTree() if tokens
-

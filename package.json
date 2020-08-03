@@ -23,38 +23,10 @@
 		"workspaceContains:**/imbaconfig.json"
 	],
 	"contributes": {
-		"semanticTokenTypes": [
-			{
-				"id": "testToken",
-				"description": "A test token"
-			}
-		],
-		"semanticTokenModifiers": [
-			{
-				"id": "testModifier",
-				"description": "A test modifier"
-			}
-		],
-		"semanticTokenStyleDefaults": [
-			{
-				"selector": "testToken",
-				"scope": [
-					"entity.name.function.special"
-				]
-			},
-			{
-				"selector": "*.testModifier",
-				"light": {
-					"fontStyle": "bold"
-				},
-				"dark": {
-					"fontStyle": "bold"
-				},
-				"highContrast": {
-					"fontStyle": "bold"
-				}
-			}
-		],
+		"commands": [{
+            "command": "extension.getProgramDiagnostics",
+            "title": "Run type checking++ for the whole project"
+        }],
 		"configuration": {
 			"type": "object",
 			"title": "Imba",

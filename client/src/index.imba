@@ -1,6 +1,6 @@
 var path = require 'path'
 
-import {window, languages, IndentAction, workspace,SnippetString, SemanticTokensLegend, SemanticTokens} from 'vscode'
+import {window, commands, languages, IndentAction, workspace,SnippetString, SemanticTokensLegend, SemanticTokens} from 'vscode'
 import {LanguageClient, TransportKind} from 'vscode-languageclient'
 
 import {SemanticTokenTypes,SemanticTokenModifiers} from 'imba/program'
@@ -30,6 +30,7 @@ languages.setLanguageConfiguration('imba',{
 		action: { indentAction: IndentAction.Indent }
 	}]
 })
+
 
 
 class SemanticTokensProvider
@@ -70,10 +71,17 @@ export def activate context
 			other: 100
 		}
 	}
+
+	
 	
 	client = new LanguageClient('imba', 'Imba Language Server', serverOptions, clientOptions)
 	let semanticLegend = new SemanticTokensLegend(SemanticTokenTypes,SemanticTokenModifiers)
 	let semanticProvider = languages.registerDocumentSemanticTokensProvider({language: 'imba'},new SemanticTokensProvider,semanticLegend)
+
+	commands.registerCommand('extension.getProgramDiagnostics') do
+		window.showInformationMessage('Checking program...')
+		client.sendNotification('getProgramDiagnostics')
+
 
 	# let disposable = client.start()
 	# context.subscriptions.push(client.start!)

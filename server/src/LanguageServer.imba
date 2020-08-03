@@ -5,13 +5,6 @@ import { TextDocument } from 'vscode-languageserver-textdocument'
 import {CompletionItemKind,SymbolKind, WorkspaceEdit} from 'vscode-languageserver-types'
 import {CompilerOptions,LanguageService,LanguageServiceHost,UserPreferences} from 'typescript'
 
-import {
-	getCSSLanguageService,
-	getSCSSLanguageService,
-	getLESSLanguageService,
-	LanguageService as CSSLanguageService
-} from 'vscode-css-languageservice'
-
 import {URI} from 'vscode-uri'
 
 import {File} from './File'
@@ -89,7 +82,9 @@ export class LanguageServer < Component
 		self.debug = !!o.debug
 		self.cache = {}
 		self.settings = {}
+		self.counters = {diagnostics: 1}
 
+		# long promise for tls?
 		log('imba config',imbaConfig)
 
 		for item in imbaConfig.entries
@@ -229,7 +224,6 @@ export class LanguageServer < Component
 		# sourceFileExists
 		if self.sourceFileExists(fileName)
 			self.files[fileName].emitFile()
-			# @service.getEmitOutput(@files[fileName].jsPath)
 		return self.files[fileName]
 			
 	def indexFiles
@@ -281,26 +275,6 @@ export class LanguageServer < Component
 		log "writeFile",fileName
 		return
 
-	// Used for testing mainly
-	def $updateFile fileName, append
-		fileName = path.resolve(rootPath,fileName)
-
-		if let file = self.files[fileName]
-			let t = Date.now!
-			log 'found file!',fileName,file.version
-			file.doc.getText!
-			if append isa Function
-				file.content = append(file.content)
-			elif typeof append == 'string'
-				file.content += append
-
-			file.version++
-			file.invalidate!
-			self.version++
-			file.emitFile!
-			log 'updatedFile',fileName,Date.now! - t
-		return
-
 	def removeFile fileName
 		fileName = path.resolve(self.rootPath,fileName)
 		if let file = self.files[fileName]
@@ -308,21 +282,42 @@ export class LanguageServer < Component
 			self.version++
 
 	def scheduleEmitDiagnostics
-		emitDiagnostics!
+		console.log 'scheduleEmitDiagnostics'
+		setTimeout(&,10) do emitDiagnostics!
 
 	def emitDiagnostics
-		let entries = tls.getProgram!.getSemanticDiagnostics!
+		let versions = {}
 		let map = {}
+		let t0 = Date.now!
+		let program = tls.getProgram!
+		let request = ++counters.diagnostics
 
-		for entry in entries
-			# console.log 'diagnostic entry',entry.file.fileName
-			if let file = files[entry.file.fileName]
-				let items = map[file.jsPath] ||= []
-				items.push(entry)
-
+		console.log 'emitDiagnostics'
 		for file in files
-			file.updateDiagnostics(map[file.jsPath])
+			versions[file.tsPath] = {
+				doc: file.doc.version
+				idoc: file.idoc.version
+			}
 
+		if true # setTimeout(&,10) do 
+			console.log 'getSemanticDiagnostics'
+			let entries = program.getSemanticDiagnostics!
+			if request != counters.diagnostics
+				console.log 'other diagnostics are on the way'
+				return
+
+			for entry in entries
+				# console.log 'diagnostic entry',entry.file.fileName
+				if let file = files[entry.file.fileName]
+					let items = map[file.tsPath] ||= []
+					items.push(entry)
+
+			if true # setTimeout(&,10) do
+				console.log 'updateDiagnostics'
+				for file in files
+					file.updateDiagnostics(map[file.tsPath],versions[file.tsPath])
+		
+		console.log 'emitDiagnostics took',Date.now! - t0
 		self
 
 	def getSemanticDiagnostics
@@ -365,7 +360,7 @@ export class LanguageServer < Component
 		let file = self.getImbaFile(src)
 		if file
 			file.didSave(doc)
-			self.emitDiagnostics()
+			self.scheduleEmitDiagnostics()
 		else
 			self.version++
 		self
@@ -596,7 +591,7 @@ export class LanguageServer < Component
 		let tsp-loc = file.generatedLocFor(loc)
 		log 'references',uri,params.position,loc,tsp-loc
 
-		let references = tls.getReferencesAtPosition(file.jsPath,tsp-loc)
+		let references = tls.getReferencesAtPosition(file.tsPath,tsp-loc)
 		let results\Location[] = []
 		inspect references
 		for ref in references
@@ -614,7 +609,7 @@ export class LanguageServer < Component
 			let iloc = file.offsetAt(params.position)
 			let tloc = file.generatedLocFor(iloc)
 			log 'rename request',iloc,tloc,params
-			let t_renames = tls.findRenameLocations(file.jsPath,tloc,false,false)
+			let t_renames = tls.findRenameLocations(file.tsPath,tloc,false,false)
 			log t_renames
 
 			for rename in t_renames

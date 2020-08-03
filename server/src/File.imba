@@ -5,13 +5,11 @@ import {ScriptElementKind,Diagnostic} from 'typescript'
 import * as util from './utils'
 import { FullTextDocument } from './FullTextDocument'
 import { items } from '../../test/data'
-import {Keywords,KeywordTypes,CompletionTypes} from 'imba/program'
-
+import {Keywords,KeywordTypes,CompletionTypes,Sym,SymbolFlags} from 'imba/program'
+import {Diagnostics, DiagnosticKind} from './Diagnostics'
 
 var ts = require 'typescript'
-
 var imbac = require 'imba/dist/compiler.js'
-var sm = require "source-map"
 
 var imbaOptions = {
 	target: 'tsc'
@@ -30,30 +28,22 @@ export class File < Component
 		super
 		self.program = program
 		imbaPath = path.replace(/\.(imba|jsx?|tsx?)$/,'.imba')
-		jsPath   = path.replace(/\.(imba|jsx?|tsx?)$/,'.js')
-		tsPath  = path.replace(/\.(imba|jsx?|tsx?)$/,'.ts')
-		lsPath   = tsPath
-
-		# should rather store without extension?
-		if lsPath.indexOf('-ts') > 0
-			lsPath = tsPath
+		tsPath = path.replace(/\.(imba|jsx?|tsx?)$/,'.ts')
+		lsPath = tsPath
 
 		if program && !program.rootFiles.includes(lsPath)
 			program.rootFiles.push(lsPath)
 
 		program.files[lsPath] = self
-		# program.files[lsPath] = self
 		program.files[imbaPath] = self
 		program.files.push(self)
 	
 		version = 1
-		diagnostics = []
-		syntaxDiagnostics = []
+		logLevel = imbaPath.indexOf('Diagnostics') >= 0 ? 3 : 0
+		diagnostics = new Diagnostics(self)
 		emitted = {}
 		invalidate!
-
 		self
-
 
 	get document
 		let uri = 'file://' + imbaPath
@@ -75,10 +65,11 @@ export class File < Component
 		doc.tokens
 
 	get tsfile
-		lis.getProgram!.getSourceFile(jsPath)
+		ils.getProgram!.getSourceFile(tsPath)
 
 	def didOpen doc
 		$doc = doc
+		getDiagnostics!
 
 	def didChange doc, event = null
 		console.log('didChange',imbaPath)
@@ -86,14 +77,16 @@ export class File < Component
 		version = doc.version
 		cache.contexts = {}
 		$delay('emitFile',500)
-		$clearSyntacticErrors!
+		diagnostics.onDidChangeContent(event)
+		# $clearSyntacticErrors! # only if our regions have changed?!?
 
 	def didSave doc
 		savedContent = doc.getText!
 		emitFile!
+		diagnostics.send!
 
 	def dispose
-		delete program.files[jsPath]
+		delete program.files[tsPath]
 		delete program.files[imbaPath]
 		let idx = program.files.indexOf(self)
 		program.files.splice(idx,1) if idx >= 0
@@ -114,42 +107,20 @@ export class File < Component
 			program.invalidate!
 		
 		if tls
-			tls.getEmitOutput(lsPath)
-			console.log 'emitted file',lsPath
+			tls.getEmitOutput(tsPath)
+			getDiagnostics!
+			console.log 'emitted file',tsPath
 		return self
 
-	def updateDiagnostics items\Diagnostic[] = []
-		
+	def updateDiagnostics items\Diagnostic[] = [], versions
+		let verbose = imbaPath.indexOf('vars') >= 0
 		# need to check if they are the same
-		let out = for entry in items
-			let lstart = originalLocFor(entry.start)
-			let msg = entry.messageText
-			let start = doc.positionAt(lstart)
-			let end = doc.positionAt(originalLocFor(entry.start + entry.length) or (lstart + entry.length))
-			let sev = [DiagnosticSeverity.Warning,DiagnosticSeverity.Error,DiagnosticSeverity.Information,DiagnosticSeverity.Information][entry.category]
+		if verbose
+			console.log 'update diagnostics',imbaPath,versions,doc.version,idoc.version
 
-			{
-				severity: sev
-				message: msg.messageText or msg
-				range: {start: start, end: end }
-			}
-
-		if JSON.stringify(out) != JSON.stringify(diagnostics)
-			diagnostics = out
-			sendDiagnostics!
-		self
-
-	def updateSyntaxDiagnostics items
-		if JSON.stringify(items) != JSON.stringify(syntaxDiagnostics)
-			syntaxDiagnostics = items
-			sendDiagnostics!
-
-	def sendDiagnostics
-		let items = diagnostics.concat(syntaxDiagnostics)
-		program.connection.sendDiagnostics(uri: uri, diagnostics: items)
-
-	def $clearSyntacticErrors
-		updateSyntaxDiagnostics([])
+		let kind = DiagnosticKind.TypeScript | DiagnosticKind.Semantic
+		diagnostics.update(kind,items,versions)
+		return self
 
 	# how is this converting?
 	def positionAt offset
@@ -172,7 +143,7 @@ export class File < Component
 	def compile
 		unless result
 			var body = doc.getText!
-			
+			var iversion = idoc.version
 			var opts = Object.assign({},imbaOptions,{
 				filename: imbaPath
 				sourcePath: imbaPath
@@ -193,17 +164,22 @@ export class File < Component
 					range: range
 				}
 				# console.log 'compile error',err
-				updateSyntaxDiagnostics([err])
+				# updateSyntaxDiagnostics([err])
 				result = {error: err}
 				js ||= "// empty"
 				jsSnapshot ||= ts.ScriptSnapshot.fromString(js)
 				return self
 
 			# clear compile errors if there were any?
-			updateSyntaxDiagnostics([])
+			# updateSyntaxDiagnostics([])
 			result = res
 			locs = res.locs
+
+			if locs
+				locs.version = iversion
+	
 			js = res.js.replace('$CARET$','valueOf')
+			tsVersion = iversion
 			jsSnapshot = ts.ScriptSnapshot.fromString(js)
 			$indexWorkspaceSymbols()
 
@@ -293,6 +269,18 @@ export class File < Component
 		let start = originalLocFor(span.start)
 		let end = originalLocFor(span.start + span.length)
 		return doc.getText!.slice(start,end)
+
+	def getDiagnostics
+		return unless tls
+
+		let t0 = Date.now!
+		let entries = tls.getSemanticDiagnostics(tsPath)
+
+		console.log 'took',Date.now! - t0
+		# console.log entries
+		let kind = DiagnosticKind.TypeScript | DiagnosticKind.Semantic
+		diagnostics.update(kind,entries)
+		self
 	
 	def getDefinitionAtPosition pos
 		console.log 'getDefinitionAtPosition',pos
@@ -321,7 +309,6 @@ export class File < Component
 		let offset = offsetAt(pos)
 
 		let ctx = idoc.getContextAtOffset(offset)
-
 
 		if ctx.token and !ctx.token.value
 			log 'token without value',ctx.token
@@ -373,7 +360,7 @@ export class File < Component
 			return
 
 		if let gen-offset = generatedLocFor(offset)
-			if let info = tls.getQuickInfoAtPosition(jsPath, gen-offset)
+			if let info = tls.getQuickInfoAtPosition(tsPath, gen-offset)
 				let contents = [{
 					value: ts.displayPartsToString(info.displayParts)
 					language: 'typescript'
@@ -388,49 +375,48 @@ export class File < Component
 
 		return null
 
+	def getTypeContext
+		let prog = ils.getProgram!
+		return [prog.getSourceFile(tsPath),prog.getTypeChecker!,prog]
+
 	def getSelfAtOffset offset
 		let context = idoc.getContextAtOffset(offset)
 		let scope = context.scope.selfScope
 		let base = scope.closest do $1.class?
 
-		let prog = ils.getProgram!
-		let tsfile = prog.getSourceFile(jsPath)
-		let checker = prog.getTypeChecker!
+		let [file,checker,prog] = getTypeContext!
 		let type = null
 
 		if base
-			if let sym = tsfile.locals.get(base.path)
-				type = checker.getTypeOfSymbolAtLocation(sym,tsfile)
+			if let sym = file.locals.get(base.path)
+				type = checker.getTypeOfSymbolAtLocation(sym,file)
 		
 		if type and scope.member? and !scope.static?
 			let sym = type.getProperty('prototype')
-			type = checker.getTypeOfSymbolAtLocation(sym,tsfile)
+			type = checker.getTypeOfSymbolAtLocation(sym,file)
 
 		return type
 
 	def getGlobalType
 		# could be cached?
-		let prog = ils.getProgram!
-		let tsfile = prog.getSourceFile(lsPath)
-		let checker = prog.getTypeChecker!
+		let [file,checker,prog] = getTypeContext!
 		let sym = checker.resolveName('globalThis',undefined,ts.SymbolFlags.Value,false)
-		checker.getTypeOfSymbolAtLocation(sym,tsfile)
+		checker.getTypeOfSymbolAtLocation(sym,file)
 
 	def getTypeOfSymbolAtOffset offset
-		let prog = ils.getProgram!
-		let tsfile = prog.getSourceFile(lsPath)
-		let tok = ts.findPrecedingToken(generatedLocFor(offset),tsfile)
+		let [file,checker,prog] = getTypeContext!
+		let tok = ts.findPrecedingToken(generatedLocFor(offset),file)
 
 		if tok and tok.kind == 24
 			tok = tok.parent.expression
 
-		let checker = prog.getTypeChecker!
 		let sym = checker.getSymbolAtLocation(tok)
-		let type = checker.getTypeOfSymbolAtLocation(sym,tsfile)
+		let type = checker.getTypeOfSymbolAtLocation(sym,file)
 		return type
 
 	def getCompletionsAtOffset offset, options = {}
 		let items = []
+		let names = new Map
 
 		let ctx = idoc.getContextAtOffset(offset)
 		let tok = ctx.token
@@ -441,11 +427,15 @@ export class File < Component
 		let flags = suggest.flags
 		let filters = {kinds: []}
 		let keywordFilter = 0
+
+		let add = do(item)
+			names.set(item.label,item)
+			items.push(item)
 	
 		# $delay('emitFile',5000)
 
-		console.log 'getCompletions',imbaPath,options,tok.type,ctx.before,suggest,!!that
-		console.log ils.config.config
+		# console.log 'getCompletions',imbaPath,options,tok.type,ctx.before,suggest,!!that
+		# console.log ils.config.config
 		let opts = Object.assign({},ils.config.config.suggest,suggest)
 
 		if flags == 0
@@ -486,22 +476,24 @@ export class File < Component
 			return []
 
 		if target && !ctx.scope.class?
+			# console.dir target, depth: 0
 			for item in target.getApparentProperties!
 				let name = item.escapedName
 				continue if name.match(/^(__@|")/)
 				continue unless item.flags & ts.SymbolFlags.Value
 
-				items.push(
+				add(
 					label: name
-					kind: CompletionItemKind.Method
-					detail: "self.{name} {item.flags}"
+					kind: 'property'
 					sortText: '0'
+					symbol: item
+					data: {resolved: yes}
 				)
 		
 		# if target is implicit value
 		if target == that
 			for keyword in suggest.keywords
-				items.push(
+				add(
 					label: keyword
 					kind: CompletionItemKind.Keyword
 					detail: 'keyword'
@@ -515,7 +507,7 @@ export class File < Component
 				continue unless name.match(/^[A-Z]/)
 				# continue unless item.flags & ts.SymbolFlags.Type
 				
-				items.push(
+				add(
 					label: name
 					kind: CompletionItemKind.Variable
 					sortText: '0'
@@ -523,25 +515,41 @@ export class File < Component
 				)
 
 			for variable in vars
-				let sym = null
+				let sym = variable
+				let name = variable.name
 				if variable.type == 'global'
-					sym = glob.getProperty(variable.name)
+					sym = glob.getProperty(name)
 
-				items.push(
+				let other = names.get(name)
+
+				if other and other.kind == 'property'
+					other.insertText = other.label = "self.{other.label}"
+
+				add(
 					label: variable.name
-					kind: CompletionItemKind.Variable
-					detail: "{variable.type} {variable.name}"
 					sortText: '0'
 					symbol: sym
 				)
 
 		# convert to actual completions
 		let results = for item in items
+			let sym = item.symbol
+			if sym isa Sym
+				item.kind ||= sym.semanticKind
+				item.label = sym.name
+				item.detail = "{sym.semanticKind} {sym.name}"
+
 			if filters.startsWith
-				continue unless item.label.indexOf(filters.startsWith) == 0
+				let idx = item.label.indexOf(filters.startsWith)
+				if idx != 0 and item.label[idx - 1] != '.'
+					continue
 
 			if filters.kinds.length
 				continue unless filters.kinds.indexOf(item.kind) >= 0
+
+			item.kind ||= 'variable'
+			if typeof item.kind == 'string'
+				item.kind = util.convertCompletionKind(item.kind)
 
 			delete item.symbol	
 			item.data ||= {resolved: yes}
@@ -552,7 +560,7 @@ export class File < Component
 
 	def getSymbols
 		let outline = idoc.getOutline do(item)
-			item.kind = util.convertSymbolKind(item.kind)
+			# item.kind = util.convertSymbolKind(item.kind)
 			item.range = item.span
 			item.selectionRange = item.range
 

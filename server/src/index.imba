@@ -78,6 +78,10 @@ connection.onInitialized do(params)
 
 	connection.onNotification('onDidCreateFiles') do(event)
 		server.onDidCreateFiles(event)
+
+	connection.onNotification('getProgramDiagnostics') do
+		console.log 'getting diagnostics'
+		server.emitDiagnostics!
 		
 	# connection.onDidChangeTextDocument do |event|
 	# 	console.log 'onDidChangeTextDocument',event

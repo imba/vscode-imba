@@ -137,7 +137,7 @@ export class Entities < Component
 			tagName = tagtype.superclass
 		return items
 
-	def getTagAttrCompletions el
+	def getTagAttrCompletions el, o = {}
 		# let el = context.scope..closest('element') || {}
 		let items\CompletionItem[] = []
 		let mapping = {}
@@ -188,7 +188,7 @@ export class Entities < Component
 
 		return items
 
-	def getTagEventCompletions o = {}
+	def getTagEventCompletions ctx, o = {}
 		var items = []
 		for item in globalEvents
 			items.push({
@@ -200,12 +200,12 @@ export class Entities < Component
 			})
 		return items
 
-	def getTagFlagCompletions o = {}
+	def getTagFlagCompletions ctx, o = {}
 		var items = []
 		# possibly add flags for tailwind etc
 		return items
 
-	def getTagEventModifierCompletions context
+	def getTagEventModifierCompletions ctx, o = {}
 		var items = []
 		for item in EVENT_MODIFIERS
 			items.push({
@@ -248,7 +248,7 @@ export class Entities < Component
 
 		return matches
 	
-	def getTagNameCompletions o = {}
+	def getTagNameCompletions ctx, o = {}
 
 		let items\CompletionItem[] = []
 		for own name,ctor of TAG_NAMES
@@ -281,7 +281,7 @@ export class Entities < Component
 
 		return items
 
-	def getCSSCompletions o
+	def getCSSCompletions ctx, o
 		let items\CompletionItem[] = []
 		if o.css.property or o.css.body
 			items.push(...getCSSPropertyCompletions(o))
@@ -338,7 +338,7 @@ export class Entities < Component
 			}
 		return items
 
-	def getCSSModifierCompletions o
+	def getCSSModifierCompletions ctx, o= {}
 		let items\CompletionItem[] = []
 		for own k,v of cssModifiers
 			items.push {
