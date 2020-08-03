@@ -79,9 +79,11 @@ export def activate context
 	let semanticProvider = languages.registerDocumentSemanticTokensProvider({language: 'imba'},new SemanticTokensProvider,semanticLegend)
 
 	commands.registerCommand('extension.getProgramDiagnostics') do
-		window.showInformationMessage('Checking program...')
+		# window.showInformationMessage('Checking program...')
 		client.sendNotification('getProgramDiagnostics')
 
+	commands.registerCommand('extension.clearProgramProblems') do
+		client.sendNotification('clearProgramProblems')
 
 	# let disposable = client.start()
 	# context.subscriptions.push(client.start!)

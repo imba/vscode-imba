@@ -72,12 +72,11 @@ export class File < Component
 		getDiagnostics!
 
 	def didChange doc, event = null
-		console.log('didChange',imbaPath)
 		$doc = doc
 		version = doc.version
 		cache.contexts = {}
 		$delay('emitFile',500)
-		diagnostics.onDidChangeContent(event)
+		diagnostics.sync!
 		# $clearSyntacticErrors! # only if our regions have changed?!?
 
 	def didSave doc
@@ -109,15 +108,9 @@ export class File < Component
 		if tls
 			tls.getEmitOutput(tsPath)
 			getDiagnostics!
-			console.log 'emitted file',tsPath
 		return self
 
 	def updateDiagnostics items\Diagnostic[] = [], versions
-		let verbose = imbaPath.indexOf('vars') >= 0
-		# need to check if they are the same
-		if verbose
-			console.log 'update diagnostics',imbaPath,versions,doc.version,idoc.version
-
 		let kind = DiagnosticKind.TypeScript | DiagnosticKind.Semantic
 		diagnostics.update(kind,items,versions)
 		return self

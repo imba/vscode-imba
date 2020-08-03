@@ -75,10 +75,13 @@ export class Diagnostics
 		send!
 		self
 
+	def clear kind = 0
+		# all = all.filter do $1.data.kind != kind
+		all = []
+		send!
+
 	def onDidChangeContent event
-		console.log 'sync diagnostics after update',doc.version,doc.idoc.version
-		for item in all
-			console.log "   item {item.version}"
+		log 'sync diagnostics after update',doc.version,doc.idoc.version
 		sync!
 		self
 
@@ -138,7 +141,7 @@ export class Diagnostics
 		doc.program.connection.sendDiagnostics(uri: doc.uri, diagnostics: all)
 
 	def sanc
-		sendinsssgd!
+		send!
 	
 ###
 {

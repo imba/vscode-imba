@@ -82,6 +82,11 @@ connection.onInitialized do(params)
 	connection.onNotification('getProgramDiagnostics') do
 		console.log 'getting diagnostics'
 		server.emitDiagnostics!
+
+	connection.onNotification('clearProgramProblems') do
+		console.log 'clear diagnostics problems'
+		server.clearProblems!
+		# server.emitDiagnostics!
 		
 	# connection.onDidChangeTextDocument do |event|
 	# 	console.log 'onDidChangeTextDocument',event

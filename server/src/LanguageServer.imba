@@ -281,9 +281,10 @@ export class LanguageServer < Component
 			file.removed = true
 			self.version++
 
-	def scheduleEmitDiagnostics
-		console.log 'scheduleEmitDiagnostics'
-		setTimeout(&,10) do emitDiagnostics!
+	def clearProblems
+		for file in files
+			file.diagnostics.clear!
+		self
 
 	def emitDiagnostics
 		let versions = {}
@@ -360,7 +361,6 @@ export class LanguageServer < Component
 		let file = self.getImbaFile(src)
 		if file
 			file.didSave(doc)
-			self.scheduleEmitDiagnostics()
 		else
 			self.version++
 		self
@@ -373,9 +373,6 @@ export class LanguageServer < Component
 			if let file = self.files[entry.oldUri.path]
 				# console.log 'found renamed file!',file.imbaPath
 				file.dispose()
-
-		if self.version != version
-			self.scheduleEmitDiagnostics()
 		self
 
 	def onDidCreateFiles event

@@ -25,7 +25,10 @@
 	"contributes": {
 		"commands": [{
             "command": "extension.getProgramDiagnostics",
-            "title": "Run type checking++ for the whole project"
+            "title": "Find Imba problems in Project"
+        },{
+            "command": "extension.clearProgramProblems",
+            "title": "Clear Imba problems in Project"
         }],
 		"configuration": {
 			"type": "object",
