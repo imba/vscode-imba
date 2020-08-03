@@ -2,7 +2,7 @@
 	"name": "vsimba",
 	"displayName": "Imba",
 	"description": "Language support for Imba 2",
-	"version": "2.2.0",
+	"version": "2.3.0",
 	"publisher": "scrimba",
 	"main": "./client/index.js",
 	"icon": "assets/imba.png",
@@ -23,13 +23,16 @@
 		"workspaceContains:**/imbaconfig.json"
 	],
 	"contributes": {
-		"commands": [{
-            "command": "extension.getProgramDiagnostics",
-            "title": "Find Imba problems in Project"
-        },{
-            "command": "extension.clearProgramProblems",
-            "title": "Clear Imba problems in Project"
-        }],
+		"commands": [
+			{
+				"command": "extension.getProgramDiagnostics",
+				"title": "Find Imba problems in Project"
+			},
+			{
+				"command": "extension.clearProgramProblems",
+				"title": "Clear Imba problems in Project"
+			}
+		],
 		"configuration": {
 			"type": "object",
 			"title": "Imba",
@@ -105,7 +108,7 @@
 		]
 	},
 	"dependencies": {
-		"imba": "^2.0.0-alpha.70",
+		"imba": "^2.0.0-alpha.71",
 		"vscode-languageclient": "^6.1.1",
 		"vscode-languageserver": "^6.1.1"
 	},

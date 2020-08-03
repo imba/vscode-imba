@@ -5,12 +5,13 @@ import {LanguageClient, TransportKind} from 'vscode-languageclient'
 
 import {SemanticTokenTypes,SemanticTokenModifiers} from 'imba/program'
 
-let debugChannel = window.createOutputChannel("Imba Debug")
+# let debugChannel = window.createOutputChannel("Imba Debug")
 
 def log msg,...rest
-	debugChannel.appendLine(msg)
-	if rest.length
-		debugChannel.appendLine(JSON.stringify(rest))
+	yes
+	# debugChannel.appendLine(msg)
+	# if rest.length
+	# 	debugChannel.appendLine(JSON.stringify(rest))
 
 # TODO(scanf): handle workspace folder and multiple client connections
 
