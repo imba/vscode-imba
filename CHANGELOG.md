@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.3.0
+
+* Using official semantic tokens api from vscode
+* Moved to new imba parser for completions & semantic tokens
+* Improved handling of diagnostics
+* Disabled completions for path, auto-import and more (will return in next version)
+
 ## 2.1.1
 
 * Add basic highlighting support for new style syntax
