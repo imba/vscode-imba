@@ -7,8 +7,8 @@ import { FullTextDocument } from './FullTextDocument'
 import { items } from '../../test/data'
 import {Keywords,KeywordTypes,CompletionTypes,Sym,SymbolFlags} from 'imba/program'
 import {Diagnostics, DiagnosticKind} from './Diagnostics'
+import * as ts from 'typescript'
 
-var ts = require 'typescript'
 var imbac = require 'imba/dist/compiler.js'
 
 var imbaOptions = {
@@ -158,15 +158,11 @@ export class File < Component
 					range: range
 				}
 				diagnostics.update(DiagnosticKind.Compiler,[err])
-				# console.log 'compile error',err
-				# updateSyntaxDiagnostics([err])
 				result = {error: err}
 				js ||= "// empty"
 				jsSnapshot ||= ts.ScriptSnapshot.fromString(js)
 				return self
 
-			# clear compile errors if there were any?
-			# updateSyntaxDiagnostics([])
 			diagnostics.update(DiagnosticKind.Compiler,[])
 			result = res
 			locs = res.locs
@@ -269,18 +265,12 @@ export class File < Component
 	def getDiagnostics
 		return unless tls and result and !result.error
 
-		let t0 = Date.now!
 		let entries = tls.getSemanticDiagnostics(tsPath)
-
-		console.log 'took',Date.now! - t0
-		# console.log entries
 		let kind = DiagnosticKind.TypeScript | DiagnosticKind.Semantic
 		diagnostics.update(kind,entries)
 		self
 	
 	def getDefinitionAtPosition pos
-		console.log 'getDefinitionAtPosition',pos
-
 		let offset = offsetAt(pos)
 		let ctx = idoc.getContextAtOffset(offset)
 
@@ -373,14 +363,14 @@ export class File < Component
 
 	def getTypeContext
 		let prog = ils.getProgram!
-		return [prog.getSourceFile(tsPath),prog.getTypeChecker!,prog]
+		return {file: prog.getSourceFile(tsPath), checker: prog.getTypeChecker!, program: prog}
 
 	def getSelfAtOffset offset
 		let context = idoc.getContextAtOffset(offset)
 		let scope = context.scope.selfScope
 		let base = scope.closest do $1.class?
 
-		let [file,checker,prog] = getTypeContext!
+		let {file,checker,program} = getTypeContext!
 		let type = null
 
 		if base
@@ -395,12 +385,12 @@ export class File < Component
 
 	def getGlobalType
 		# could be cached?
-		let [file,checker,prog] = getTypeContext!
+		let {file,checker,program} = getTypeContext!
 		let sym = checker.resolveName('globalThis',undefined,ts.SymbolFlags.Value,false)
 		checker.getTypeOfSymbolAtLocation(sym,file)
 
 	def getTypeOfSymbolAtOffset offset
-		let [file,checker,prog] = getTypeContext!
+		let {file,checker,program} = getTypeContext!
 		let tok = ts.findPrecedingToken(generatedLocFor(offset),file)
 
 		if tok and tok.kind == 24

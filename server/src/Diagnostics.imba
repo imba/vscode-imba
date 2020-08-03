@@ -23,6 +23,8 @@ export class Diagnostic
 	static def fromTypeScript kind, entry, doc
 		let file = entry.file
 		let msg = entry.messageText
+		msg = msg.messageText or msg or ''
+
 		let sev = [WARN,ERR,INFO,INFO][entry.category]
 
 		let rawCode = file.text.substr(entry.start,entry.length)
@@ -36,6 +38,9 @@ export class Diagnostic
 			offset: lstart
 			length: lend - lstart
 		}
+
+		if msg.match('does not exist on type')
+			sev = WARN
 		
 		return new Diagnostic({
 			severity: sev
@@ -44,7 +49,6 @@ export class Diagnostic
 			data: {
 				kind: kind
 				version: doc.version
-				# text: imbaCode
 			}
 		})
 
@@ -91,11 +95,13 @@ export class Diagnostics
 			console.log(...params)
 
 	def syncItem item,version
-		let start0 = item.range.offset
-		let end0 = start0 + item.range.length
+		let range = item.range
 		let meta = item.data
 
-		if meta.version != version
+		if meta.version != version and range
+			let start0 = range.offset
+			let end0 = start0 + range.length
+
 			let start1 = doc.idoc.offsetAtVersion(start0,meta.version)
 			let end1 = doc.idoc.offsetAtVersion(end0,meta.version)
 
@@ -136,8 +142,8 @@ export class Diagnostics
 		# if all.length
 		#	console.log 'send diagnostics',all
 		for item in all
-			let range = item.range
-			range.start = doc.positionAt(range.offset)
-			range.end = doc.positionAt(range.offset + range.length)
+			if let range = item.range
+				range.start = doc.positionAt(range.offset)
+				range.end = doc.positionAt(range.offset + range.length)
 		log 'sending',all
 		doc.program.connection.sendDiagnostics(uri: doc.uri, diagnostics: all)
