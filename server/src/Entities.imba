@@ -44,7 +44,7 @@ class TagQuery
 		# ought to go all the way up to <element>?
 		program = program
 		types = program.entities.getTagTypesForNamePattern(tagName)
-		let regex = RegExp.new("^({types.map(do $1.name).join('|')}|element|htmlelement)(\\.|$)")
+		let regex = new RegExp("^({types.map(do $1.name).join('|')}|element|htmlelement)(\\.|$)")
 		symbols = program.getWorkspaceSymbols(query: regex)
 		self
 
@@ -61,7 +61,7 @@ export class Entities < Component
 		$cache = {}
 
 	def getTagQuery name
-		TagQuery.new(program,name)
+		new TagQuery(program,name)
 
 	# cache based on project version
 	def getWorkspaceSymbols query
@@ -76,7 +76,7 @@ export class Entities < Component
 
 	def getTagTypesForNamePattern name
 		let types = []
-		let query = RegExp.new("^{name.replace(/\*/g,'[\\w\\-]+')}$")
+		let query = new RegExp("^{name.replace(/\*/g,'[\\w\\-]+')}$")
 		if name.indexOf('*') >= 0
 			let matches = program.getWorkspaceSymbols(type: 'tag',query: query)
 			for match in matches
@@ -94,7 +94,7 @@ export class Entities < Component
 	def getTagTypeInfo name
 		let res = tags[name]
 		unless res
-			let query = RegExp.new("^{name.replace(/\*/g,'[\\w\\-]+')}$")
+			let query = new RegExp("^{name.replace(/\*/g,'[\\w\\-]+')}$")
 
 			let components = program.getWorkspaceSymbols(type: 'tag',query: query)
 			return components.map do |item|

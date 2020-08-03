@@ -392,7 +392,7 @@ export class LanguageServer < Component
 		src = util.uriToPath(src)
 		src = path.resolve(self.rootPath,src).replace(/\.(imba|js|ts)$/,'.imba')
 		# what if it is a local file?
-		let file\File = self.files[src] ||= File.new(self,src)
+		let file\File = self.files[src] ||= new File(self,src)
 
 		return file
 

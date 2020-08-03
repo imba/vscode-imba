@@ -62,7 +62,7 @@ var documentCache = {}
 export class FullTextDocument < Component
 
 	static def create uri, languageId, version, content
-		return self.new(uri,languageId,version,content)
+		return new self(uri,languageId,version,content)
 
 	static def update document, changes, version
 		try
@@ -88,7 +88,7 @@ export class FullTextDocument < Component
 		connection = null
 
 		if languageId == 'imba'
-			tokens = ImbaDocument.new(uri,languageId,version,content)
+			tokens = new ImbaDocument(uri,languageId,version,content)
 
 	get lineCount
 		lineOffsets.length
