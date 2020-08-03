@@ -82,7 +82,7 @@ export class File < Component
 	def didSave doc
 		savedContent = doc.getText!
 		emitFile!
-		diagnostics.send!
+		diagnostics.sync!
 
 	def dispose
 		delete program.files[tsPath]
@@ -112,7 +112,8 @@ export class File < Component
 
 	def updateDiagnostics items\Diagnostic[] = [], versions
 		let kind = DiagnosticKind.TypeScript | DiagnosticKind.Semantic
-		diagnostics.update(kind,items,versions)
+		unless result and result.error
+			diagnostics.update(kind,items,versions)
 		return self
 
 	# how is this converting?
@@ -147,8 +148,8 @@ export class File < Component
 			catch e
 				let loc = e.loc && e.loc()
 				let range = loc && {
-					start: doc.positionAt(loc[0])
-					end: doc.positionAt(loc[1])
+					offset: loc[0]
+					length: loc[1] - loc[0]
 				}
 
 				let err = {
@@ -156,6 +157,7 @@ export class File < Component
 					message: e.message
 					range: range
 				}
+				diagnostics.update(DiagnosticKind.Compiler,[err])
 				# console.log 'compile error',err
 				# updateSyntaxDiagnostics([err])
 				result = {error: err}
@@ -165,6 +167,7 @@ export class File < Component
 
 			# clear compile errors if there were any?
 			# updateSyntaxDiagnostics([])
+			diagnostics.update(DiagnosticKind.Compiler,[])
 			result = res
 			locs = res.locs
 
@@ -264,7 +267,7 @@ export class File < Component
 		return doc.getText!.slice(start,end)
 
 	def getDiagnostics
-		return unless tls
+		return unless tls and result and !result.error
 
 		let t0 = Date.now!
 		let entries = tls.getSemanticDiagnostics(tsPath)
