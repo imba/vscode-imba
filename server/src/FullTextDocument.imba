@@ -1,5 +1,5 @@
 import { Component } from './Component'
-import { ImbaDocument, Imba1Document } from 'imba/program'
+import { ImbaDocument } from 'imba/program'
 
 def computeLineOffsets text, isAtLineStart, textOffset
 	if textOffset === undefined
@@ -87,10 +87,8 @@ export class FullTextDocument < Component
 		cache = {}
 		connection = null
 
-		if languageId == 'imba'
+		if languageId == 'imba' or languageId == 'imba1'
 			tokens = new ImbaDocument(uri,languageId,version,content)
-		elif languageId == 'imba1'
-			tokens = new Imba1Document(uri,languageId,version,content)
 
 	get lineCount
 		lineOffsets.length
