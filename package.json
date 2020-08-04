@@ -77,6 +77,17 @@
 		},
 		"languages": [
 			{
+				"id": "imba1",
+				"aliases": [
+					"Imba1"
+				],
+				"extensions": [
+					".imba1"
+				],
+				"configuration": "./language-configuration.json",
+				"firstLine": "^#!/.*\\bimba1*\\b"
+			},
+			{
 				"id": "imba",
 				"aliases": [
 					"Imba",
@@ -87,19 +98,9 @@
 					".imba2"
 				],
 				"configuration": "./language-configuration.json",
-				"firstLine": "^#!/.*\\bimba[0-9.-]*\\b"
-			},
-			{
-				"id": "imba1",
-				"aliases": [
-					"Imba1"
-				],
-				"extensions": [
-					".imba1"
-				],
-				"configuration": "./language-configuration.json",
-				"firstLine": "^#!/.*\\bimba[0-9.-]*\\b"
+				"firstLine": "^#!/.*\\bimba[2-9.-]*\\b"
 			}
+			
 		],
 		"grammars": [
 			{
