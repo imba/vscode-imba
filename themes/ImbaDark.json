@@ -33,6 +33,13 @@
       }
     },
     {
+      "name": "source.imba1",
+      "scope": "source.imba1",
+      "settings": {
+        "foreground": "#e3e3e3"
+      }
+    },
+    {
       "name": "comment",
       "scope": "comment",
       "settings": {
@@ -142,6 +149,27 @@
       "scope": "variable.other",
       "settings": {
         "foreground": "#9dcbeb"
+      }
+    },
+    {
+      "name": "identifier.const",
+      "scope": "identifier.const",
+      "settings": {
+        "foreground": "#c5badc"
+      }
+    },
+    {
+      "name": "variable.instance.imba1",
+      "scope": "variable.instance.imba1",
+      "settings": {
+        "foreground": "#9dcbeb"
+      }
+    },
+    {
+      "name": "identifier.basic.imba1",
+      "scope": "identifier.basic.imba1",
+      "settings": {
+        "foreground": "#e3e3e3"
       }
     },
     {

@@ -29,9 +29,10 @@ export class File < Component
 		self.program = program
 		imbaPath = path.replace(/\.(imba|jsx?|tsx?)$/,'.imba')
 		tsPath = path.replace(/\.(imba|jsx?|tsx?)$/,'.ts')
+		isLegacy = imbaPath.indexOf('.imba1') > 0
 		lsPath = tsPath
 
-		if program && !program.rootFiles.includes(lsPath)
+		if program && !program.rootFiles.includes(lsPath) and !isLegacy
 			program.rootFiles.push(lsPath)
 
 		program.files[lsPath] = self
@@ -52,7 +53,7 @@ export class File < Component
 		program.documents.get(uri)
 
 	get tls
-		program.tls
+		isLegacy ? null : program.tls
 	
 	get ils
 		program
@@ -125,7 +126,7 @@ export class File < Component
 			invalidate!
 			version++
 			log 'emitFile',uri,version
-			program.invalidate!
+			program.invalidate! unless isLegacy
 		
 		if tls
 			tls.getEmitOutput(tsPath)
@@ -159,6 +160,8 @@ export class File < Component
 		self
 
 	def compile
+		return if isLegacy
+
 		unless result
 			var body = doc.getText!
 			var iversion = idoc.version
@@ -295,6 +298,7 @@ export class File < Component
 		self
 	
 	def getDefinitionAtPosition pos
+		return if isLegacy
 		let offset = offsetAt(pos)
 		let ctx = idoc.getContextAtOffset(offset)
 
@@ -316,6 +320,8 @@ export class File < Component
 		return
 
 	def getQuickInfoAtPosition pos
+		return if isLegacy
+
 		let offset = offsetAt(pos)
 
 		let ctx = idoc.getContextAtOffset(offset)
@@ -427,6 +433,8 @@ export class File < Component
 	def getCompletionsAtOffset offset, options = {}
 		let items = []
 		let names = new Map
+
+		return if isLegacy	
 
 		let ctx = idoc.getContextAtOffset(offset)
 		let tok = ctx.token
@@ -573,6 +581,8 @@ export class File < Component
 			# item.kind = util.convertSymbolKind(item.kind)
 			item.range = item.span
 			item.selectionRange = item.range
+			if typeof item.kind == 'string'
+				item.kind = util.convertSymbolKind(item.kind)
 
 		return outline.children
 

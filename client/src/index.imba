@@ -36,11 +36,11 @@ languages.setLanguageConfiguration('imba',{
 
 class SemanticTokensProvider
 	def provideDocumentSemanticTokens(doc, token)
-		await true
+		# await true
 		let uri = doc.uri.toString!
 		unless isReady
 			await client.onReady!
-		# log("provide tokens!! {uri} {isReady}")
+		
 		let t = Date.now!
 		let response = await client.sendRequest('semanticTokens',{uri: uri})
 		log("semanticTokens {uri} request? {response.length} - {Date.now! - t}ms")
@@ -63,7 +63,10 @@ export def activate context
 	}
 	
 	var clientOptions = {
-		documentSelector: [{scheme: 'file', language: 'imba'}]
+		documentSelector: [
+			{scheme: 'file', language: 'imba'},
+			{scheme: 'file', language: 'imba1'}
+		]
 		synchronize: { configurationSection: ['imba'] }
 		revealOutputChannelOn: 0
 		outputChannelName: 'Imba Language Client'
@@ -77,7 +80,9 @@ export def activate context
 	
 	client = new LanguageClient('imba', 'Imba Language Server', serverOptions, clientOptions)
 	let semanticLegend = new SemanticTokensLegend(SemanticTokenTypes,SemanticTokenModifiers)
-	let semanticProvider = languages.registerDocumentSemanticTokensProvider({language: 'imba'},new SemanticTokensProvider,semanticLegend)
+	let provider = new SemanticTokensProvider
+	languages.registerDocumentSemanticTokensProvider({language: 'imba'},provider,semanticLegend)
+	languages.registerDocumentSemanticTokensProvider({language: 'imba1'},new SemanticTokensProvider,semanticLegend)
 
 	commands.registerCommand('extension.getProgramDiagnostics') do
 		# window.showInformationMessage('Checking program...')

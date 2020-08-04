@@ -20,6 +20,7 @@
 	],
 	"activationEvents": [
 		"onLanguage:imba",
+		"onLanguage:imba1",
 		"workspaceContains:**/imbaconfig.json"
 	],
 	"contributes": {
@@ -83,6 +84,17 @@
 				],
 				"extensions": [
 					".imba",
+					".imba2"
+				],
+				"configuration": "./language-configuration.json",
+				"firstLine": "^#!/.*\\bimba[0-9.-]*\\b"
+			},
+			{
+				"id": "imba1",
+				"aliases": [
+					"Imba1"
+				],
+				"extensions": [
 					".imba1"
 				],
 				"configuration": "./language-configuration.json",
@@ -93,7 +105,12 @@
 			{
 				"language": "imba",
 				"scopeName": "source.imba",
-				"path": "./syntaxes/imba.tmLanguage",
+				"path": "./syntaxes/imba.tmLanguage"
+			},
+			{
+				"language": "imba1",
+				"scopeName": "source.imba1",
+				"path": "./syntaxes/imba1.tmLanguage.json",
 				"embeddedLanguages": {
 					"meta.embedded.block.css": "css"
 				}

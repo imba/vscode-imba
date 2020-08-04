@@ -408,8 +408,10 @@ export class LanguageServer < Component
 
 	def getDefinitionAtPosition uri, pos
 		let file = self.getImbaFile(uri)
-		let loc = self.documents.get(uri).offsetAt(pos)
+		if !file or file.isLegacy
+			return []
 
+		let loc = self.documents.get(uri).offsetAt(pos)
 		let fileres = file.getDefinitionAtPosition(pos)
 
 		if fileres
