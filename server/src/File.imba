@@ -10,7 +10,7 @@ import {Diagnostics, DiagnosticKind} from './Diagnostics'
 import * as ts from 'typescript'
 
 var imbac = require 'imba/dist/compiler.js'
-var imba1c = require 'imba/scripts/bootstrap.compiler.js'
+var imba1c = require './imba1.compiler.js'
 
 var imbaOptions = {
 	target: 'tsc'
