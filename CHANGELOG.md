@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.4.0
+* Improved support for imba1 files
+
 ## 2.3.0
 
 * Using official semantic tokens api from vscode

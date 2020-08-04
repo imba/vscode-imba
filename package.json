@@ -2,7 +2,7 @@
 	"name": "vsimba",
 	"displayName": "Imba",
 	"description": "Language support for Imba 2",
-	"version": "2.3.0",
+	"version": "2.4.0",
 	"publisher": "scrimba",
 	"main": "./client/index.js",
 	"icon": "assets/imba.png",
@@ -100,7 +100,6 @@
 				"configuration": "./language-configuration.json",
 				"firstLine": "^#!/.*\\bimba[2-9.-]*\\b"
 			}
-			
 		],
 		"grammars": [
 			{
@@ -126,7 +125,7 @@
 		]
 	},
 	"dependencies": {
-		"imba": "^2.0.0-alpha.71",
+		"imba": "^2.0.0-alpha.72",
 		"vscode-languageclient": "^6.1.1",
 		"vscode-languageserver": "^6.1.1"
 	},
