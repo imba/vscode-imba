@@ -42,6 +42,8 @@ export class File < Component
 		logLevel = imbaPath.indexOf('Diagnostics') >= 0 ? 3 : 0
 		diagnostics = new Diagnostics(self)
 		emitted = {}
+		times = {}
+		_isTyping = no
 		invalidate!
 		self
 
@@ -67,22 +69,40 @@ export class File < Component
 	get tsfile
 		ils.getProgram!.getSourceFile(tsPath)
 
+	get isTyping
+		_isTyping
+
+	set isTyping value
+		if _isTyping =? value
+			yes
+
 	def didOpen doc
 		$doc = doc
+		times.opened = Date.now!
 		getDiagnostics!
 
 	def didChange doc, event = null
 		$doc = doc
 		version = doc.version
 		cache.contexts = {}
-		$delay('emitFile',500)
+		
 		diagnostics.sync!
+		times.edited = Date.now!
+		if version > 1
+			isTyping = yes
+			$delay('emitFile',5000)
+		else
+			$delay('emitFile',10)
+
+		# console.log 'didChange'
 		# $clearSyntacticErrors! # only if our regions have changed?!?
 
 	def didSave doc
 		savedContent = doc.getText!
 		emitFile!
 		diagnostics.sync!
+		times.saved = Date.now!
+		isTyping = no
 
 	def dispose
 		delete program.files[tsPath]
@@ -97,8 +117,10 @@ export class File < Component
 
 	def emitFile
 		$cancel('emitFile')
+		
 		let content = doc.getText!
 		if content != lastEmitContent
+			# console.log 'emitFile',imbaPath,!!tls
 			lastEmitContent = content
 			invalidate!
 			version++
@@ -108,6 +130,8 @@ export class File < Component
 		if tls
 			tls.getEmitOutput(tsPath)
 			getDiagnostics!
+		else
+			compile!
 		return self
 
 	def updateDiagnostics items\Diagnostic[] = [], versions
@@ -551,3 +575,11 @@ export class File < Component
 			item.selectionRange = item.range
 
 		return outline.children
+
+	def onDidChangeTextEditorSelection event
+		const now = times.selection = Date.now!
+		# console.log 'file selection change',now - times.edited
+		if isTyping and (now - times.edited) > 3
+			isTyping = no
+			$flush('emitFile')
+			diagnostics.sync!

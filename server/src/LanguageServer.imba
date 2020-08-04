@@ -365,6 +365,12 @@ export class LanguageServer < Component
 			self.version++
 		self
 
+	def onDidChangeTextEditorSelection event
+		let src = util.uriToPath(event.uri)
+		if files[src]
+			files[src].onDidChangeTextEditorSelection(event)
+		yes
+
 	def onDidRenameFiles event
 		let version = self.version
 		

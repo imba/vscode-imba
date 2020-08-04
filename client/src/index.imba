@@ -93,7 +93,16 @@ export def activate context
 	isReady = yes
 
 	window.onDidChangeTextEditorSelection do(e)
-		log 'onDidChangeTextEditorSelection',e.kind,e.selections
+		const doc = e.textEditor.document
+		const uri = doc.uri
+		# log 'onDidChangeTextEditorSelection',e.kind,e.selections
+		let params = {
+			kind: e.kind
+			selections: e.selections
+			uri: uri.toString!
+		}
+		client.sendNotification('onDidChangeTextEditorSelection',params)
+
 
 	workspace.onDidRenameFiles do |ev|
 		client.sendNotification('onDidRenameFiles',ev)

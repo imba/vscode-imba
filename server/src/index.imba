@@ -87,6 +87,9 @@ connection.onInitialized do(params)
 		console.log 'clear diagnostics problems'
 		server.clearProblems!
 		# server.emitDiagnostics!
+
+	connection.onNotification('onDidChangeTextEditorSelection') do(params)
+		server.onDidChangeTextEditorSelection(params)
 		
 	# connection.onDidChangeTextDocument do |event|
 	# 	console.log 'onDidChangeTextDocument',event
