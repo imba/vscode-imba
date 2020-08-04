@@ -10,6 +10,7 @@ import {Diagnostics, DiagnosticKind} from './Diagnostics'
 import * as ts from 'typescript'
 
 var imbac = require 'imba/dist/compiler.js'
+var imba1c = require 'imba/scripts/bootstrap.compiler.js'
 
 var imbaOptions = {
 	target: 'tsc'
@@ -29,7 +30,7 @@ export class File < Component
 		self.program = program
 		imbaPath = path.replace(/\.(imba|jsx?|tsx?)$/,'.imba')
 		tsPath = path.replace(/\.(imba|jsx?|tsx?)$/,'.ts')
-		isLegacy = imbaPath.indexOf('.imba1') > 0
+		isLegacy = imbaPath.indexOf('.imba1') > 0 or program.isLegacy
 		lsPath = tsPath
 
 		if program && !program.rootFiles.includes(lsPath) and !isLegacy
@@ -79,6 +80,8 @@ export class File < Component
 
 	def didOpen doc
 		$doc = doc
+		if doc.tokens
+			isLegacy = doc.tokens.isLegacy
 		times.opened = Date.now!
 		getDiagnostics!
 
@@ -125,7 +128,7 @@ export class File < Component
 			lastEmitContent = content
 			invalidate!
 			version++
-			log 'emitFile',uri,version
+			log 'emitFile',uri,version,isLegacy
 			program.invalidate! unless isLegacy
 		
 		if tls
@@ -171,7 +174,8 @@ export class File < Component
 			})
 
 			try
-				var res = imbac.compile(body,opts)
+				var compiler = isLegacy ? imba1c : imbac
+				var res = compiler.compile(body,opts)
 			catch e
 				let loc = e.loc && e.loc()
 				let range = loc && {
