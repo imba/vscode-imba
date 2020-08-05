@@ -9593,6 +9593,14 @@
         <array>
           <dict>
             <key>include</key>
+            <string>#qstring-single-multi</string>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#qstring-double-multi</string>
+          </dict>
+          <dict>
+            <key>include</key>
             <string>#qstring-single</string>
           </dict>
           <dict>
@@ -9668,6 +9676,38 @@
           <dict>
             <key>name</key>
             <string>invalid.illegal.newline.imba</string>
+          </dict>
+        </dict>
+        <key>patterns</key>
+        <array>
+          <dict>
+            <key>include</key>
+            <string>#string-character-escape</string>
+          </dict>
+        </array>
+      </dict>
+      <key>qstring-single-multi</key>
+      <dict>
+        <key>name</key>
+        <string>string.quoted.single.imba</string>
+        <key>begin</key>
+        <string>'''</string>
+        <key>beginCaptures</key>
+        <dict>
+          <key>0</key>
+          <dict>
+            <key>name</key>
+            <string>punctuation.definition.string.begin.imba</string>
+          </dict>
+        </dict>
+        <key>end</key>
+        <string>'''</string>
+        <key>endCaptures</key>
+        <dict>
+          <key>0</key>
+          <dict>
+            <key>name</key>
+            <string>punctuation.definition.string.end.imba</string>
           </dict>
         </dict>
         <key>patterns</key>
