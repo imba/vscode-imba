@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.4.3
+* Upgraded to imba 2 alpha 77
+* Darkened background colors in ImbaDark theme
+
 ## 2.4.2
 * Fixed issues with multiline string highlighting
 * Upgraded to imba 2 alpha 76
