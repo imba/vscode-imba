@@ -131,6 +131,7 @@
 	},
 	"devDependencies": {
 		"@rollup/plugin-json": "^4.0.2",
+		"chroma-js": "^2.1.0",
 		"js-yaml": "^3.14.0",
 		"plist": "^3.0.1",
 		"rollup": "^1.28.0",
@@ -141,6 +142,7 @@
 		"dev:bootstrap": "lerna bootstrap",
 		"dev:watch": "rollup -c --watch",
 		"prod:version": "lerna version",
+		"build-theme": "imba scripts/compile-theme.imba",
 		"test": "node server/test.js"
 	},
 	"__metadata": {
