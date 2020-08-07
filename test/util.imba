@@ -2,12 +2,12 @@ import {Base} from './base'
 import {Stream,RemoteStream} from './stream'
 
 export class Util < Base
-	@state = 'test'
-	@sta
-	@plugin
+	state = 'test'
+	sta
+	plugin
 	# @type {string[]} - List of all the items
 	
-	@items
+	items
 	
 	static def ping
 		123
@@ -15,10 +15,9 @@ export class Util < Base
 	static def bind
 		self
 
-	@stream = RemoteStream.new
+	stream = new RemoteStream
 
 	def setup
-		@
 		self
 
 	def incr
