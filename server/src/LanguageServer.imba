@@ -37,7 +37,7 @@ const tsServiceOptions\CompilerOptions = {
 	resolveJsonModule: true
 	incremental: true
 	target: ts.ScriptTarget.Latest
-	# lib: ['lib.es6.d.ts']
+	lib: ['lib.es6.d.ts']
 	# types: ['node']
 	types: ['node']
 	forceConsistentCasingInFileNames: true
@@ -131,6 +131,9 @@ export class LanguageServer < Component
 		const realpath = do(path)
 			log 'realpath',path
 			return path
+
+		if imbaConfig.types
+			options.types = imbaConfig.types
 
 		const resolutionHost = {
 			fileExists: self.fileExists.bind(self)

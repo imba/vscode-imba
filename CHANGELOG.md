@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.4.5
+* Upgraded to imba 2 alpha 80
+* Showing tag definitions in outline
+* Showing elements in outline
+* Allow configuring types via imbaconfig.json
+
 ## 2.4.4
 * Upgraded to imba 2 alpha 78
 
