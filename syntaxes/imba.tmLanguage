@@ -427,6 +427,10 @@
           </dict>
           <dict>
             <key>include</key>
+            <string>#css-comment</string>
+          </dict>
+          <dict>
+            <key>include</key>
             <string>#nested-css-selector</string>
           </dict>
           <dict>
@@ -1037,6 +1041,24 @@
         <key>match</key>
         <string>,</string>
       </dict>
+      <key>css-comment</key>
+      <dict>
+        <key>patterns</key>
+        <array>
+          <dict>
+            <key>name</key>
+            <string>comment.line.imba</string>
+            <key>match</key>
+            <string>\#(\s.+)?(\n|$)</string>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>comment.line.imba</string>
+            <key>match</key>
+            <string>(^\t+)(\#(\s.+)?(\n|$))</string>
+          </dict>
+        </array>
+      </dict>
       <key>css-escapes</key>
       <dict>
         <key>patterns</key>
@@ -1387,10 +1409,6 @@
           </dict>
           <dict>
             <key>include</key>
-            <string>#tag-inlined-styles</string>
-          </dict>
-          <dict>
-            <key>include</key>
             <string>#tag-interpolated-content</string>
           </dict>
           <dict>
@@ -1472,44 +1490,6 @@
           <dict>
             <key>include</key>
             <string>#expression</string>
-          </dict>
-        </array>
-        <key>contentName</key>
-        <string>meta.embedded.line.imba</string>
-      </dict>
-      <key>tag-inlined-styles</key>
-      <dict>
-        <key>name</key>
-        <string>meta.tag.expression.imba</string>
-        <key>begin</key>
-        <string>\.\(</string>
-        <key>beginCaptures</key>
-        <dict>
-          <key>0</key>
-          <dict>
-            <key>name</key>
-            <string>punctuation.section.tag.imba</string>
-          </dict>
-        </dict>
-        <key>end</key>
-        <string>\)</string>
-        <key>endCaptures</key>
-        <dict>
-          <key>0</key>
-          <dict>
-            <key>name</key>
-            <string>punctuation.section.tag.imba</string>
-          </dict>
-        </dict>
-        <key>patterns</key>
-        <array>
-          <dict>
-            <key>include</key>
-            <string>#inline-css-selector</string>
-          </dict>
-          <dict>
-            <key>include</key>
-            <string>#inline-styles</string>
           </dict>
         </array>
         <key>contentName</key>

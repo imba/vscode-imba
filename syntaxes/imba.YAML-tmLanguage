@@ -278,6 +278,7 @@ repository:
     end: ^(?!(\1\t|\s*$))
     patterns:
     - include: '#css-selector'
+    - include: '#css-comment'
     - include: '#nested-css-selector'
     - include: '#inline-styles'
       
@@ -537,6 +538,13 @@ repository:
   css-commas:
     name: punctuation.separator.list.comma.css
     match: ','
+
+  css-comment:
+    patterns:
+    - name: comment.line.imba
+      match: \#(\s.+)?(\n|$)
+    - name: comment.line.imba
+      match: (^\t+)(\#(\s.+)?(\n|$))
     
   css-escapes:
     patterns:
@@ -670,7 +678,6 @@ repository:
   tag-content:
     patterns:
       - include: '#tag-expr-name'
-      - include: '#tag-inlined-styles'
       - include: '#tag-interpolated-content'
       - include: '#tag-interpolated-parens'
       - include: '#tag-interpolated-brackets'
@@ -698,19 +705,6 @@ repository:
       '0': { name: punctuation.section.tag.imba }
     patterns:
       - include: '#expression'
-    contentName: meta.embedded.line.imba
-    
-  tag-inlined-styles:
-    name: meta.tag.expression.imba
-    begin: \.\(
-    beginCaptures:
-      '0': { name: punctuation.section.tag.imba }
-    end: \)
-    endCaptures:
-      '0': { name: punctuation.section.tag.imba }
-    patterns:
-      - include: '#inline-css-selector'
-      - include: '#inline-styles'
     contentName: meta.embedded.line.imba
 
   tag-interpolated-parens:
