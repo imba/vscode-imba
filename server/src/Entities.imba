@@ -9,8 +9,11 @@ import { items } from '../../test/data'
 
 import * as cssData from './css-data.json'
 
-import {aliases as cssAliases} from 'imba/src/compiler/styler'
+import {aliases as cssAliases,StyleTheme} from 'imba/src/compiler/styler'
 import {modifiers as cssModifiers} from 'imba/src/compiler/theme'
+import * as theme from 'imba/src/compiler/theme'
+
+import * as svg from './StylePreviews'
 
 var globalEvents = for item in globalAttributes when item.name.match(/^on\w+/)
 	item
@@ -58,7 +61,41 @@ export class Entities < Component
 		super
 		program = program
 		symbols = {}
+		$theme = new StyleTheme
 		$cache = {}
+		$easings = {}
+		$colors = {}
+
+		for own name,value of theme.variants.easings
+			registerEasing(name,value)
+
+		for own name,value of $theme.palette
+			registerColor(name,value) unless name.match(/^grey\d/)
+		self
+	
+	def registerEasing name, value
+		let info = {
+			name: name
+		}
+
+		info.preview = """
+			![]({svg.md('easing',value)}|width=120,height=120)
+		"""
+		# {name} translates to `{value}`
+		info.documentation = info.preview
+
+		$easings[name] = info
+
+	def registerColor name, value
+		let info = {
+			name: name
+		}
+
+		info.documentation = info.preview = """
+			![]({svg.md('color',value)}|width=240,height=120)
+		"""
+
+		$colors[name] = info
 
 	def getTagQuery name
 		new TagQuery(program,name)
@@ -174,6 +211,23 @@ export class Entities < Component
 					# documentation: item.description
 				)
 		return items
+
+	def getCSSValueInfo value, property, o = {}
+		
+		let item
+
+		if item = $easings[value]
+			yes
+		elif item = $colors[value]
+			yes
+		
+		if item
+			return {
+				name: item.name
+				description: {kind: 'markdown', value: item.documentation}
+			}
+
+		return null
 		
 	def getKeywordCompletions o = {}
 		let keywords = ['yes','no','tag']
@@ -326,16 +380,39 @@ export class Entities < Component
 		let property = cssProperties[String(o.styleProperty)]
 
 		return [] unless property
+
+		let name = property.name
+		let values = (property.values or []).slice(0)
+		console.log 'value completion for',name
+
+		if name == 'transition-timing-function'
+			values = Object.values($easings)
+			# console.log 'set values',values,theme.variants.easings
+		elif name == 'transition'
+			# need to look at which part of the value we are in
+			values = Object.values($easings)
+
+		elif name == 'color'
+			values = Object.values($colors)
+		elif name == 'background' or name.match(/\-color/)
+			values.push(...Object.values($colors))
 		
-		for val in property.values
-			items.push {
+		for val in values
+			let item = {
 				label: val.name
 				insertText: val.name
 				kind: CompletionItemKind.Field,
 				sortText: val.name.replace(/^\-/,'zzz')
 				detail: val.description
+				documentation: {
+					kind: 'markdown'
+					value: val.preview or ''
+				}
 				data: {resolved: true}
 			}
+
+			items.push(item)
+
 		return items
 
 	def getCSSModifierCompletions ctx, o= {}

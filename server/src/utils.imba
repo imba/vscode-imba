@@ -193,7 +193,8 @@ export def kebabCase str
 	out[0] == '-' ? out.slice(1) : out
 
 
-export def fastExtractSymbols text
+export def fastExtractSymbols text,fname = null
+	# console.log 'fastExtractSymbols',text && text.length,fname
 	let lines = text.split(/\n/)
 	let symbols = []
 	let scope = {indent: -1,children: []}

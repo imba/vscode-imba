@@ -209,7 +209,7 @@ export class File < Component
 		return self
 		
 	def $indexWorkspaceSymbols
-		cache.symbols ||= util.fastExtractSymbols(doc.getText!)
+		cache.symbols ||= util.fastExtractSymbols(doc.getText!,imbaPath)
 		cache.workspaceSymbols ||= cache.symbols.map do |sym|
 			sym.location = Location.create(uri,sym.span)
 			sym
@@ -329,11 +329,27 @@ export class File < Component
 		let offset = offsetAt(pos)
 
 		let ctx = idoc.getContextAtOffset(offset)
+		let grp = ctx.group
+		let tok = ctx.token or {match: (do no)}
 
 		if ctx.token and !ctx.token.value
 			log 'token without value',ctx.token
 
 		let range = idoc.getTokenRange(ctx.token)
+
+		# console.log 'the context we got here',ctx.mode,range
+		try
+			let info = null
+			let cssprop = grp.closest('styleprop')
+
+			if tok.match('style.value')
+				# console.log 'style value',tok.value,cssprop.propertyName
+				info = ils.entities.getCSSValueInfo(tok.value,cssprop.propertyName,ctx)
+		
+			if info
+				return {range: range, contents: info.description}
+
+		
 		# log 'getting context',offset,range,ctx.token,ctx.mode
 	
 		let element = ctx.tag
