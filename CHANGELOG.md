@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.4.6
+* Upgraded to imba 2 alpha 91
+* Add completions for border-radius
+* Add completions and hover info for colors
+* Add completions and hover info for easings
+
 ## 2.4.5
 * Upgraded to imba 2 alpha 80
 * Showing tag definitions in outline
