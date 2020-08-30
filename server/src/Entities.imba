@@ -67,6 +67,7 @@ export class Entities < Component
 		$colors = {}
 		$styles = {
 			rd: {}
+			fs: {}
 		}
 
 		for own name,value of theme.variants.easings
@@ -81,14 +82,32 @@ export class Entities < Component
 			let item = {
 				name: name
 				detail: value
+				type: 'radius'
 				documentation: "![]({svg.md('rd',value)}|width=120,height=120)"
 			}
+
 			$styles.rd[name] = item
+
+		for own name,value of theme.variants.fontSize
+			continue unless name.match(/[a-z]/)
+			registerFontSize(name,value)
 		self
+
+	def registerFontSize name, value
+		let item = {
+			name: name
+			detail: value isa Array ? value[0] : value
+			type: 'font-size'
+			
+		}
+		item.documentation = "![]({svg.md('fs',item.detail)}|width=120,height=120)"
+
+		$styles.fs[name] = item
 	
 	def registerEasing name, value
 		let info = {
 			name: name
+			type: 'easing'
 		}
 
 		info.documentation = """
@@ -415,6 +434,8 @@ export class Entities < Component
 			values.push(...Object.values($colors))
 		elif name == 'border-radius'
 			values = Object.values($styles.rd)
+		elif name == 'font-size'
+			values = Object.values($styles.fs)
 		
 		for val in values
 			let item = {

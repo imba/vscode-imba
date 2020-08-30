@@ -18,7 +18,12 @@ def types.rd input
 </svg>`
 	return svg
 
-
+def types.fs value
+	return `<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect x="10" y="10" width="100" height="100" rx="10" fill="#868686" fill-opacity="0.1"/>
+<text fill="#8AB9FF" xml:space="preserve" style="white-space: pre" font-family="Arial" font-size="{parseInt(value)}" font-weight="500" letter-spacing="0em"><tspan x="46.0156" y="68.2031">Aa</tspan></text>
+</svg>
+`
 
 export def color input
 	let key = String(input)
