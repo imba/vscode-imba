@@ -57,11 +57,11 @@ class TagQuery
 
 export class Entities < Component
 
-	def constructor program
+	def constructor program, config = {}
 		super
 		program = program
 		symbols = {}
-		$theme = new StyleTheme
+		$theme = new StyleTheme(config ? config.styles : {})
 		$cache = {}
 		$easings = {}
 		$colors = {}

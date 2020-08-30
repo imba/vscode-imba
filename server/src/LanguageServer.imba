@@ -73,9 +73,10 @@ export class LanguageServer < Component
 
 		self.documents = documents
 		self.connection = connection
-		self.entities = new Entities(self)
 		self.rootPath = self.rootUri = util.uriToPath(params.rootUri)
 		self.imbaConfig = self.resolveConfigFile(self.rootPath) or {}
+		self.entities = new Entities(self,self.imbaConfig)
+
 		self.rootFiles = o.rootFiles || []
 		self.snapshots = {}
 		self.version = 0
