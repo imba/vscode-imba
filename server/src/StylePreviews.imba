@@ -8,6 +8,18 @@ let keyword2easing = {
 
 let cached = {}
 
+const types = {}
+
+def types.rd input
+	let rd = parseInt(input)
+	let svg = `<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="120" height="120" fill="rgba(0,0,0,0)"/>
+<rect x="10" y="10" width="100" height="100" rx="{rd}" fill="#868686" fill-opacity="0.3"/>
+</svg>`
+	return svg
+
+
+
 export def color input
 	let key = String(input)
 	if cached[key]
@@ -31,6 +43,8 @@ export def color input
 	markup = markup.replace(/#FF0000/g,key)
 	markup = markup.replace(/Roboto/g,"Arial")
 	return cached[key] = markup
+
+
 
 /* Returns code for the cubic-bezier preview (as an SVG image) */
 export def easing input
@@ -84,10 +98,8 @@ export def easing input
 	markup = markup.replace(/\(o\.(\w+)\)/g) do o[$2]
 	return cached[input] = markup
 
-let types = {
-	'easing': easing
-	'color': color
-}
+types.easing = easing
+types.color = color
 
 export def uri input
 	input = input.split("\n").map(do $1.trim!).join('')

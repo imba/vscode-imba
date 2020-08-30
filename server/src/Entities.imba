@@ -65,12 +65,25 @@ export class Entities < Component
 		$cache = {}
 		$easings = {}
 		$colors = {}
+		$styles = {
+			rd: {}
+		}
 
 		for own name,value of theme.variants.easings
 			registerEasing(name,value)
 
 		for own name,value of $theme.palette
 			registerColor(name,value) unless name.match(/^grey\d/)
+
+		for own name,value of theme.variants.radius
+			continue if name != name.toLowerCase!
+
+			let item = {
+				name: name
+				detail: value
+				documentation: "![]({svg.md('rd',value)}|width=120,height=120)"
+			}
+			$styles.rd[name] = item
 		self
 	
 	def registerEasing name, value
@@ -78,22 +91,26 @@ export class Entities < Component
 			name: name
 		}
 
-		info.preview = """
+		info.documentation = """
 			![]({svg.md('easing',value)}|width=120,height=120)
 		"""
-		# {name} translates to `{value}`
-		info.documentation = info.preview
-
 		$easings[name] = info
 
 	def registerColor name, value
+		let color = "hsla({parseInt(value.h)},{parseInt(value.s)}%,{parseInt(value.l)}%,{parseFloat(value.a) / 100})"
 		let info = {
 			name: name
+			type: 'color'
+			detail: color
 		}
 
-		info.documentation = info.preview = """
-			![]({svg.md('color',value)}|width=240,height=120)
-		"""
+		if name == 'current'
+			info.type = 'value'
+			info.detail = "Inherited value of `color`"
+		else
+			info.documentation = """
+				![]({svg.md('color',value)}|width=240,height=120)
+			"""
 
 		$colors[name] = info
 
@@ -383,7 +400,7 @@ export class Entities < Component
 
 		let name = property.name
 		let values = (property.values or []).slice(0)
-		console.log 'value completion for',name
+		# console.log 'value completion for',name
 
 		if name == 'transition-timing-function'
 			values = Object.values($easings)
@@ -396,20 +413,26 @@ export class Entities < Component
 			values = Object.values($colors)
 		elif name == 'background' or name.match(/\-color/)
 			values.push(...Object.values($colors))
+		elif name == 'border-radius'
+			values = Object.values($styles.rd)
 		
 		for val in values
 			let item = {
 				label: val.name
 				insertText: val.name
-				kind: CompletionItemKind.Field,
+				kind: CompletionItemKind.Value,
 				sortText: val.name.replace(/^\-/,'zzz')
-				detail: val.description
+				detail: val.detail or val.description
 				documentation: {
 					kind: 'markdown'
-					value: val.preview or ''
+					value: val.documentation or ''
 				}
 				data: {resolved: true}
 			}
+
+			if val.type == 'color'
+				item.kind = CompletionItemKind.Color
+				item.documentation = item.detail
 
 			items.push(item)
 
