@@ -108,7 +108,7 @@ export class Entities < Component
 			type: 'font-size'
 			
 		}
-		item.documentation = "![]({svg.md('fs',item.detail)}|width=120,height=120)"
+		item.documentation = "![]({svg.md('fs',item.detail)}|width=316,height=120)"
 
 		$styles.fs[name] = item
 

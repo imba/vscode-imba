@@ -19,8 +19,8 @@ def types.rd input
 	return svg
 
 def types.fs value
-	return `<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect x="10" y="10" width="100" height="100" rx="10" fill="#868686" fill-opacity="0.1"/>
+	return `<svg width="316" height="120" viewBox="0 0 316 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+	<rect x="8" y="8" width="300" height="104" rx="4" fill="#868686" fill-opacity="0.1"/>
 <text fill="#8AB9FF" xml:space="preserve" style="white-space: pre" font-family="Arial" font-size="{parseInt(value)}" font-weight="500" letter-spacing="0em" text-anchor="middle" dominant-baseline="middle"><tspan x="50%" y="50%">Aa</tspan></text>
 </svg>
 `
