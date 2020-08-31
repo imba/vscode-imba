@@ -83,8 +83,12 @@
 					"description": "The element generates a principal flex container box and establishes a flex formatting context."
 				},
 				{
-					"name": "flexbox",
-					"description": "The element lays out its contents using flow layout (block-and-inline layout). Standardized as 'flex'."
+					"name": "hflex",
+					"description": "Flex with flex-direction set to row"
+				},
+				{
+					"name": "vflex",
+					"description": "Flex with flex-direction set to column"
 				},
 				{
 					"name": "flow-root",
@@ -93,6 +97,14 @@
 				{
 					"name": "grid",
 					"description": "The element generates a principal grid container box, and establishes a grid formatting context."
+				},
+				{
+					"name": "hgrid",
+					"description": "Grid with grid-auto-flow set to column"
+				},
+				{
+					"name": "vgrid",
+					"description": "Grid with grid-auto-flow set to row"
 				},
 				{
 					"name": "inline",
@@ -106,10 +118,7 @@
 					"name": "inline-flex",
 					"description": "Inline-level flex container."
 				},
-				{
-					"name": "inline-flexbox",
-					"description": "Inline-level flex container. Standardized as 'inline-flex'"
-				},
+
 				{
 					"name": "inline-table",
 					"description": "Inline-level table wrapper box containing table box."
