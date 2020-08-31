@@ -68,6 +68,7 @@ export class Entities < Component
 		$styles = {
 			rd: {}
 			fs: {}
+			ff: {}
 		}
 
 		for own name,value of theme.variants.easings
@@ -91,6 +92,9 @@ export class Entities < Component
 		for own name,value of theme.variants.fontSize
 			continue unless name.match(/[a-z]/)
 			registerFontSize(name,value)
+		
+		for own name,value of theme.fonts
+			registerFontFamily(name,value)
 		self
 
 	def registerFontSize name, value
@@ -103,6 +107,16 @@ export class Entities < Component
 		item.documentation = "![]({svg.md('fs',item.detail)}|width=120,height=120)"
 
 		$styles.fs[name] = item
+	
+	def registerFontFamily name, value
+		let item = {
+			name: name
+			detail: value
+			type: 'font'
+			
+		}
+		$styles.ff[name] = item
+
 	
 	def registerEasing name, value
 		let info = {
@@ -435,6 +449,8 @@ export class Entities < Component
 			values = Object.values($styles.rd)
 		elif name == 'font-size'
 			values = Object.values($styles.fs)
+		elif name == 'font-family'
+			values = Object.values($styles.ff) # .concat(values)
 		
 		for val,i in values
 			let sort = 1000 + (val.name[0] == '-' ? (i + 100) : i)
