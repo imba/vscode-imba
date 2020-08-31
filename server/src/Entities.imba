@@ -419,7 +419,6 @@ export class Entities < Component
 
 		let name = property.name
 		let values = (property.values or []).slice(0)
-		# console.log 'value completion for',name
 
 		if name == 'transition-timing-function'
 			values = Object.values($easings)
@@ -437,13 +436,15 @@ export class Entities < Component
 		elif name == 'font-size'
 			values = Object.values($styles.fs)
 		
-		for val in values
+		for val,i in values
+			let sort = 1000 + (val.name[0] == '-' ? (i + 100) : i)
+			let detail = val.detail or val.description
 			let item = {
 				label: val.name
 				insertText: val.name
 				kind: CompletionItemKind.Value,
-				sortText: val.name.replace(/^\-/,'zzz')
-				detail: val.detail or val.description
+				sortText: "{sort}-{val.name}"
+				detail: detail
 				documentation: {
 					kind: 'markdown'
 					value: val.documentation or ''
