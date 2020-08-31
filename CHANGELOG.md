@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.4.7
+* Add completions for font-size
+* Add completions for font-family
+* Add completions for box-shadow
+
 ## 2.4.6
 * Upgraded to imba 2 alpha 91
 * Add completions for border-radius
