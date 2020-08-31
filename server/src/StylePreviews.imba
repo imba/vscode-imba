@@ -25,6 +25,14 @@ def types.fs value
 </svg>
 `
 
+def types.bxs value
+	return `<svg width="316" height="120" viewBox="0 0 316 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect x="8" y="8" width="300" height="104" rx="4" fill="#e2e8f0" fill-opacity="1" style=""/>
+<foreignObject xmlns="http://www.w3.org/2000/svg" x="30" y="30" width="256" height="60" style="&#10;    overflow: visible;&#10;    display: block;&#10;    background: #FFF;border-radius: 10px;&#10;box-shadow: {value};&#10;&#10;">
+    <div></div>
+</foreignObject>
+</svg>`
+
 export def color input
 	let key = String(input)
 	if cached[key]

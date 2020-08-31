@@ -69,6 +69,7 @@ export class Entities < Component
 			rd: {}
 			fs: {}
 			ff: {}
+			bxs: {}
 		}
 
 		for own name,value of theme.variants.easings
@@ -95,6 +96,9 @@ export class Entities < Component
 		
 		for own name,value of theme.fonts
 			registerFontFamily(name,value)
+
+		for own name,value of theme.variants['box-shadow']
+			registerBoxShadow(name,value)
 		self
 
 	def registerFontSize name, value
@@ -107,6 +111,15 @@ export class Entities < Component
 		item.documentation = "![]({svg.md('fs',item.detail)}|width=120,height=120)"
 
 		$styles.fs[name] = item
+
+	def registerBoxShadow name, value
+		let item = {
+			name: name
+			detail: ''
+			type: 'box-shadow'
+		}
+		item.documentation = "![]({svg.md('bxs',value)}|width=316,height=120)\n{value}"
+		$styles.bxs[name] = item
 	
 	def registerFontFamily name, value
 		let item = {
@@ -451,6 +464,8 @@ export class Entities < Component
 			values = Object.values($styles.fs)
 		elif name == 'font-family'
 			values = Object.values($styles.ff) # .concat(values)
+		elif name == 'box-shadow'
+			values = Object.values($styles.bxs) # .concat(values)
 		
 		for val,i in values
 			let sort = 1000 + (val.name[0] == '-' ? (i + 100) : i)
