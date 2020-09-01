@@ -275,23 +275,26 @@ export class Entities < Component
 				)
 		return items
 
-	def getCSSValueInfo value, propname, o = {}
-		
-		let property = cssProperties[String(propname)]
+	def getCSSValueInfo value, propname, ctx = {}
+
 		let item
 
 		if item = $easings[value]
 			yes
 		elif item = $colors[value]
 			yes
-
-		if property and property.name == 'box-shadow'
-			item = $styles.bxs[value]
+		else
+			let completions = getCSSValueCompletions(ctx)
+			let val = completions.$values and completions.$values[value]
+			
+			if val
+				item = val
 		
 		if item
+			let md = item.documentation or item.description or item.detail
 			return {
 				name: item.name
-				description: {kind: 'markdown', value: item.documentation}
+				description: {kind: 'markdown', value: md}
 			}
 
 		return null
@@ -444,7 +447,14 @@ export class Entities < Component
 
 	def getCSSValueCompletions ctx,o = {}
 		let items\CompletionItem[] = []
-		let property = cssProperties[String(o.styleProperty)]
+		let propalias = o.styleProperty
+
+		unless propalias
+			let p = ctx.group.closest('styleprop')
+			if p
+				propalias = p.propertyName
+
+		let property = cssProperties[String(propalias)]
 
 		return [] unless property
 
@@ -498,6 +508,7 @@ export class Entities < Component
 		elif name == 'box-shadow'
 			values = Object.values($styles.bxs) # .concat(values)
 		
+		let map = items.$values = {}
 		for val,i in values
 			let sort = 1000 + (val.name[0] == '-' ? (i + 100) : i)
 			let detail = val.detail or val.description
@@ -518,6 +529,7 @@ export class Entities < Component
 				item.kind = CompletionItemKind.Color
 				item.documentation = item.detail
 
+			map[val.name] = val
 			items.push(item)
 
 		return items
