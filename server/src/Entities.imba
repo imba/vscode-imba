@@ -118,7 +118,7 @@ export class Entities < Component
 			detail: ''
 			type: 'box-shadow'
 		}
-		item.documentation = "![]({svg.md('bxs',value)}|width=316,height=120)\n{value}"
+		item.documentation = "![]({svg.md('bxs',value)}|width=316,height=120)\n\n`{value}`"
 		$styles.bxs[name] = item
 	
 	def registerFontFamily name, value
@@ -275,14 +275,18 @@ export class Entities < Component
 				)
 		return items
 
-	def getCSSValueInfo value, property, o = {}
+	def getCSSValueInfo value, propname, o = {}
 		
+		let property = cssProperties[String(propname)]
 		let item
 
 		if item = $easings[value]
 			yes
 		elif item = $colors[value]
 			yes
+
+		if property and property.name == 'box-shadow'
+			item = $styles.bxs[value]
 		
 		if item
 			return {
