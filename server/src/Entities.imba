@@ -446,13 +446,40 @@ export class Entities < Component
 
 		let name = property.name
 		let values = (property.values or []).slice(0)
+		let syntax = property.syntax or ''
+		# console.log 'css value completions',name
+		let signature = syntax.split(' || ')
+		let before = ctx..before..group
+		let nr = before ? before.split(' ').length : 0
 
-		if name == 'transition-timing-function'
+		# console.log 'parts',signature,before,nr,before.split(' ')
+
+		if signature.length > 1 and before
+			# let nr = before.split(' ')
+			let kind = signature[before.split(' ').length - 1]
+			# console.log 'parts',signature,kind
+			# if place
+			if kind == '<color>'
+				name = 'color'
+
+		if name == 'transition'
+			if nr == 1
+				values = property.values.slice(0)
+			elif nr == 3
+				values = Object.values($easings)
+
+		elif name == 'border'
+			if nr == 2
+				values = cssProperties['text-decoration-style'].values.slice(0)
+			elif nr == 3
+				values = Object.values($colors)
+
+		elif name == 'transition-timing-function'
 			values = Object.values($easings)
 			# console.log 'set values',values,theme.variants.easings
-		elif name == 'transition'
-			# need to look at which part of the value we are in
-			values = Object.values($easings)
+		# elif name == 'transition'
+		#	# need to look at which part of the value we are in
+		#	values = Object.values($easings)
 
 		elif name == 'color'
 			values = Object.values($colors)

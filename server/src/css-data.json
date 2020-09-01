@@ -1779,6 +1779,18 @@
 					"description": "Every property that is able to undergo a transition will do so."
 				},
 				{
+					"name": "styles",
+					"description": "background-color, border-color, color, fill, stroke, opacity, box-shadow, transform"
+				},
+				{
+					"name": "sizes",
+					"description": "width, height, left, top, right, bottom, margin, padding"
+				},
+				{
+					"name": "colors",
+					"description": "background-color, border-color, color, fill, stroke"
+				},
+				{
 					"name": "none",
 					"description": "No property will transition."
 				}

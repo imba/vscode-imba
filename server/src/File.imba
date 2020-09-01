@@ -474,28 +474,36 @@ export class File < Component
 
 		# console.log 'getCompletions',imbaPath,options,tok.type,ctx.before,suggest,!!that
 		# console.log ils.config.config
+		let t = CompletionTypes
 		let opts = Object.assign({},ils.config.config.suggest,suggest)
 
 		if flags == 0
 			return []
 
-		if flags & CompletionTypes.TagName
+		if flags & t.TagName
 			return ils.entities.getTagNameCompletions(ctx.group,opts)
 
-		if flags & CompletionTypes.TagProp
+		if flags & t.TagProp
 			return ils.entities.getTagAttrCompletions(ctx.group,opts)
 		
-		if flags & CompletionTypes.TagEvent
+		if flags & t.TagEvent
 			return ils.entities.getTagEventCompletions(ctx.group,opts)
 		
-		if flags & CompletionTypes.TagEventModifier
+		if flags & t.TagEventModifier
 			return ils.entities.getTagEventModifierCompletions(ctx.group,opts)
 
-		if flags & CompletionTypes.StyleProp
+		if flags & t.StyleValue
+			items = ils.entities.getCSSValueCompletions(ctx,opts)
+
+			if flags & t.StyleProp
+				items.push(...ils.entities.getCSSPropertyCompletions(ctx.group,opts))
+
+			return items
+
+		if flags & t.StyleProp
 			return ils.entities.getCSSPropertyCompletions(ctx.group,opts)
 
-		if flags & CompletionTypes.StyleValue
-			return ils.entities.getCSSValueCompletions(ctx.group,opts)
+		
 
 
 		# find the access chain
