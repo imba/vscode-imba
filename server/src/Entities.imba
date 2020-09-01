@@ -468,7 +468,7 @@ export class Entities < Component
 			elif nr == 3
 				values = Object.values($easings)
 
-		elif name == 'border'
+		elif name.match(/^border(-(left|right|top|bottom))?$/)
 			if nr == 2
 				values = cssProperties['text-decoration-style'].values.slice(0)
 			elif nr == 3
