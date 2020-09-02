@@ -4,13 +4,11 @@ import {CompletionItemKind,SymbolKind,InsertTextFormat,CompletionItem} from 'vsc
 import {convertCompletionKind,matchFuzzyString} from './utils'
 
 import {tags,globalAttributes} from './html-data.json'
-import {snippets} from './snippets'
-import { items } from '../../test/data'
-
 import * as cssData from './css-data.json'
 
+import {snippets} from './snippets'
+
 import {aliases as cssAliases,StyleTheme} from 'imba/src/compiler/styler'
-import {modifiers as cssModifiers} from 'imba/src/compiler/theme'
 import * as theme from 'imba/src/compiler/theme'
 
 import * as svg from './StylePreviews'
@@ -275,6 +273,39 @@ export class Entities < Component
 				)
 		return items
 
+	def getCSSInfo ctx
+		let property = ctx.group.closest('styleprop')
+		let propname = property and property.propertyName
+		let grp
+		let info = null
+		let md = []
+
+		if let key = ctx.group.closest('stylepropkey')
+			# let raw = key.value.replace(/\:\s*$/,'')
+			if info = cssProperties[propname]
+				let link = info.references and info.references[0]
+				if link
+					md.push "**[{info.name}]({link.url})**"
+				else
+					md.push "**{info.name}**"
+				md.push info.description
+				# for ref in info.references
+				#	md.push "[{ref.name}]({ref.url})"
+			# now find the potential modifiers as well
+
+		if md.length
+			return {markdown: md.join('\n\n')}
+	
+		if info
+			let md = info.documentation or info.description or info.detail
+			return {
+				name: info.name
+				description: {kind: 'markdown', value: md}
+			}
+
+		return null
+
+
 	def getCSSValueInfo value, propname, ctx = {}
 
 		let item
@@ -292,10 +323,7 @@ export class Entities < Component
 		
 		if item
 			let md = item.documentation or item.description or item.detail
-			return {
-				name: item.name
-				description: {kind: 'markdown', value: md}
-			}
+			return {markdown: md}
 
 		return null
 		
@@ -536,7 +564,7 @@ export class Entities < Component
 
 	def getCSSModifierCompletions ctx, o= {}
 		let items\CompletionItem[] = []
-		for own k,v of cssModifiers
+		for own k,v of theme.modifiers
 			items.push {
 				label: k
 				insertText: k

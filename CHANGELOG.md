@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.4.8
+* Upgraded to imba 2 alpha 92
+* Improve completions for border-* properties
+* Improve completions for transition
+* Show hover info for style properties
+* Show hover info for box-shadows++
+
+
 ## 2.4.7
 * Add completions for font-size
 * Add completions for font-family

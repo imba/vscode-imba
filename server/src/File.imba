@@ -329,6 +329,12 @@ export class File < Component
 		let offset = offsetAt(pos)
 
 		let ctx = idoc.getContextAtOffset(offset)
+
+		# see if we should move one step ahead
+		if ctx.after.token == '' and !ctx.before.character.match(/\w/)
+			if ctx.after.character.match(/[\w\$]/)
+				ctx = idoc.getContextAtOffset(offset + 1)
+
 		let grp = ctx.group
 		let tok = ctx.token or {match: (do no)}
 
@@ -340,14 +346,17 @@ export class File < Component
 		# console.log 'the context we got here',ctx.mode,range
 		try
 			let info = null
+			let csspropkey = grp.closest('stylepropkey')
 			let cssprop = grp.closest('styleprop')
 
+			if csspropkey
+				info = ils.entities.getCSSInfo(ctx)
+
 			if tok.match('style.value')
-				# console.log 'style value',tok.value,cssprop.propertyName
 				info = ils.entities.getCSSValueInfo(tok.value,cssprop.propertyName,ctx)
 		
-			if info
-				return {range: range, contents: info.description}
+			if info and info.markdown
+				return {range: range, contents: {kind: 'markdown', value: info.markdown}}
 
 		
 		# log 'getting context',offset,range,ctx.token,ctx.mode
