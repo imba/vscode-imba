@@ -125,6 +125,12 @@ connection.onReferences do(event)
 connection.onRequest('semanticTokens') do(params)
 	return server.getSemanticTokens(params.uri)
 
+connection.onRequest('increment') do(params)
+	if let file = (server and server.getImbaFile(params.uri))
+		let sel = params.selections[0]
+		return Promise.resolve(file.getAdjustmentEdits(sel.start,params.by))
+	return null
+
 connection.onTypeDefinition do(event)
 	return undefined
 

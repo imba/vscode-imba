@@ -322,6 +322,11 @@ export class File < Component
 			if item and item.data.location
 				return [item.data.location]
 		return
+	
+	def getAdjustmentEdits pos, amount = 1
+		let loc =  offsetAt(pos)
+		let edit = idoc.adjustmentAtOffset(loc,amount)
+		return edit
 
 	def getQuickInfoAtPosition pos
 		return if isLegacy

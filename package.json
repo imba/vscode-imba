@@ -26,14 +26,34 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "extension.getProgramDiagnostics",
+				"command": "imba.getProgramDiagnostics",
 				"title": "Find Imba problems in Project"
 			},
 			{
-				"command": "extension.clearProgramProblems",
+				"command": "imba.clearProgramProblems",
 				"title": "Clear Imba problems in Project"
+			},
+			{
+				"command": "ximba.incrementByOne",
+				"title": "Increment by 1"
+			},
+			{
+				"command": "ximba.decrementByOne",
+				"title": "Decrement by 1"
 			}
 		],
+		"keybindings": [
+            {
+                "command": "ximba.incrementByOne",
+				"when": "editorLangId == imba",
+                "key": "ctrl+up"
+            },
+            {
+                "command": "ximba.decrementByOne",
+				"when": "editorLangId == imba",
+                "key": "ctrl+down"
+            }
+        ],
 		"configuration": {
 			"type": "object",
 			"title": "Imba",

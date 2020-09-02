@@ -1,17 +1,17 @@
 var path = require 'path'
 
-import {window, commands, languages, IndentAction, workspace,SnippetString, SemanticTokensLegend, SemanticTokens} from 'vscode'
+import {window, commands, languages, IndentAction, workspace,SnippetString, SemanticTokensLegend, SemanticTokens,Range} from 'vscode'
 import {LanguageClient, TransportKind} from 'vscode-languageclient'
 
 import {SemanticTokenTypes,SemanticTokenModifiers} from 'imba/program'
 
-# let debugChannel = window.createOutputChannel("Imba Debug")
+let debugChannel = null # window.createOutputChannel("Imba Debug")
 
 def log msg,...rest
-	yes
-	# debugChannel.appendLine(msg)
-	# if rest.length
-	# 	debugChannel.appendLine(JSON.stringify(rest))
+	if debugChannel
+		debugChannel.appendLine(msg)
+		if rest.length
+			debugChannel.appendLine(JSON.stringify(rest))
 
 # TODO(scanf): handle workspace folder and multiple client connections
 
@@ -50,6 +50,24 @@ class SemanticTokensProvider
 			return out
 		return []
 
+def adjustmentCommand amount = 1
+	return do(editor,edit)
+		# log("increment!!! {JSON.stringify(editor.selection)} {editor.document.uri}")
+		let doc = editor.document
+		let edits = await client.sendRequest('increment',{
+			by: amount
+			selections: editor.selections
+			uri: doc.uri.toString!
+		})
+
+		if edits
+			let start = doc.positionAt(edits[0])
+			let end = doc.positionAt(edits[0] + edits[1])
+			let range = new Range(start,end)
+
+			editor.edit do(edit)
+				edit.replace(range,edits[2])
+
 export def activate context
 	var serverModule = context.asAbsolutePath(path.join('server', 'index.js'))
 	var debugOptions = { execArgv: ['--nolazy', '--inspect=6005'] }
@@ -84,12 +102,15 @@ export def activate context
 	languages.registerDocumentSemanticTokensProvider({language: 'imba'},provider,semanticLegend)
 	languages.registerDocumentSemanticTokensProvider({language: 'imba1'},new SemanticTokensProvider,semanticLegend)
 
-	commands.registerCommand('extension.getProgramDiagnostics') do
+	commands.registerCommand('imba.getProgramDiagnostics') do
 		# window.showInformationMessage('Checking program...')
 		client.sendNotification('getProgramDiagnostics')
 
-	commands.registerCommand('extension.clearProgramProblems') do
+	commands.registerCommand('imba.clearProgramProblems') do
 		client.sendNotification('clearProgramProblems')
+
+	commands.registerTextEditorCommand('ximba.incrementByOne',adjustmentCommand(1))
+	commands.registerTextEditorCommand('ximba.decrementByOne',adjustmentCommand(-1))
 
 	# let disposable = client.start()
 	# context.subscriptions.push(client.start!)
@@ -109,10 +130,10 @@ export def activate context
 		client.sendNotification('onDidChangeTextEditorSelection',params)
 
 
-	workspace.onDidRenameFiles do |ev|
+	workspace.onDidRenameFiles do(ev)
 		client.sendNotification('onDidRenameFiles',ev)
 
-	client.onNotification('closeAngleBracket') do |params|
+	client.onNotification('closeAngleBracket') do(params)
 		let editor = window.activeTextEditor
 
 		try
