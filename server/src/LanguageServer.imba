@@ -17,7 +17,9 @@ const path = require 'path'
 const fs = require 'fs'
 const ts = require 'typescript'
 const glob = require 'glob'
-const imbac = require 'imba/dist/compiler.js' 
+const imbac = require 'imba/dist/compiler.js'
+import {resolveConfigFile} from 'imba/src/compiler/imbaconfig'
+# const imbac = require 'imba/dist/compiler.js'
 
 const tsServiceOptions\CompilerOptions = {
 	allowJs: true
@@ -74,7 +76,7 @@ export class LanguageServer < Component
 		self.documents = documents
 		self.connection = connection
 		self.rootPath = self.rootUri = util.uriToPath(params.rootUri)
-		self.imbaConfig = self.resolveConfigFile(self.rootPath) or {}
+		self.imbaConfig = resolveConfigFile(self.rootPath,fs:fs,path:path) or {}
 		self.entities = new Entities(self,self.imbaConfig)
 
 		self.rootFiles = o.rootFiles || []
@@ -86,7 +88,8 @@ export class LanguageServer < Component
 		self.counters = {diagnostics: 1}
 
 		# long promise for tls?
-		log('imba config',imbaConfig)
+		# log('imba config',imbaConfig)
+		log('assets',Object.keys(imbaConfig.assets or {}))
 
 		for item in imbaConfig.entries
 			if let file = getImbaFile(item.input)

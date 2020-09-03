@@ -257,7 +257,7 @@
             <key>name</key>
             <string>meta.property-name.css</string>
             <key>begin</key>
-            <string>(?=[\@\.]*[\w\-\$]+(?:[\@\.]+[\w\-\$]+)*(?:\s*\:))</string>
+            <string>(?=(?:[\@\.]+[\!\&lt;\&gt;]?)?[\w\-\$]+(?:[\@\.]+[\!\&lt;\&gt;]?[\w\-\$]+)*(?:\s*\:))</string>
             <key>beginCaptures</key>
             <dict>
               <key>1</key>
@@ -288,6 +288,12 @@
                 <string>support.type.property-name.variable.css</string>
                 <key>match</key>
                 <string>(?:--|\$)[\w\-\$]+</string>
+              </dict>
+              <dict>
+                <key>name</key>
+                <string>support.type.property-name.modifier.breakpoint.css</string>
+                <key>match</key>
+                <string>\@[\!\&lt;\&gt;]?[0-9]+</string>
               </dict>
               <dict>
                 <key>name</key>
@@ -343,6 +349,12 @@
             <string>support.constant.property-value.var.css</string>
             <key>match</key>
             <string>--[_$[:alpha:]][_$[:alnum:]]*(?:\-[_$[:alnum:]]+)*[\?\!]?</string>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>support.constant.property-value.size.css</string>
+            <key>match</key>
+            <string>(x+s|sm-|md-|lg-|sm|md|lg|x+l|hg|x+h)(?![\w-])</string>
           </dict>
           <dict>
             <key>name</key>
@@ -459,6 +471,15 @@
           </dict>
         </array>
       </dict>
+      <key>css-size-keywords</key>
+      <array>
+        <dict>
+          <key>name</key>
+          <string>support.constant.size.property-value.css</string>
+          <key>match</key>
+          <string>(x+s|sm-|md-|lg-|sm|md|lg|x+l|hg|x+h)(?![\w-])</string>
+        </dict>
+      </array>
       <key>css-color-keywords</key>
       <dict>
         <key>patterns</key>
@@ -1090,9 +1111,9 @@
         <key>name</key>
         <string>meta.selector.css</string>
         <key>begin</key>
-        <string>(?&lt;=css\s)(?![\@\.]*[\w\-\$]+(?:[\@\.]+[\w\-\$]+)*(?:\s*\:))</string>
+        <string>(?&lt;=css\s)(?!(?:[\@\.]+[\!\&lt;\&gt;]?)?[\w\-\$]+(?:[\@\.]+[\!\&lt;\&gt;]?[\w\-\$]+)*(?:\s*\:))</string>
         <key>end</key>
-        <string>(\s*(?=[\@\.]*[\w\-\$]+(?:[\@\.]+[\w\-\$]+)*(?:\s*\:))|\s*$)</string>
+        <string>(\s*(?=(?:[\@\.]+[\!\&lt;\&gt;]?)?[\w\-\$]+(?:[\@\.]+[\!\&lt;\&gt;]?[\w\-\$]+)*(?:\s*\:))|\s*$)</string>
         <key>endCaptures</key>
         <dict>
           <key>0</key>
@@ -1114,9 +1135,9 @@
         <key>name</key>
         <string>meta.selector.css</string>
         <key>begin</key>
-        <string>(^\t+)(?![\@\.]*[\w\-\$]+(?:[\@\.]+[\w\-\$]+)*(?:\s*\:))</string>
+        <string>(^\t+)(?!(?:[\@\.]+[\!\&lt;\&gt;]?)?[\w\-\$]+(?:[\@\.]+[\!\&lt;\&gt;]?[\w\-\$]+)*(?:\s*\:))</string>
         <key>end</key>
-        <string>(\s*(?=[\@\.]*[\w\-\$]+(?:[\@\.]+[\w\-\$]+)*(?:\s*\:))|\s*$)</string>
+        <string>(\s*(?=(?:[\@\.]+[\!\&lt;\&gt;]?)?[\w\-\$]+(?:[\@\.]+[\!\&lt;\&gt;]?[\w\-\$]+)*(?:\s*\:))|\s*$)</string>
         <key>endCaptures</key>
         <dict>
           <key>0</key>
@@ -1138,9 +1159,9 @@
         <key>name</key>
         <string>meta.selector.css</string>
         <key>begin</key>
-        <string>(^\t+)(?![\@\.]*[\w\-\$]+(?:[\@\.]+[\w\-\$]+)*(?:\s*\:))</string>
+        <string>(^\t+)(?!(?:[\@\.]+[\!\&lt;\&gt;]?)?[\w\-\$]+(?:[\@\.]+[\!\&lt;\&gt;]?[\w\-\$]+)*(?:\s*\:))</string>
         <key>end</key>
-        <string>(\s*(?=[\@\.]*[\w\-\$]+(?:[\@\.]+[\w\-\$]+)*(?:\s*\:)|\)|\])|\s*$)</string>
+        <string>(\s*(?=(?:[\@\.]+[\!\&lt;\&gt;]?)?[\w\-\$]+(?:[\@\.]+[\!\&lt;\&gt;]?[\w\-\$]+)*(?:\s*\:)|\)|\])|\s*$)</string>
         <key>endCaptures</key>
         <dict>
           <key>0</key>
@@ -1318,6 +1339,10 @@
           <dict>
             <key>include</key>
             <string>#css-numeric-values</string>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#css-size-keywords</string>
           </dict>
           <dict>
             <key>include</key>

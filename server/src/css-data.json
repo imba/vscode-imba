@@ -360,6 +360,14 @@
 			]
 		},
 		{
+			"name": "svg",
+			"values": [],
+			"syntax": "<asset>",
+			"references": [],
+			"description": "Set asset as inline background svg",
+			"restrictions": []
+		},
+		{
 			"name": "top",
 			"values": [
 				{

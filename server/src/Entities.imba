@@ -68,6 +68,7 @@ export class Entities < Component
 			fs: {}
 			ff: {}
 			bxs: {}
+			assets: {}
 		}
 
 		for own name,value of theme.variants.easings
@@ -97,7 +98,22 @@ export class Entities < Component
 
 		for own name,value of theme.variants['box-shadow']
 			registerBoxShadow(name,value)
+
+		registerAssets!
 		self
+	
+	def registerAssets
+		let conf = program.imbaConfig
+		if conf.assets
+			for own name,value of conf.assets
+				let item = {
+					name: name
+					type: 'asset'
+					documentation: "![]({svg.uri(value.body)}|width=120,height=120)"
+					
+				}
+				$styles.assets[name] = item
+		return self
 
 	def registerFontSize name, value
 		let item = {
@@ -430,6 +446,16 @@ export class Entities < Component
 				sortText: 'self'
 				data: {resolved: true}
 			}
+			for own name,value of $styles.assets
+				items.push {
+					label: "svg-{name}"
+					kind: CompletionItemKind.Value
+					data: {resolved: true}
+					documentation: {
+						kind: 'markdown'
+						value: value.documentation or ''
+					}
+				}
 
 		return items
 
@@ -522,7 +548,8 @@ export class Entities < Component
 		# elif name == 'transition'
 		#	# need to look at which part of the value we are in
 		#	values = Object.values($easings)
-
+		elif name == 'svg'
+			values = Object.values($styles.assets)
 		elif name == 'color'
 			values = Object.values($colors)
 		elif name == 'background' or name.match(/\-color/)
