@@ -43,17 +43,17 @@
 			}
 		],
 		"keybindings": [
-            {
-                "command": "ximba.incrementByOne",
+			{
+				"command": "ximba.incrementByOne",
 				"when": "editorLangId == imba",
-                "key": "ctrl+up"
-            },
-            {
-                "command": "ximba.decrementByOne",
+				"key": "ctrl+up"
+			},
+			{
+				"command": "ximba.decrementByOne",
 				"when": "editorLangId == imba",
-                "key": "ctrl+down"
-            }
-        ],
+				"key": "ctrl+down"
+			}
+		],
 		"configuration": {
 			"type": "object",
 			"title": "Imba",
@@ -145,7 +145,7 @@
 		]
 	},
 	"dependencies": {
-		"imba": "^2.0.0-alpha.92",
+		"imba": "^2.0.0-alpha.97",
 		"vscode-languageclient": "^6.1.1",
 		"vscode-languageserver": "^6.1.1"
 	},

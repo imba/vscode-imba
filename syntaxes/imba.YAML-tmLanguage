@@ -22,6 +22,7 @@ variables:
   internalIdentifier: '\${{identifier}}'
   symbolIdentifier: '\:{{identifier}}'
   instanceIdentifier: '\@{{identifier}}'
+  metaIdentifier: '\@\@+{{identifier}}'
   privateIdentifier: '\#{{identifier}}'
   tagTypeIdentifier: '\w+(?:\-\w+)*(?:\:\w+(?:\-\w+)*)*'
   tagAttrIdentifier: '[\w$_]+(?:\-[\w$_]+)*'
@@ -80,7 +81,7 @@ variables:
   typeParamersStart: ([_$[:alpha:]]|{{matchingBraces}}|{{matchingParenthesis}}|{{matchingBrackets}})
   typeParameters: (<\s*{{typeParamersStart}}([^=<>]|=[^<]|\<\s*{{typeParamersStart}}([^=<>]|=[^<]|\<\s*{{typeParamersStart}}([^=<>]|=[^<])*\>)*\>)*>\s*)
   # Identifier start | matching braces | matching parenthesis | matching square brackets | matching strings
-  typeArgumentsStart: (((keyof|infer|typeof|readonly)\s+)|(({{identifier}}|{{matchingBraces}}|{{matchingParenthesis}}|{{matchingBrackets}}|(\'[^\']*\')|(\"[^\"]*\")|(\`[^\`]*\`))(?=\s*([\<\>\,\.\[]|=>|&(?!&)|\|(?!\|)))))
+  typeArgumentsStart: (((keyof|infer|typeof|readonly)\s+)|(({{metaIdentifier}}|{{identifier}}|{{matchingBraces}}|{{matchingParenthesis}}|{{matchingBrackets}}|(\'[^\']*\')|(\"[^\"]*\")|(\`[^\`]*\`))(?=\s*([\<\>\,\.\[]|=>|&(?!&)|\|(?!\|)))))
   typeArgumentsInnerExpressionPart: '[^<>\(]|{{matchingParenthesis}}|(?<==)\>'
   typeArguments: '<\s*{{typeArgumentsStart}}({{typeArgumentsInnerExpressionPart}}|\<\s*{{typeArgumentsStart}}(({{typeArgumentsInnerExpressionPart}}|\<\s*{{typeArgumentsStart}}({{typeArgumentsInnerExpressionPart}})*(?<!=)\>))*(?<!=)\>)*(?<!=)>'
   functionCallLookup: \s*(?:(\?\.\s*)|(\!))?({{typeArguments}}\s*)?\(
@@ -827,7 +828,7 @@ repository:
 
   decorator:
     name: meta.decorator.imba
-    begin: '{{startOfIdentifier}}\@'
+    begin: '{{startOfIdentifier}}\@(?!\@)'
     beginCaptures:
       '0': { name: punctuation.decorator.imba }
     end: (?=\s)
@@ -1256,7 +1257,7 @@ repository:
     patterns:
     - name: meta.function.head
       # begin: '{{startOfDeclaration}}(?:(static)\s+)?(def|set|get)\b(?:\s*(\*))?(?:(?:\s+|(?<=\*))({{identifier}}))?\s*'
-      begin: '(?<=def|get|set)\s(\@?{{identifier}})((\.){{identifier}})?'
+      begin: '(?<=[^\w]def|[^\w]get|[^\w]set)\s(\@*{{identifier}})((\.){{identifier}})?'
       beginCaptures:
         '1': { name: meta.definition.function.imba entity.name.function.imba }
         '2': { name: meta.definition.function.imba entity.name.function.imba }
@@ -2784,6 +2785,8 @@ repository:
       match: '\$\d+'
     - name: variable.other.internal.imba
       match: '{{internalIdentifier}}'
+    - name: variable.other.symbol.imba
+      match: '{{metaIdentifier}}'
     - name: variable.other.readwrite.imba
       match: '{{identifier}}'
     - name: variable.other.instance.imba
@@ -2820,6 +2823,7 @@ repository:
         '1': { name: punctuation.accessor.imba }
         '2': { name: punctuation.accessor.optional.imba }
         '3': { name: variable.other.property.imba }
+    
 
     - name: keyword.other
       match: '(for own|for|if|unless|when)\b'
