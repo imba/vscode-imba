@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.4.9
+* Upgraded to imba 2 alpha 97
+
 ## 2.4.8
 * Upgraded to imba 2 alpha 92
 * Improve completions for border-* properties
