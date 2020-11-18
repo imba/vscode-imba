@@ -14,9 +14,12 @@ var imba1c = require './imba1.compiler.js'
 
 var imbaOptions = {
 	target: 'tsc'
+	platform: 'tsc'
 	imbaPath: null
 	silent: yes
-	sourceMap: {}
+	sourceMap: {
+		hidden: yes
+	}
 }
 
 export class File < Component
@@ -151,6 +154,9 @@ export class File < Component
 	def offsetAt position
 		doc.offsetAt(position)
 
+	def rangeAt start, end
+		idoc.rangeAt(start,end)
+
 	# remove compiled output etc
 	def invalidate
 		result = null
@@ -166,16 +172,17 @@ export class File < Component
 		return if isLegacy
 
 		unless result
-			var body = doc.getText!
-			var iversion = idoc.version
-			var opts = Object.assign({},imbaOptions,{
+			let body = doc.getText!
+			let iversion = idoc.version
+			let opts = Object.assign({},imbaOptions,{
 				filename: imbaPath
 				sourcePath: imbaPath
 			})
+			let res = null
 
 			try
 				var compiler = isLegacy ? imba1c : imbac
-				var res = compiler.compile(body,opts)
+				res = compiler.compile(body,opts)
 			catch e
 				let loc = e.loc && e.loc()
 				let range = loc && {
@@ -194,7 +201,17 @@ export class File < Component
 				jsSnapshot ||= ts.ScriptSnapshot.fromString(js)
 				return self
 
-			diagnostics.update(DiagnosticKind.Compiler,[])
+			diagnostics.update(DiagnosticKind.Compiler,res.diagnostics or [])
+
+			if res.errors && res.errors.length
+				# Should rather keep the last successfully compiled version?
+				js ||= "// empty"
+				jsSnapshot ||= ts.ScriptSnapshot.fromString(js)
+				result = {error: res.errors[0]}
+				return
+			# diagnostics.update(DiagnosticKind.Compiler,[])
+
+			# potential memory leak?
 			result = res
 			locs = res.locs
 
@@ -234,6 +251,13 @@ export class File < Component
 					return {start: span[2],length: span[3] - span[2], end: span[3]}
 				
 		return null
+
+	def sourceRangeAt start, end
+		for [ts0,ts1,imba0,imba1] in locs.spans
+			if start == ts0 and end == ts1
+				return idoc.rangeAt(imba0,imba1)
+		return null
+
 
 	# need a better converter
 	def originalLocFor jsloc

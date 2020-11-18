@@ -31,6 +31,7 @@ const tsServiceOptions\CompilerOptions = {
 	allowNonTsExtensions: true
 	allowUnreachableCode: true
 	allowUnusedLabels: true
+	strictNullChecks: false
 	noImplicitUseStrict: true
 	noStrictGenericChecks: true
 	allowSyntheticDefaultImports: true
@@ -314,7 +315,7 @@ export class LanguageServer < Component
 				console.log 'other diagnostics are on the way'
 				return
 
-			for entry in entries
+			for entry in entries when entry.file
 				# console.log 'diagnostic entry',entry.file.fileName
 				if let file = files[entry.file.fileName]
 					let items = map[file.tsPath] ||= []

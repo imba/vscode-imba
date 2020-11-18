@@ -18,29 +18,75 @@ const WARN = DiagnosticSeverity.Warning
 const ERR = DiagnosticSeverity.Error
 const INFO = DiagnosticSeverity.Information
 
+export const ImbaSeverityToLSP = {
+	error: ERR
+	warning: WARN
+	info: INFO
+}
+
+# https://github.com/microsoft/TypeScript/blob/master/src/compiler/diagnosticMessages.json
+
+# message: /Type '-?[\d\.]+' is not assignable to type 'string'/
+# ideally only for a
+
+const SuppressDiagnostics = [
+	
+	code: 2322	
+	text: /^\$\d+/
+	---
+	code: 2339
+	message: /on type 'EventTarget'/
+	---
+	code: 2556
+	text: /\.\.\.arguments/
+	---
+	code: 2557
+	text: /\.\.\.arguments/
+	---
+	code: 2339
+	message: /on type '\{\}'/
+]
+
 export class Diagnostic
+
+	static def fromCompiler kind, entry, doc
+		return entry
 
 	static def fromTypeScript kind, entry, doc
 		let file = entry.file
 		let msg = entry.messageText
 		msg = msg.messageText or msg or ''
-
 		let sev = [WARN,ERR,INFO,INFO][entry.category]
-
 		let rawCode = file.text.substr(entry.start,entry.length)
-		let lstart = doc.originalLocFor(entry.start)
-		let lend = doc.originalLocFor(entry.start + entry.length) or (lstart + entry.length)
-		
-		let start = doc.positionAt(lstart)
-		let end = doc.positionAt(lend)
-		
-		let range = {
-			offset: lstart
-			length: lend - lstart
-		}
+
+		for rule in SuppressDiagnostics
+			if rule.code == entry.code
+				if rule.text isa RegExp
+					if rule.text.test(rawCode)
+						console.log 'skipping rule'
+						return 
+				if rule.message isa RegExp
+					return if rule.message.test(msg)
+
+		let range = doc.sourceRangeAt(entry.start,entry.start + entry.length)
+
+		unless range
+			let lstart = doc.originalLocFor(entry.start)
+			let lend = doc.originalLocFor(entry.start + entry.length) or (lstart + entry.length)
+			
+			let start = doc.positionAt(lstart)
+			let end = doc.positionAt(lend)
+			
+			range = doc.rangeAt(lstart,lend)
+			# range = {
+			#	offset: lstart
+			#	length: lend - lstart
+			# }			
 
 		if msg.match('does not exist on type')
 			sev = WARN
+
+		console.log "ts diagnostic",entry.code,entry.start,entry.length,rawCode,range,entry.messageText
 		
 		return new Diagnostic({
 			severity: sev
@@ -71,6 +117,7 @@ export class Diagnostics
 
 		if kind & DiagnosticKind.TypeScript
 			items = items.map do Diagnostic.fromTypeScript(kind,$1,doc)
+			items = items.filter do $1
 			
 		let text = doc.doc.getText! # .slice(lstart,lstart + entry.length)
 
@@ -80,7 +127,7 @@ export class Diagnostics
 			item.data.version = doc.version
 			if item.range
 				item.data.text ||= text.substr(item.range.offset,item.range.length)
-		log 'update diagnostics',kind,items
+		# console.log 'update diagnostics',kind,items
 		all = all.concat(items)
 		sync!
 		self
@@ -108,12 +155,15 @@ export class Diagnostics
 			log('syncItem',start0,end0,start1,end1,version)
 
 			if start0 != start1 or end1 != end0
+				console.log 'syncing version',start0,end0,start1,end1,version
 				self.dirty = yes
 
-			item.range = {
-				offset: start1
-				length: end1 - start1
-			}
+			item.range = doc.rangeAt(start1,end1)
+			
+			# {
+			#	offset: start1
+			# 	length: end1 - start1
+			# }
 
 			let text = doc.doc.getText!.slice(start1,end1)
 
@@ -141,9 +191,9 @@ export class Diagnostics
 		all = all.filter do !$1.remove
 		# if all.length
 		#	console.log 'send diagnostics',all
-		for item in all
-			if let range = item.range
-				range.start = doc.positionAt(range.offset)
-				range.end = doc.positionAt(range.offset + range.length)
+		# for item in all
+		#	if let range = item.range
+		#		range.start = doc.idoc.positionAt(range.offset)
+		#		range.end = doc.idoc.positionAt(range.offset + range.length)
 		log 'sending',all
 		doc.program.connection.sendDiagnostics(uri: doc.uri, diagnostics: all)
