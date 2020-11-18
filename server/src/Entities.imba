@@ -13,7 +13,7 @@ import * as theme from 'imba/src/compiler/theme'
 
 import * as svg from './StylePreviews'
 
-var globalEvents = for item in globalAttributes when item.name.match(/^on\w+/)
+let globalEvents = for item in globalAttributes when item.name.match(/^on\w+/)
 	item
 
 for tagItem in tags
@@ -357,7 +357,7 @@ export class Entities < Component
 		return items
 
 	def getTagEventCompletions ctx, o = {}
-		var items = []
+		let items = []
 		for item in globalEvents
 			items.push({
 				label: item.name.slice(2)
@@ -369,12 +369,12 @@ export class Entities < Component
 		return items
 
 	def getTagFlagCompletions ctx, o = {}
-		var items = []
+		let items = []
 		# possibly add flags for tailwind etc
 		return items
 
 	def getTagEventModifierCompletions ctx, o = {}
-		var items = []
+		let items = []
 		for item in EVENT_MODIFIERS
 			items.push({
 				label: item.name,

@@ -249,7 +249,7 @@ export class LanguageServer < Component
 	def sourceFileExists fileName\string
 		let [m,ext] = (fileName.match(/\.(d\.ts|\w+)$/) or [])
 	
-		var alt = fileName.replace(/\.ts/, '.imba')
+		let alt = fileName.replace(/\.ts/, '.imba')
 
 		if ext == 'd.ts'
 			return false
@@ -270,7 +270,7 @@ export class LanguageServer < Component
 		return res
 
 	def readFile fileName
-		var source = self.files[fileName]
+		let source = self.files[fileName]
 		# logPath(fileName,'readFile')
 		# log 'readFile',fileName
 		if source
@@ -437,7 +437,7 @@ export class LanguageServer < Component
 			let isLink = sourceText and sourceText.indexOf('-') >= 0
 			console.log 'definitions!',sourceSpan,sourceText,isLink
 
-			var defs = for item of info.definitions
+			let defs = for item of info.definitions
 				# console.log 'get definition',item
 				let ifile = self.files[item.fileName]
 				if ifile

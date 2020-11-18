@@ -3,7 +3,7 @@ import {Stream} from "./stream"
 export class Base
 
 	state = 'paused'
-	stream = Stream.new
+	stream = new Stream
 	
 	static def ping
 		123

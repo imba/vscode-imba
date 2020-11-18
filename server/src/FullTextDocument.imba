@@ -5,10 +5,10 @@ def computeLineOffsets text, isAtLineStart, textOffset
 	if textOffset === undefined
 		textOffset = 0
 
-	var result = isAtLineStart ? [textOffset] : []
-	var i = 0
+	let result = isAtLineStart ? [textOffset] : []
+	let i = 0
 	while i < text.length
-		var ch = text.charCodeAt(i)
+		let ch = text.charCodeAt(i)
 		if ch === 13 || ch === 10
 			if ch === 13 && (i + 1 < text.length) && text.charCodeAt(i + 1) === 10
 				i++
@@ -17,14 +17,14 @@ def computeLineOffsets text, isAtLineStart, textOffset
 	return result
 
 def getWellformedRange range
-	var start = range.start
-	var end = range.end
+	let start = range.start
+	let end = range.end
 	if start.line > end.line || start.line === end.line && start.character > end.character
 		return { start: end, end: start }
 	return range
 
 def getWellformedEdit textEdit
-	var range = getWellformedRange(textEdit.range)
+	let range = getWellformedRange(textEdit.range)
 	if range !== textEdit.range
 		return { newText: textEdit.newText, range: range }
 	return textEdit
@@ -32,16 +32,16 @@ def getWellformedEdit textEdit
 def mergeSort data, compare
 	if data.length <= 1
 		return data
-	var p = (data.length / 2) | 0
-	var left = data.slice(0, p)
-	var right = data.slice(p)
+	let p = (data.length / 2) | 0
+	let left = data.slice(0, p)
+	let right = data.slice(p)
 	mergeSort(left, compare)
 	mergeSort(right, compare)
-	var leftIdx = 0
-	var rightIdx = 0
-	var i = 0
+	let leftIdx = 0
+	let rightIdx = 0
+	let i = 0
 	while leftIdx < left.length && rightIdx < right.length
-		var ret = compare(left[leftIdx], right[rightIdx])
+		let ret = compare(left[leftIdx], right[rightIdx])
 		if ret <= 0
 			// smaller_equal -> take left to preserve order
 			data[i++] = left[leftIdx++]
@@ -57,7 +57,7 @@ def mergeSort data, compare
 
 	return data
 
-var documentCache = {}
+let documentCache = {}
 
 export class FullTextDocument < Component
 
@@ -98,8 +98,8 @@ export class FullTextDocument < Component
 	
 	def getText range = null
 		if range
-			var start = offsetAt(range.start)
-			var end = offsetAt(range.end)
+			let start = offsetAt(range.start)
+			let end = offsetAt(range.end)
 			return content.substring(start, end)
 		return content
 
@@ -110,34 +110,34 @@ export class FullTextDocument < Component
 	
 	def positionAt offset
 		offset = Math.max(Math.min(offset, content.length), 0)
-		var lineOffsets = lineOffsets
-		var low = 0
-		var high = lineOffsets.length
+		let lineOffsets = lineOffsets
+		let low = 0
+		let high = lineOffsets.length
 		if high === 0
 			return { line: 0, character: offset }
 		while low < high
-			var mid = Math.floor((low + high) / 2)
+			let mid = Math.floor((low + high) / 2)
 			if lineOffsets[mid] > offset
 				high = mid
 			else
 				low = mid + 1
 		// low is the least x for which the line offset is larger than the current offset
 		// or array.length if no line offset is larger than the current offset
-		var line = low - 1
+		let line = low - 1
 		return { line: line, character: (offset - lineOffsets[line]) }
 
 	def offsetAt position
 		if position.offset
 			return position.offset
 
-		var lineOffsets = lineOffsets
+		let lineOffsets = lineOffsets
 		if position.line >= lineOffsets.length
 			return content.length
 		elif position.line < 0
 			return 0
 
-		var lineOffset = lineOffsets[position.line]
-		var nextLineOffset = (position.line + 1 < lineOffsets.length) ? lineOffsets[position.line + 1] : content.length
+		let lineOffset = lineOffsets[position.line]
+		let nextLineOffset = (position.line + 1 < lineOffsets.length) ? lineOffsets[position.line + 1] : content.length
 		return Math.max(Math.min(lineOffset + position.character, nextLineOffset), lineOffset)
 
 	def overwrite body
@@ -161,9 +161,9 @@ export class FullTextDocument < Component
 				# tokens.invalidateFromLine(0) if tokens
 				continue
 
-			var range = getWellformedRange(change.range)
-			var startOffset = offsetAt(range.start)
-			var endOffset = offsetAt(range.end)
+			let range = getWellformedRange(change.range)
+			let startOffset = offsetAt(range.start)
+			let endOffset = offsetAt(range.end)
 			change.range = range
 			change.offset = startOffset
 			change.length = endOffset - startOffset
@@ -172,13 +172,13 @@ export class FullTextDocument < Component
 			# content = content.substring(0, startOffset) + change.text + content.substring(endOffset, content.length)
 			applyEdit(change,version,changes)
 
-			var startLine = Math.max(range.start.line, 0)
-			var endLine = Math.max(range.end.line, 0)
-			var lineOffsets = _lineOffsets
+			let startLine = Math.max(range.start.line, 0)
+			let endLine = Math.max(range.end.line, 0)
+			let lineOffsets = _lineOffsets
 
 			# many items has no line offset changes at all?
 
-			var addedLineOffsets = computeLineOffsets(change.text, false, startOffset)
+			let addedLineOffsets = computeLineOffsets(change.text, false, startOffset)
 
 			if (endLine - startLine) === addedLineOffsets.length
 				for added,k in addedLineOffsets
@@ -189,7 +189,7 @@ export class FullTextDocument < Component
 				else
 					_lineOffsets = lineOffsets = lineOffsets.slice(0, startLine + 1).concat(addedLineOffsets, lineOffsets.slice(endLine + 1))
 
-			var diff = change.text.length - (endOffset - startOffset)
+			let diff = change.text.length - (endOffset - startOffset)
 			if diff !== 0
 				let k = startLine + 1 + addedLineOffsets.length
 				while k < lineOffsets.length

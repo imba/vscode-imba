@@ -9,10 +9,10 @@ import {Keywords,KeywordTypes,CompletionTypes,Sym,SymbolFlags} from 'imba/progra
 import {Diagnostics, DiagnosticKind} from './Diagnostics'
 import * as ts from 'typescript'
 
-var imbac = require 'imba/dist/compiler.js'
-var imba1c = require './imba1.compiler.js'
+const imbac = require 'imba/dist/compiler.js'
+const imba1c = require './imba1.compiler.js'
 
-var imbaOptions = {
+let imbaOptions = {
 	target: 'tsc'
 	platform: 'tsc'
 	imbaPath: null
@@ -181,7 +181,7 @@ export class File < Component
 			let res = null
 
 			try
-				var compiler = isLegacy ? imba1c : imbac
+				let compiler = isLegacy ? imba1c : imbac
 				res = compiler.compile(body,opts)
 			catch e
 				let loc = e.loc && e.loc()

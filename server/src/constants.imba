@@ -361,7 +361,7 @@ export const TAG_NAMES = {
 	svg_video:66
 	svg_view:137
 }
-var keys = Object.keys(TAG_TYPES)
+let keys = Object.keys(TAG_TYPES)
 for typ,i in keys
 	let item = TAG_TYPES[typ]
 	item.name = typ + 'Element'

@@ -11,7 +11,7 @@ class Item
 		"somewhere {} here"
 
 	def inobject
-		var obj = {
+		let obj = {
 			one: 1
 			two: 2
 		}

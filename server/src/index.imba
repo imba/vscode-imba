@@ -5,12 +5,12 @@ import {LanguageServer} from './LanguageServer'
 import {snippets} from './snippets'
 import { FullTextDocument } from './FullTextDocument'
 
-var connection = process.argv.length <= 2 ? createConnection(process.stdin, process.stdout) : createConnection()
+let connection = process.argv.length <= 2 ? createConnection(process.stdin, process.stdout) : createConnection()
 
-const documents = TextDocuments.new(FullTextDocument)
+const documents = new TextDocuments(FullTextDocument)
 documents.listen(connection)
 
-var server\LanguageServer
+let server\LanguageServer
 
 documents.onDidOpen do(event)
 	let doc = event.document

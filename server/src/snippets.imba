@@ -1,7 +1,7 @@
-var path = require 'path'
-var fs = require 'fs'
+const path = require 'path'
+const fs = require 'fs'
 
-export var snippets = [
+export const snippets = [
 	
 ]
 

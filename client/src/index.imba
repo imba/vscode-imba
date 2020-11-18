@@ -1,4 +1,4 @@
-var path = require 'path'
+let path = require 'path'
 
 import {window, commands, languages, IndentAction, workspace,SnippetString, SemanticTokensLegend, SemanticTokens,Range} from 'vscode'
 import {LanguageClient, TransportKind} from 'vscode-languageclient'
@@ -69,18 +69,18 @@ def adjustmentCommand amount = 1
 				edit.replace(range,edits[2])
 
 export def activate context
-	var serverModule = context.asAbsolutePath(path.join('server', 'index.js'))
-	var debugOptions = { execArgv: ['--nolazy', '--inspect=6005'] }
+	let serverModule = context.asAbsolutePath(path.join('server', 'index.js'))
+	let debugOptions = { execArgv: ['--nolazy', '--inspect=6005'] }
 	
 	log("activating!")
 	# console.log serverModule, debugOptions # , debugServerModule
 	
-	var serverOptions = {
+	let serverOptions = {
 		run: {module: serverModule, transport: TransportKind.ipc }
 		debug: {module: serverModule, transport: TransportKind.ipc, options: debugOptions }
 	}
 	
-	var clientOptions = {
+	let clientOptions = {
 		documentSelector: [
 			{scheme: 'file', language: 'imba'},
 			{scheme: 'file', language: 'imba1'}

@@ -1,5 +1,5 @@
-var fs = require 'fs'
-var path = require 'path'
+const fs = require 'fs'
+const path = require 'path'
 import {colors,scopes,globals,vstheme,semanticColors} from '../themes/ImbaDark.imba'
 
 def exportTmTheme

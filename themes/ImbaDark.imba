@@ -1,6 +1,6 @@
-var chroma = require('chroma-js')
+let chroma = require('chroma-js')
 
-export var colors = {
+export let colors = {
 	gray100: "#f7fafc"
 	gray200: "#edf2f7"
 	gray300: "#e2e8f0"
@@ -133,7 +133,7 @@ colors.darker = '#171a1e'
 colors.root_ = "#c5badc"
 colors.import_ = "#c5badc"
 
-export var globals = {
+export let globals = {
 	activeGuide: '#3b5567'
 	background: '#1b1e22'
 	caret: '#A7A7A7'
@@ -144,7 +144,7 @@ export var globals = {
 	stackGuide: '#202e37'
 }
 
-export var vstheme = {
+export let vstheme = {
 	"activityBar.foreground": "#d7dae0",
 	"activityBarBadge.background": "#4d78cc",
 	"activityBarBadge.foreground": "#f8fafd",
@@ -313,7 +313,7 @@ export var vstheme = {
 	"sideBarSectionHeader.border": "#21252b"
 }
 
-export var semanticColors = {
+export let semanticColors = {
 	# "*.declaration": {"fontStyle": "underline","foreground": "#e8e6cb"}
 	# "*.access": {"foreground": "#e8e6cb"}
 	"variable": {"foreground": "#e8e6cb"}
@@ -328,7 +328,7 @@ export var semanticColors = {
 	# "variable.declaration": {"fontStyle": "bold","foreground": "#00ff00"}
 }
 
-export var scopes = [
+export let scopes = [
 	# ['source.imba',colors.base]
 	# ['source.imba1',colors.base]
 	['comment',colors.gray600,'italic']

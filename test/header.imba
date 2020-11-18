@@ -1,4 +1,4 @@
-var items = [
+let items = [
 	id: 1
 	name: 'other'
 	-
