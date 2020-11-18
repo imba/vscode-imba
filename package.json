@@ -160,7 +160,8 @@
 	},
 	"scripts": {
 		"dev:bootstrap": "lerna bootstrap",
-		"dev:watch": "rollup -c --watch",
+		"watch": "rollup -c --watch",
+		"build": "rollup -c",
 		"prod:version": "lerna version",
 		"build-theme": "imba scripts/compile-theme.imba",
 		"test": "node server/test.js"
