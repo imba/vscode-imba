@@ -57,10 +57,11 @@ function buildGrammar(src) {
     let grammar = updateGrammarVariables(content, content.variables);
     // var grammar = getTsGrammar(function (grammarVariables) { return grammarVariables; });
     var text = plist.build(grammar);
-    var dest = src.replace('YAML-','')
+    var dest = src.replace('YAML-','').replace('3','')
     fs.writeFileSync(dest, text);
     console.log(`${src} built`);
 }
+
 
 let src = path.resolve(__dirname,'..','syntaxes','imba.YAML-tmLanguage')
 

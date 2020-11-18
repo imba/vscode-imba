@@ -26,20 +26,6 @@
   },
   "tokenColors": [
     {
-      "name": "source.imba",
-      "scope": "source.imba",
-      "settings": {
-        "foreground": "#e3e3e3"
-      }
-    },
-    {
-      "name": "source.imba1",
-      "scope": "source.imba1",
-      "settings": {
-        "foreground": "#e3e3e3"
-      }
-    },
-    {
       "name": "comment",
       "scope": "comment",
       "settings": {
@@ -274,7 +260,7 @@
       "name": "meta.object-literal.key",
       "scope": "meta.object-literal.key",
       "settings": {
-        "foreground": "#8ab9ff"
+        "foreground": "#f0f0f0"
       }
     },
     {
@@ -357,6 +343,41 @@
     {
       "name": "meta.type.annotation",
       "scope": "meta.type.annotation",
+      "settings": {
+        "foreground": "#718096"
+      }
+    },
+    {
+      "name": "meta.type.annotation variable",
+      "scope": "meta.type.annotation variable",
+      "settings": {
+        "foreground": "#718096"
+      }
+    },
+    {
+      "name": "meta.type.annotation variable.other.readwrite",
+      "scope": "meta.type.annotation variable.other.readwrite",
+      "settings": {
+        "foreground": "#718096"
+      }
+    },
+    {
+      "name": "meta.type.annotation variable.other.class",
+      "scope": "meta.type.annotation variable.other.class",
+      "settings": {
+        "foreground": "#718096"
+      }
+    },
+    {
+      "name": "meta.type.annotation support.class.builtin",
+      "scope": "meta.type.annotation support.class.builtin",
+      "settings": {
+        "foreground": "#718096"
+      }
+    },
+    {
+      "name": "meta.type.annotation keyword.operator",
+      "scope": "meta.type.annotation keyword.operator",
       "settings": {
         "foreground": "#718096"
       }

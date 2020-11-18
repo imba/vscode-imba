@@ -329,8 +329,8 @@ export var semanticColors = {
 }
 
 export var scopes = [
-	['source.imba',colors.base]
-	['source.imba1',colors.base]
+	# ['source.imba',colors.base]
+	# ['source.imba1',colors.base]
 	['comment',colors.gray600,'italic']
 	['keyword',colors.keyword]
 	['storage',colors.keyword]
@@ -373,7 +373,7 @@ export var scopes = [
 	['meta.definition entity.name.function',colors.prop]
 	['meta.definition.property variable.object.property',colors.prop]
 	
-	['meta.object-literal.key',colors.prop]
+	['meta.object-literal.key',colors.identifier]
 	
 	['meta.tag',darken(colors.tag,1.5)]
 	['meta.tag.attributes',darken(colors.tag,0)]
@@ -394,7 +394,13 @@ export var scopes = [
 	['string.symbol',colors.symbol]
 	
 	['meta.type.annotation',colors.type]
+	['meta.type.annotation variable',colors.type]
+	['meta.type.annotation variable.other.readwrite',colors.type]
+	['meta.type.annotation variable.other.class',colors.type]
+	['meta.type.annotation support.class.builtin',colors.type]
+	['meta.type.annotation keyword.operator',colors.type]
 	['meta.type.annotation entity.name',colors.type]
+	
 	['meta.type.annotation entity.name.type',colors.type]
 
 	['keyword.operator.type',colors.type]
@@ -402,8 +408,7 @@ export var scopes = [
 	['punctuation.accessor',colors.keyword]
 	['punctuation.definition.parameters',colors.keyword]
 	['punctuation.definition.comment',colors.gray600,'italic']
-	
-	
+
 	# css
 	['meta.selector','#e9e19b']
 	['support.type.property-name.modifier','#f394eb']

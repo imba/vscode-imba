@@ -4,7 +4,6 @@ name: Imba
 scopeName: source.imba
 fileTypes: [imba,imba2]
 uuid: ef98eb90-bf9b-11e4-bb52-0800200c9a67
-
 variables:
   startOfIdentifier: (?<![_$[:alnum:]])(?:(?<=\.\.\.)|(?<!\.))
   endOfIdentifier: (?![_$[:alnum:]])(?:(?=\.\.\.)|(?!\.))
@@ -149,14 +148,137 @@ variables:
   completeRegexp: \/(?![\/*])(?=(?:[^\/\\\[]|\\.|\[([^\]\\]|\\.)+\])+\/{{regexpTail}})
 
 patterns:
-- include: '#directives'
-- include: '#statements'
+# - include: '#directives'
+# - include: '#statements'
+- include: '#root'
 - name: comment.line.shebang.imba
   match: \A(#!).*(?=$)
   captures:
     '1': { name: punctuation.definition.comment.imba }
 
 repository:
+
+  root:
+    patterns:
+    - include: '#block'
+
+  block:
+    patterns:
+    - include: '#style-declaration'
+    - include: '#object-keys'
+    - include: '#tag-literal'
+    - include: '#keywords'
+    - include: '#comment'
+    - include: '#literal'
+    - include: '#plain-identifiers'
+    - include: '#plain-accessors'
+    - include: '#pairs'
+
+  expr:
+    patterns:
+    - include: '#style-declaration'
+    - include: '#object-keys'
+    - include: '#tag-literal'
+    - include: '#keywords'
+    - include: '#comment'
+    - include: '#literal'
+    - include: '#plain-identifiers'
+    - include: '#plain-accessors'
+    - include: '#pairs'
+
+  #literals
+  literal:
+    patterns:
+    - include: '#numeric-literal'
+    - include: '#boolean-literal'
+    - include: '#null-literal'
+    - include: '#undefined-literal'
+    - include: '#numericConstant-literal'
+    - include: '#array-literal'
+    - include: '#this-literal'
+    - include: '#global-literal'
+    - include: '#super-literal'
+    - include: '#type-literal'
+    - include: '#regex'
+    - include: '#string'
+
+  pairs:
+    patterns:
+    - include: '#curly-braces'
+    - include: '#square-braces'
+    - include: '#round-braces'
+
+  curly-braces:
+    begin: \s*(\{)
+    beginCaptures:
+      '1': { name: meta.brace.curly.imba }
+    end: \}
+    endCaptures:
+      '0': { name: meta.brace.curly.imba }
+    patterns:
+    - include: '#expr'
+    - include: '#punctuation-comma'
+
+  square-braces:
+    begin: \s*(\[)
+    beginCaptures:
+      '1': { name: meta.brace.square.imba }
+    end: \]
+    endCaptures:
+      '0': { name: meta.brace.square.imba }
+    patterns:
+    - include: '#expr'
+    - include: '#punctuation-comma'
+
+  round-braces:
+    begin: \s*(\()
+    beginCaptures:
+      '1': { name: meta.brace.round.imba }
+    end: \)
+    endCaptures:
+      '0': { name: meta.brace.round.imba }
+    patterns:
+    - include: '#expr'
+    - include: '#punctuation-comma'
+
+
+  keywords:
+    patterns:
+    - name: keyword.control.imba
+      match: '(if|elif|else|unless|switch|when|then|do|import|export|for own|for|return|try|catch|await|finally){{endOfIdentifier}}'
+
+    - name: keyword.control.imba
+      match: '(?<=export\s+)(default){{endOfIdentifier}}'
+
+    - name: keyword.control.imba
+      match: (?<=[\*\}\w\$]\s+)(from)(?=\s+[\"\'])
+
+    - name: storage.type.function.imba
+      match: '(def|get|set){{endOfIdentifier}}'
+
+    - name: storage.type.class.imba
+      match: '(tag|class|struct){{endOfIdentifier}}'
+
+    - name: storage.type.imba
+      match: '(let|const|constructor){{endOfIdentifier}}'
+
+    - name: storage.type.imba
+      match: '(prop|attr){{endOfIdentifier}}'
+    
+    - name: keyword.operator.assignment.imba
+      match: (=|\|\|=|\?\?=|\&\&=|\+=|\-=|\*=|\^=|\%=)
+
+    - name: keyword.operator.imba
+      match: (\>\=?|\<\=?)
+  
+    - name: keyword.operator.imba
+      match: '(of|delete|\!?isa|in|new){{endOfIdentifier}}'
+
+  object-keys:
+    patterns:
+    - match: '{{identifier}}\:'
+      name: meta.object-literal.key
+
   statements:
     patterns:
     - include: '#invalid-indentation'
@@ -670,10 +792,10 @@ repository:
       begin: '^(\s*)(?=\<[\w\{\[\.\#\$\@])'
       end: ^(?!(\1\s+|\s*$))
       patterns:
-      - include: '#tag-instance'
+      - include: '#tag-literal'
       - include: '#statements'
 
-  tag-instance:
+  tag-literal:
     patterns:
     - name: meta.tag.imba
       begin: '(<)(?=[\w\{\[\.\#\$\@])'
@@ -794,8 +916,7 @@ repository:
 
   expression:
     patterns:
-    - include: '#tag-instance'
-    - include: '#annotated-assignment'
+    - include: '#tag-literal'
     - include: '#expressionWithoutIdentifiers'
     - include: '#identifiers'
     - include: '#expressionPunctuations'
@@ -1699,30 +1820,6 @@ repository:
         patterns:
         - include: '#type'
 
-  annotated-assignment:
-    patterns:
-    - name: meta.assignment
-      begin: '{{startOfIdentifier}}({{internalIdentifier}})(?=\\)\s*'
-      beginCaptures:
-        '1': { name: variable.other.internal.imba }
-      end: (?=\=)
-      patterns:
-        - include: '#type-annotation'
-    - name: meta.assignment
-      begin: '{{startOfIdentifier}}({{privateIdentifier}})(?=\\)\s*'
-      beginCaptures:
-        '1': { name: variable.other.private.imba }
-      end: (?=\=)
-      patterns:
-        - include: '#type-annotation'
-    - name: meta.assignment
-      begin: '{{startOfIdentifier}}\b({{identifier}})(?=\\)\s*'
-      beginCaptures:
-        '1': { name: variable.other.readwrite.imba }
-      end: (?=\=)
-      patterns:
-        - include: '#type-annotation'
-
 
   #import and export
   import-equals-declaration:
@@ -2385,19 +2482,7 @@ repository:
     name: keyword.operator.expression.typeof.imba
     match: '{{startOfIdentifier}}typeof{{endOfIdentifier}}'
 
-  #literals
-  literal:
-    patterns:
-    - include: '#numeric-literal'
-    - include: '#boolean-literal'
-    - include: '#null-literal'
-    - include: '#undefined-literal'
-    - include: '#numericConstant-literal'
-    - include: '#array-literal'
-    - include: '#this-literal'
-    - include: '#global-literal'
-    - include: '#super-literal'
-
+  
   array-literal:
     name: meta.array.literal.imba
     begin: \s*(\[)
@@ -2406,6 +2491,16 @@ repository:
     end: \]
     endCaptures:
       '0': { name: meta.brace.square.imba }
+    patterns:
+    - include: '#expression'
+    - include: '#punctuation-comma'
+  
+  type-literal:
+    name: meta.type.annotation.imba
+    begin: (\\)
+    beginCaptures:
+      '1': { name: meta.type.annotation.open.imba }
+    end: (?=[\s\]\)\,\.\=\}]|$)
     patterns:
     - include: '#expression'
     - include: '#punctuation-comma'
@@ -2795,6 +2890,13 @@ repository:
       match: '{{privateIdentifier}}'
     - name: string.symbol.imba
       match: '{{symbolIdentifier}}'
+    
+  plain-accessors:
+    patterns:
+      - match: '(\.\.?)({{identifier}})'
+        captures:
+          '1': { name: punctuation.accessor.imba }
+          '2': { name: variable.other.property.imba }
 
   identifiers:
     patterns:
@@ -2830,7 +2932,7 @@ repository:
     - name: support.function.require
       match: 'require'
     - include: '#plain-identifiers'
-    
+    - include: '#type-literal'
 
   object-identifiers:
     patterns:
@@ -2877,22 +2979,7 @@ repository:
   #type annotation
   type-annotation:
     patterns:
-    # if type starts on same line use end of line as end
-    - name: meta.type.annotation.imba
-      begin: (\\)(?=\s*\S)
-      beginCaptures:
-        '1': { name: keyword.operator.type.annotation.imba }
-      end: (?<![:|&])((?=$|^|[,);\}\]]|//)|(?==[^>])|((?<=[\}>\]\)]|[_$[:alpha:]])\s*(?=\{)))
-      patterns:
-      - include: '#type'
-    # if type starts on next line use modified line endings as end of type annotation eg. complete empty line
-    - name: meta.type.annotation.imba
-      begin: (\\)
-      beginCaptures:
-        '1': { name: keyword.operator.type.annotation.imba }
-      end: (?<![:|&])((?=[,);\}\]]|//)|(?==[^>])|(?=^\s*$)|((?<=\S)(?=\s*$))|((?<=[\}>\]\)]|[_$[:alpha:]])\s*(?=\{)))
-      patterns:
-      - include: '#type'
+    - include: '#type-literal'
 
   parameter-type-annotation:
     patterns:
@@ -3372,7 +3459,7 @@ repository:
     endCaptures:
       '0': { name: punctuation.definition.template-expression.end.imba }
     patterns:
-      - include: '#expression'
+      - include: '#expr'
     contentName: meta.embedded.line.imba
 
   #regular expression
