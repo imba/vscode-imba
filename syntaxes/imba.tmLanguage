@@ -64,6 +64,10 @@
           </dict>
           <dict>
             <key>include</key>
+            <string>#regex</string>
+          </dict>
+          <dict>
+            <key>include</key>
             <string>#keywords</string>
           </dict>
           <dict>
@@ -107,6 +111,10 @@
           <dict>
             <key>include</key>
             <string>#tag-literal</string>
+          </dict>
+          <dict>
+            <key>include</key>
+            <string>#regex</string>
           </dict>
           <dict>
             <key>include</key>
@@ -173,10 +181,6 @@
           <dict>
             <key>include</key>
             <string>#type-literal</string>
-          </dict>
-          <dict>
-            <key>include</key>
-            <string>#regex</string>
           </dict>
           <dict>
             <key>include</key>

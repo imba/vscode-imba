@@ -89,6 +89,7 @@ repository:
     - include: '#style-declaration'
     - include: '#object-keys'
     - include: '#tag-literal'
+    - include: '#regex'
     - include: '#keywords'
     - include: '#comment'
     - include: '#literal'
@@ -102,6 +103,7 @@ repository:
     - include: '#style-declaration'
     - include: '#object-keys'
     - include: '#tag-literal'
+    - include: '#regex'
     - include: '#keywords'
     - include: '#comment'
     - include: '#literal'
@@ -121,7 +123,6 @@ repository:
     - include: '#global-literal'
     - include: '#super-literal'
     - include: '#type-literal'
-    - include: '#regex'
     - include: '#string'
 
   pairs:
