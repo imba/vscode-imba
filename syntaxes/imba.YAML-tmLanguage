@@ -48,14 +48,10 @@ variables:
   anyNumber: ({{hexNumber}})|({{binaryNumber}})|({{octalNumber}})|({{decimalNumber}})
   # any use of property name needs to ignore line breaks in regular expression because of decimal number regex (maintained for readability)
   propertyName: ({{anyNumber}}|({{identifier}})|{{nonIdentifierPropertyName}})
-  propertyNameWithPrivate: ({{anyNumber}}|({{propertyIdentifier}})|{{nonIdentifierPropertyName}})
   constantVar: ({{constantIdentifier}})(?![_$[:alnum:]])
-  constructsAndModifiers: '(?:abstract|async|class|const|struct|declare|enum|export|function|import|interface|let|module|namespace|return|type|var|def)\b'
-  endOfStatement: ';|(?:^\s*{{constructsAndModifiers}})'
-  varExprStart: '{{startOfDeclaration}}\b(var|let){{endOfIdentifier}}'
-  constExprStart: '{{startOfDeclaration}}\b(const(?!\s+enum\b)){{endOfIdentifier}}'
   nonPropertyLookBehind: '[^\._$[:alnum:]]'
   lookBehindReturn: '^return|{{nonPropertyLookBehind}}return'
+  lookBehindCase: '^case|{{nonPropertyLookBehind}}case'
   lookBehindThrow: '^throw|{{nonPropertyLookBehind}}throw'
   lookBehindYield: '^yield|{{nonPropertyLookBehind}}yield'
   lookBehindAwait: '^await|{{nonPropertyLookBehind}}await'
@@ -66,90 +62,16 @@ variables:
   lookBehindIn: '^in|{{nonPropertyLookBehind}}in'
   lookBehindOf: '^of|{{nonPropertyLookBehind}}of'
   lookBehindTypeof: '^typeof|{{nonPropertyLookBehind}}typeof'
-  lookBehindCase: '^case|{{nonPropertyLookBehind}}case'
   lookBehindImport: '^import|{{nonPropertyLookBehind}}import'
   matchingParenthesis: (\(([^\(\)]|(\([^\(\)]*\)))*\))
   matchingBraces: (\{([^\{\}]|(\{[^\{\}]*\}))*\})
   matchingBrackets: (\[([^\[\]]|(\[[^\[\]]*\]))*\])
   inlineComment: \/\*([^\*]|(\*[^\/]))*\*\/
   startOfDeclaration: '{{startOfIdentifier}}(?:(\bexport)\s+)?'
-  lookBehindOfPossiblyMultilineArrowWithDestructuring: (?<=[(=,])
-  lookBehindOfPossiblyMultilineArrow: (?<=[(=,]|=>|{{lookBehindReturn}})
-  lookBehindOfObjectMemberPossiblyMultilineArrow: (?<=:)
-  # Identifier start | matching braces | matching parenthesis | matching square brackets
-  typeParamersStart: ([_$[:alpha:]]|{{matchingBraces}}|{{matchingParenthesis}}|{{matchingBrackets}})
-  typeParameters: (<\s*{{typeParamersStart}}([^=<>]|=[^<]|\<\s*{{typeParamersStart}}([^=<>]|=[^<]|\<\s*{{typeParamersStart}}([^=<>]|=[^<])*\>)*\>)*>\s*)
-  # Identifier start | matching braces | matching parenthesis | matching square brackets | matching strings
-  typeArgumentsStart: (((keyof|infer|typeof|readonly)\s+)|(({{metaIdentifier}}|{{identifier}}|{{matchingBraces}}|{{matchingParenthesis}}|{{matchingBrackets}}|(\'[^\']*\')|(\"[^\"]*\")|(\`[^\`]*\`))(?=\s*([\<\>\,\.\[]|=>|&(?!&)|\|(?!\|)))))
-  typeArgumentsInnerExpressionPart: '[^<>\(]|{{matchingParenthesis}}|(?<==)\>'
-  typeArguments: '<\s*{{typeArgumentsStart}}({{typeArgumentsInnerExpressionPart}}|\<\s*{{typeArgumentsStart}}(({{typeArgumentsInnerExpressionPart}}|\<\s*{{typeArgumentsStart}}({{typeArgumentsInnerExpressionPart}})*(?<!=)\>))*(?<!=)\>)*(?<!=)>'
-  functionCallLookup: \s*(?:(\?\.\s*)|(\!))?({{typeArguments}}\s*)?\(
-  possiblyType: \s*([^<>\(\)\{\}]|\<([^<>]|\<[^<>]+\>)+\>|\([^\(\)]+\)|\{[^\{\}]+\})+
-  typeparamertStartOfArrow: ''
-  arrowLookup: |-
-    # sure shot arrow functions even if => is on new line
-    (
-      {{typeParameters}}?
-      [(]\s*({{inlineComment}}\s*)*
-      (
-        ([)]\s*:) |                                                                                       # ():
-        ((\.\.\.\s*)?{{identifier}}\s*:)                                                                  # [(]param: | [(]...param:
-      )
-    ) |
-    {{typeparamertStartOfArrow}}
-    # arrow function possible to detect only with => on same line
-    (
-      {{typeParameters}}?                                                                                 # typeparameters
-      \(\s*({{inlineComment}}\s*)*(([_$[:alpha:]]|{{matchingBraces}}|{{matchingBrackets}}|(\.\.\.\s*[_$[:alpha:]]))([^()]|{{matchingParenthesis}})*)?\)   # parameters
-      (\s*:{{possiblyType}})?                                                                        # return type
-      \s*=>                                                                                               # arrow operator
-    )
-  possiblyMultilineArrowExpressionBeforeEndOfLine: ((({{typeParameters}})?\()|(<))
-  possiblyMultilineObjectBindingPattern: '{{matchingBraces}}\s*((:\s*\{?$)|(({{possiblyType}}\s*)?=\s*))'
-  possiblyMultilineArrayBindingPattern: '{{matchingBrackets}}\s*((:\s*\[?$)|(({{possiblyType}}\s*)?=\s*))'
-  possiblyMultilineArrowWParamters: '((([\{\[]\s*)?$)|({{possiblyMultilineObjectBindingPattern}})|({{possiblyMultilineArrayBindingPattern}}))'
-  possiblyMultilineArrowWithoutTypeParameters: '[\(]\s*{{possiblyMultilineArrowWParamters}}'
-  possiblyMultilineArrow: ((<\s*$)|({{typeParameters}}?{{possiblyMultilineArrowWithoutTypeParameters}}))  # during lookup treat <typeparameters>?( followed by line end as arrow or < followed by new line
-  functionOrArrowLookup: |-
-    \s*(
-      ((async\s+)?(
-        (function\s*[(<*]) |
-        (function\s+) |
-        ({{identifier}}\s*=>)
-      )) |
-      ((async\s*)?(
-        {{possiblyMultilineArrow}} |
-        {{arrowLookup}}
-      ))
-    )
-  functionLikeType: |-
-    (:\s*(
-      (<) |
-      ([(]\s*(
-        ([)]) |
-        (\.\.\.) |
-        ([_$[:alnum:]]+\s*(
-          ([:,?=])|
-          ([)]\s*=>)
-        ))
-      ))
-    )) |
-    (:\s*{{startOfIdentifier}}Function{{endOfIdentifier}}) |
-    (:\s*{{possiblyMultilineArrow}})
-  functionLikeAssignmentOrType: |-
-    \s*
-    # function assignment |
-    (={{functionOrArrowLookup}}) |
-    # typeannotation is fn type: < | () | (... | (param: | (param, | (param? | (param= | (param) =>
-    {{functionLikeType}} |
-    (:\s*(=>|{{matchingParenthesis}}|(<[^<>]*>)|[^<>(),=])+={{functionOrArrowLookup}})
-  arrowFunctionEnd: (?==>|\{|(^\s*(export|function|class|interface|let|var|const|import|enum|namespace|module|type|abstract|declare)\s+))
   regexpTail: ([gimsuy]+|(?![\/\*])|(?=\/\*))(?!\s*[a-zA-Z0-9_$])
   completeRegexp: \/(?![\/*])(?=(?:[^\/\\\[]|\\.|\[([^\]\\]|\\.)+\])+\/{{regexpTail}})
 
 patterns:
-# - include: '#directives'
-# - include: '#statements'
 - include: '#root'
 - name: comment.line.shebang.imba
   match: \A(#!).*(?=$)
