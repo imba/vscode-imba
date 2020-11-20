@@ -1,7 +1,9 @@
 import {Component} from './Component'
 import {TAG_NAMES,TAG_TYPES,EVENT_MODIFIERS,keywords} from './constants'
-import {CompletionItemKind,SymbolKind,InsertTextFormat,CompletionItem} from 'vscode-languageserver-types'
+import {CompletionItemKind,SymbolKind,InsertTextFormat} from 'vscode-languageserver-types'
 import {convertCompletionKind,matchFuzzyString} from './utils'
+
+import type {CompletionItem} from 'vscode-languageserver-types'
 
 import {tags,globalAttributes} from './html-data.json'
 import * as cssData from './css-data.json'

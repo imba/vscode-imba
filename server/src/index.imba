@@ -1,8 +1,7 @@
 import {createConnection, TextDocuments, Location,TextDocumentSyncKind} from 'vscode-languageserver'
-import { TextDocument } from 'vscode-languageserver-textdocument'
 import {LanguageServer} from './LanguageServer'
-
 import {snippets} from './snippets'
+# import { TextDocument } from 'vscode-languageserver-textdocument'
 import { FullTextDocument } from './FullTextDocument'
 
 let connection = process.argv.length <= 2 ? createConnection(process.stdin, process.stdout) : createConnection()
