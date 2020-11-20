@@ -43,8 +43,11 @@ const SuppressDiagnostics = [
 	code: 2557
 	text: /\.\.\.arguments/
 	---
-	code: 2339
+	code: 2339 # should we always?
 	message: /on type '\{\}'/
+	---
+	code: 2304 # dynamic asset items
+	message: /Svg[A-Z]/
 ]
 
 export class Diagnostic
@@ -52,13 +55,13 @@ export class Diagnostic
 	static def fromCompiler kind, entry, doc
 		return entry
 
-	static def fromTypeScript kind, entry, doc
+	static def fromTypeScript kind, entry, doc, options = {}
 		let file = entry.file
 		let msg = entry.messageText
 		msg = msg.messageText or msg or ''
 		let sev = [WARN,ERR,INFO,INFO][entry.category]
 		let rawCode = file.text.substr(entry.start,entry.length)
-
+	
 		for rule in SuppressDiagnostics
 			if rule.code == entry.code
 				if rule.text isa RegExp
@@ -67,6 +70,10 @@ export class Diagnostic
 						return 
 				if rule.message isa RegExp
 					return if rule.message.test(msg)
+
+		if options.suppress
+			for rule in options.suppress
+				return if rule.test(msg)
 
 		let range = doc.sourceRangeAt(entry.start,entry.start + entry.length)
 
@@ -116,7 +123,13 @@ export class Diagnostics
 		all = all.filter do $1.data.kind != kind
 
 		if kind & DiagnosticKind.TypeScript
-			items = items.map do Diagnostic.fromTypeScript(kind,$1,doc)
+			let options = {suppress: []}
+			let customRules = doc.program.imbaConfig..diagnostics..suppressErrorRules
+			if customRules isa Array
+				for item in customRules
+					if typeof item == 'string'
+						options.suppress.push(new RegExp(item))
+			items = items.map do Diagnostic.fromTypeScript(kind,$1,doc,options)
 			items = items.filter do $1
 			
 		let text = doc.doc.getText! # .slice(lstart,lstart + entry.length)

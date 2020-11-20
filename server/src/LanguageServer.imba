@@ -36,11 +36,12 @@ const tsServiceOptions\CompilerOptions = {
 	noStrictGenericChecks: true
 	allowSyntheticDefaultImports: true
 	suppressExcessPropertyErrors: true
+	suppressImplicitAnyIndexErrors: true
 	traceResolution: true
 	resolveJsonModule: true
 	incremental: true
 	target: ts.ScriptTarget.Latest
-	lib: ['lib.es6.d.ts']
+	lib: ['lib.es6.d.ts','lib.esnext.d.ts']
 	# types: ['node']
 	types: ['node']
 	forceConsistentCasingInFileNames: true
@@ -90,7 +91,7 @@ export class LanguageServer < Component
 
 		# long promise for tls?
 		# log('imba config',imbaConfig)
-		log('assets',Object.keys(imbaConfig.assets or {}))
+		# log('assets',Object.keys(imbaConfig.assets or {}))
 
 		for item in imbaConfig.entries
 			if let file = getImbaFile(item.input)

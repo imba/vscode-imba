@@ -316,13 +316,19 @@
             <key>name</key>
             <string>keyword.control.imba</string>
             <key>match</key>
-            <string>(if|elif|else|unless|switch|when|then|do|import|export|for own|for|return|try|catch|await|finally)(?![_$[:alnum:]])(?:(?=\.\.\.)|(?!\.))</string>
+            <string>(if|elif|else|unless|switch|when|then|do|import|export|for own|for|while|until|return|try|catch|await|finally|throw|as)(?![_$[:alnum:]])(?:(?=\.\.\.)|(?!\.))</string>
           </dict>
           <dict>
             <key>name</key>
             <string>keyword.control.imba</string>
             <key>match</key>
             <string>(?&lt;=export\s+)(default)(?![_$[:alnum:]])(?:(?=\.\.\.)|(?!\.))</string>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>keyword.control.imba</string>
+            <key>match</key>
+            <string>(extend)\s+(?=class|tag)</string>
           </dict>
           <dict>
             <key>name</key>
