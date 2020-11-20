@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.5.0
+* Upgraded to imba 2 alpha 100
+    (make sure to also update your project to alpha 100)
+
 ## 2.4.9
 * Upgraded to imba 2 alpha 97
 
