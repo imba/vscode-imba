@@ -1,16 +1,16 @@
-import { TextDocument,Position } from 'vscode-languageserver'
+
+
+import type { TextDocument,Position } from 'vscode-languageserver'
+import type { LanguageServer} from './LanguageServer'
 import { Component } from './Component'
 
 export class Document < Component
 
-	prop changes // List of recent changes to document
-	prop scopes // List of all current scope-regions from latest
+	prop changes # List of recent changes to document
+	prop scopes # List of all current scope-regions from latest
 	prop doc\TextDocument
 
-	/**
-	@param {import("./LanguageServer").LanguageServer} program
-	*/
-	def constructor program, path
+	def constructor program\LanguageServer, path
 		super()
 		self.version = 0
 		self.program = program

@@ -328,6 +328,12 @@
             <key>name</key>
             <string>keyword.control.imba</string>
             <key>match</key>
+            <string>(?&lt;=import\s+)(type)(?=\s+[\w\{\$\_])</string>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>keyword.control.imba</string>
+            <key>match</key>
             <string>(extend)\s+(?=class|tag)</string>
           </dict>
           <dict>
@@ -359,6 +365,12 @@
             <string>storage.type.imba</string>
             <key>match</key>
             <string>(prop|attr)(?![_$[:alnum:]])(?:(?=\.\.\.)|(?!\.))</string>
+          </dict>
+          <dict>
+            <key>name</key>
+            <string>storage.modifier.imba</string>
+            <key>match</key>
+            <string>(static)\s+</string>
           </dict>
           <dict>
             <key>name</key>

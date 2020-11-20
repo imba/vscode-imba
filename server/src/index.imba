@@ -1,4 +1,4 @@
-import {createConnection, TextDocuments, Location,TextDocumentSyncKind, Proposed} from 'vscode-languageserver'
+import {createConnection, TextDocuments, Location,TextDocumentSyncKind} from 'vscode-languageserver'
 import { TextDocument } from 'vscode-languageserver-textdocument'
 import {LanguageServer} from './LanguageServer'
 

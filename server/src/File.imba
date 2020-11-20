@@ -1,13 +1,15 @@
 import {Component} from './Component'
-import {CompletionItemKind,DiagnosticSeverity,SymbolKind, InsertTextFormat} from 'vscode-languageserver-types'
+import {CompletionItemKind,DiagnosticSeverity,SymbolKind} from 'vscode-languageserver-types'
 import {Location} from 'vscode-languageserver'
-import {ScriptElementKind,Diagnostic} from 'typescript'
+
 import * as util from './utils'
 import { FullTextDocument } from './FullTextDocument'
 import { items } from '../../test/data'
 import {Keywords,KeywordTypes,CompletionTypes,Sym,SymbolFlags} from 'imba/program'
 import {Diagnostics, DiagnosticKind} from './Diagnostics'
 import * as ts from 'typescript'
+import type {Diagnostic} from 'typescript'
+import type {LanguageServer} from './LanguageServer'
 
 const imbac = require 'imba/dist/compiler.js'
 const imba1c = require './imba1.compiler.js'
@@ -24,11 +26,9 @@ let imbaOptions = {
 
 export class File < Component
 	prop symbols = []
+	removed = no
 
-	/**
-	@param {import("./LanguageServer").LanguageServer} program
-	*/
-	def constructor program, path, origPath = null
+	def constructor program\LanguageServer, path, origPath = null
 		super
 		self.program = program
 		imbaPath = path.replace(/\.(imba|jsx?|tsx?)$/,'.imba')

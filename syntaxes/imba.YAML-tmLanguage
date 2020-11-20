@@ -172,9 +172,13 @@ repository:
 
     - name: keyword.control.imba
       match: '(?<=export\s+)(default){{endOfIdentifier}}'
+    
+    - name: keyword.control.imba
+      match: '(?<=import\s+)(type)(?=\s+[\w\{\$\_])'
 
     - name: keyword.control.imba
       match: '(extend)\s+(?=class|tag)'
+      
 
     - name: keyword.control.imba
       match: (?<=[\*\}\w\$]\s+)(from)(?=\s+[\"\'])
@@ -190,6 +194,9 @@ repository:
 
     - name: storage.type.imba
       match: '(prop|attr){{endOfIdentifier}}'
+
+    - name: storage.modifier.imba
+      match: '(static)\s+'
     
     - name: keyword.operator.assignment.imba
       match: (=|\|\|=|\?\?=|\&\&=|\+=|\-=|\*=|\^=|\%=)
