@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.5.1
+* Upgraded to imba 2 alpha 113
+* Fixed several highlighting bugs
+* Add css style block folding commands (shift+alt+m to toggle)
+
 ## 2.5.0
 * Upgraded to imba 2 alpha 100
     (make sure to also update your project to alpha 100)
