@@ -6,7 +6,7 @@ fileTypes: [imba,imba2]
 uuid: ef98eb90-bf9b-11e4-bb52-0800200c9a67
 variables:
   startOfIdentifier: (?<![_$[:alnum:]])(?:(?<=\.\.\.)|(?<!\.))
-  endOfIdentifier: (?![_$[:alnum:]])(?:(?=\.\.\.)|(?!\.))
+  endOfIdentifier: (?![_\-$[:alnum:]])(?:(?=\.\.\.)|(?!\.))  
   propertyAccess: (?:(\.)|(\.\.(?!\s*[[:digit:]]|\s+)))
   propertyAccessPreIdentifier: \??\.\s*
   identifier: '[_$[:alpha:]][_$[:alnum:]]*(?:\-[_$[:alnum:]]+)*[\?\!]?'
@@ -17,7 +17,7 @@ variables:
   cssModifier: '\@{{cssPropertyName}}'
   cssUpModifier: '\.\.{{cssPropertyName}}'
   cssIsModifier: '\.{{cssPropertyName}}'
-  pascalIdentifier: '[[:upper:]][_$[:alnum:]]*(?:\-[_$[:alnum:]]+)*'
+  pascalIdentifier: '[[:upper:]][_$[:alnum:]]*(?:\-[_$[:alnum:]]+)*[\!]?'
   internalIdentifier: '\${{identifier}}'
   symbolIdentifier: '\:{{identifier}}'
   instanceIdentifier: '\@{{identifier}}'
@@ -197,6 +197,8 @@ repository:
 
     - name: storage.modifier.imba
       match: '(static)\s+'
+
+    - include: '#ops'
     
     - name: keyword.operator.assignment.imba
       match: (=|\|\|=|\?\?=|\&\&=|\+=|\-=|\*=|\^=|\%=)
@@ -206,8 +208,6 @@ repository:
   
     - name: keyword.operator.imba
       match: '(of|delete|\!?isa|typeof|in|new){{endOfIdentifier}}'
-
-    - include: '#ops'
 
   ops:
     patterns:
@@ -220,7 +220,7 @@ repository:
     - name: keyword.operator.bitwise.shift.imba
       match: <<|>>>|>>
     - name: keyword.operator.comparison.imba
-      match: ===|!==|==|!=
+      match: ===|!==|==|!=|~=
     - name: keyword.operator.relational.imba
       match: <=|>=|<>|<|>
     - match: (\!)\s*(/)(?![/*])
@@ -808,7 +808,7 @@ repository:
     end: (?=>|\s)
     contentName: meta.tag.attribute-value.imba
     patterns:
-      - include: '#expression'
+    - include: '#expr'
 
 
   expression:
@@ -820,7 +820,7 @@ repository:
       endCaptures:
         '0': { name: meta.brace.round.imba }
       patterns:
-      - include: '#expression'
+      - include: '#expr'
     - include: '#tag-literal'
     - include: '#expressionWithoutIdentifiers'
     - include: '#identifiers'
