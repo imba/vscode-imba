@@ -57,16 +57,16 @@
 		"keybindings": [
 			{
 				"command": "ximba.incrementByOne",
-				"when": "editorLangId == imba",
+				"when": "editorTextFocus && editorLangId == imba",
 				"key": "ctrl+up"
 			},{
 				"command": "imba.toggleStyles",
-				"when": "editorLangId == imba",
+				"when": "editorTextFocus && foldingEnabled && editorLangId == imba",
 				"key": "shift+alt+m"
 			},
 			{
 				"command": "ximba.decrementByOne",
-				"when": "editorLangId == imba",
+				"when": "editorTextFocus && editorLangId == imba",
 				"key": "ctrl+down"
 			}
 		],

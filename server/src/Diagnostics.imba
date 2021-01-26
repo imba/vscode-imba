@@ -47,6 +47,9 @@ const SuppressDiagnostics = [
 	---
 	code: 2304 # dynamic asset items
 	message: /Svg[A-Z]/
+	---
+	code: 2538 # dynamic asset items
+	message: /unique symbol' cannot be used as an index type/
 ]
 
 export class Diagnostic
@@ -60,7 +63,7 @@ export class Diagnostic
 		msg = msg.messageText or msg or ''
 		let sev = [WARN,ERR,INFO,INFO][entry.category]
 		let rawCode = file.text.substr(entry.start,entry.length)
-	
+
 		for rule in SuppressDiagnostics
 			if rule.code == entry.code
 				if rule.text isa RegExp
@@ -84,10 +87,7 @@ export class Diagnostic
 			let end = doc.positionAt(lend)
 			
 			range = doc.rangeAt(lstart,lend)
-			# range = {
-			#	offset: lstart
-			#	length: lend - lstart
-			# }			
+
 
 		if msg.match('does not exist on type')
 			sev = WARN

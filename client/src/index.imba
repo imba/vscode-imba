@@ -27,6 +27,9 @@ languages.setLanguageConfiguration('imba',{
 		beforeText: /\s*(?:do)\s*(\|.*\|\s*)?$/,
 		action: { indentAction: IndentAction.Indent }
 	},{
+		beforeText: /^\s*(css)\b.*$/,
+		action: { indentAction: IndentAction.Indent }
+	},{
 		beforeText: /\s*(?:do)\(.*\)\s*$/,
 		action: { indentAction: IndentAction.Indent }
 	}]
@@ -76,8 +79,22 @@ def getStyleBlockLines doc
 	let lines = []
 	while i < count
 		let line = doc.lineAt(i)
-		if line.text.match(/^\t*(global )?css\b/)
-			lines.push(i)
+		let m = line.text.match(/^(\t*)(global )?css\b/)
+		if m
+			let k = i
+			let res = undefined
+			while res === undefined and k < count
+				let next = doc.lineAt(++k)
+				let m2 = next.text.match(/^([\t\s]*)(?=[^\#]|\#\w)/)
+				if m2 
+					let diff = m2[1].length - m[1].length
+					if diff > 0
+						lines.push(i)
+						res = yes
+					else
+						res = no
+				# need to figure out whether the css part stretches multiple lines
+				lines.push(i) if res == yes
 		i++
 	log 'getStyleBlockLines',lines
 	return lines
