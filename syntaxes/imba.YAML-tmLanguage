@@ -709,16 +709,15 @@ repository:
     
   tag-content:
     patterns:
-      - include: '#tag-expr-name'
-      - include: '#tag-interpolated-content'
-      - include: '#tag-interpolated-parens'
-      - include: '#tag-interpolated-brackets'
-      - include: '#tag-event-handler'
-      - include: '#tag-classname'
-      - include: '#tag-mixin'
-      - include: '#tag-ref'
-      - include: '#tag-attr-value'
-      - include: '#tag-attr-name'
+    - include: '#tag-expr-name'
+    - include: '#tag-interpolated-content'
+    - include: '#tag-interpolated-parens'
+    - include: '#tag-interpolated-brackets'
+    - include: '#tag-event-handler'
+    - include: '#tag-classname'
+    - include: '#tag-ref'
+    - include: '#tag-attr-value'
+    - include: '#tag-attr-name'
 
   tag-expr-name:
     begin: '(?<=<)(?=[\w\{])'
@@ -771,30 +770,28 @@ repository:
     end: (?=[\.\[\>\s\(\=])
     contentName: entity.other.attribute-name.class.css
   
-  tag-mixin:
-    match: (\%{{identifier}})
-    name: entity.other.attribute-name.mixin.css
     
   tag-ref:
     match: (\${{identifier}})
     name: entity.other.attribute-name.reference.css
 
   tag-event-handler:
-    begin: (?=\:)
+    begin: (\@{{tagAttrIdentifier}})
     beginCaptures:
-      '0': { name: punctuation.section.tag }
+      '0': { name: entity.other.event-name.imba }
+
     patterns:
     - include: '#tag-interpolated-content'
     - include: '#tag-interpolated-parens'
-    - name: entity.other.tag.event-modifier
+    - name: entity.other.event-modifier.imba
       begin: \.
       beginCaptures:
         '0': { name: punctuation.section.tag }
       patterns:
       - include: '#tag-interpolated-parens'
       - include: '#tag-interpolated-content'
-      end: (?=[\.\[\>\s]|$)
-    end: (?=[\[\>\s])
+      end: (?=[\.\[\>\s\=]|$)
+    end: (?=[\[\>\s\=])
     contentName: entity.other.tag.event
 
   tag-attr-name:
@@ -813,8 +810,17 @@ repository:
     patterns:
       - include: '#expression'
 
+
   expression:
     patterns:
+    - begin: '\('
+      beginCaptures:
+        '0': { name: meta.brace.round.imba }
+      end: '\)'
+      endCaptures:
+        '0': { name: meta.brace.round.imba }
+      patterns:
+      - include: '#expression'
     - include: '#tag-literal'
     - include: '#expressionWithoutIdentifiers'
     - include: '#identifiers'

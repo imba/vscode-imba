@@ -51,11 +51,16 @@ def exportVSCodeTheme
 	
 		if typeof style == 'string'
 			style = {foreground: style}
+
 		item.settings = style
+
+		if scope[2]
+			item.settings.fontStyle = scope[2]
+
 		rules.push(item)
 	
 	let text = JSON.stringify(scheme,null,2)
-	let dest = path.join(__dirname,'..','themes','ImbaDark.json')
+	let dest = path.resolve(__realname,'..','..','themes','ImbaDark.json')
 	fs.writeFileSync(dest,text)
 
 # exportTmTheme()

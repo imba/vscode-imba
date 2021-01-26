@@ -378,8 +378,9 @@ export let scopes = [
 	['meta.tag',darken(colors.tag,1.5)]
 	['meta.tag.attributes',darken(colors.tag,0)]
 	['entity.name.tag',colors.tag]
+	['entity.other.event-name.imba',colors.tag,'italic']
 	# ['entity.other.tag.class-name',colors.yellow200]
-	# ['entity.other.tag.event',colors.event-modifier]
+	# 
 	# ['entity.other.tag.event-modifier',colors.event-modifier]
 	
 	['support.class',colors.pascal]

@@ -1701,10 +1701,6 @@
           </dict>
           <dict>
             <key>include</key>
-            <string>#tag-mixin</string>
-          </dict>
-          <dict>
-            <key>include</key>
             <string>#tag-ref</string>
           </dict>
           <dict>
@@ -1855,13 +1851,6 @@
         <key>contentName</key>
         <string>entity.other.attribute-name.class.css</string>
       </dict>
-      <key>tag-mixin</key>
-      <dict>
-        <key>match</key>
-        <string>(\%[_$[:alpha:]][_$[:alnum:]]*(?:\-[_$[:alnum:]]+)*[\?\!]?)</string>
-        <key>name</key>
-        <string>entity.other.attribute-name.mixin.css</string>
-      </dict>
       <key>tag-ref</key>
       <dict>
         <key>match</key>
@@ -1872,13 +1861,13 @@
       <key>tag-event-handler</key>
       <dict>
         <key>begin</key>
-        <string>(?=\:)</string>
+        <string>(\@[\w$_]+(?:\-[\w$_]+)*)</string>
         <key>beginCaptures</key>
         <dict>
           <key>0</key>
           <dict>
             <key>name</key>
-            <string>punctuation.section.tag</string>
+            <string>entity.other.event-name.imba</string>
           </dict>
         </dict>
         <key>patterns</key>
@@ -1893,7 +1882,7 @@
           </dict>
           <dict>
             <key>name</key>
-            <string>entity.other.tag.event-modifier</string>
+            <string>entity.other.event-modifier.imba</string>
             <key>begin</key>
             <string>\.</string>
             <key>beginCaptures</key>
@@ -1916,11 +1905,11 @@
               </dict>
             </array>
             <key>end</key>
-            <string>(?=[\.\[\&gt;\s]|$)</string>
+            <string>(?=[\.\[\&gt;\s\=]|$)</string>
           </dict>
         </array>
         <key>end</key>
-        <string>(?=[\[\&gt;\s])</string>
+        <string>(?=[\[\&gt;\s\=])</string>
         <key>contentName</key>
         <string>entity.other.tag.event</string>
       </dict>
@@ -1969,6 +1958,35 @@
       <dict>
         <key>patterns</key>
         <array>
+          <dict>
+            <key>begin</key>
+            <string>\(</string>
+            <key>beginCaptures</key>
+            <dict>
+              <key>0</key>
+              <dict>
+                <key>name</key>
+                <string>meta.brace.round.imba</string>
+              </dict>
+            </dict>
+            <key>end</key>
+            <string>\)</string>
+            <key>endCaptures</key>
+            <dict>
+              <key>0</key>
+              <dict>
+                <key>name</key>
+                <string>meta.brace.round.imba</string>
+              </dict>
+            </dict>
+            <key>patterns</key>
+            <array>
+              <dict>
+                <key>include</key>
+                <string>#expression</string>
+              </dict>
+            </array>
+          </dict>
           <dict>
             <key>include</key>
             <string>#tag-literal</string>

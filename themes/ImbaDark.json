@@ -29,7 +29,8 @@
       "name": "comment",
       "scope": "comment",
       "settings": {
-        "foreground": "#718096"
+        "foreground": "#718096",
+        "fontStyle": "italic"
       }
     },
     {
@@ -285,6 +286,14 @@
       }
     },
     {
+      "name": "entity.other.event-name.imba",
+      "scope": "entity.other.event-name.imba",
+      "settings": {
+        "foreground": "#e9e19b",
+        "fontStyle": "italic"
+      }
+    },
+    {
       "name": "support.class",
       "scope": "support.class",
       "settings": {
@@ -428,7 +437,8 @@
       "name": "punctuation.definition.comment",
       "scope": "punctuation.definition.comment",
       "settings": {
-        "foreground": "#718096"
+        "foreground": "#718096",
+        "fontStyle": "italic"
       }
     },
     {

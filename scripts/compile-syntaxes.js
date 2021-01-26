@@ -53,6 +53,7 @@ function updateGrammarVariables(grammar, variables) {
     return grammar;
 }
 function buildGrammar(src) {
+    console.log(`${src} building`);
     let content = readYaml(src);
     let grammar = updateGrammarVariables(content, content.variables);
     // var grammar = getTsGrammar(function (grammarVariables) { return grammarVariables; });
