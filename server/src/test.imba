@@ -1,14 +1,17 @@
-var content = `<div.one.two title=10 :click.test>`
+let content = `<div.one.two title=10 :click.test>`
+# import {inspect} from 'util'
 import {File} from './File'
 import {LanguageServer} from './LanguageServer'
 import * as util from './utils'
 import { FullTextDocument } from './FullTextDocument'
 import * as ts from 'typescript'
+import * as fs from 'fs'
+import * as svg from './StylePreviews'
 
-var imbac = require 'imba/dist/compiler.js'
+let imbac = require 'imba/dist/compiler.js'
 
 
-var conn = {
+let conn = {
 	sendDiagnostics: do yes
 }
 
@@ -26,9 +29,26 @@ def time blk
 	console.log 'time',Date.now! - t
 	return res
 
-def lprops props
+def inspect item
+	console.log item.escapedName, item.flags
+	console.dir item, depth: 1
+	if item.declarations
+		console.dir item.declarations, depth: 1
+	try
+		console.dir item.valueDeclaration.name, depth: 1
+		console.dir item.valueDeclaration.members, depth: 1
+		console.dir item.valueDeclaration.locals, depth: 1
+	
+	# if item.flowNode
+	#	console.dir item.flowNode, depth: 1
+
+def lprops props, key
 	console.log "---- properties"
 	for item in props
+		if key
+			console.log item[key]
+			continue
+
 		if item.label
 			console.log item.label
 			continue
@@ -38,9 +58,24 @@ def lprops props
 		console.log item.escapedName,pr
 	console.log "\n"
 
+console.log svg.easing('ease')
+console.log svg.easing('circ-out')
+console.log svg.uri(svg.easing('ease'))
+
 if true
-	var rootFile = '/Users/sindre/repos/vscode-imba/test/main.js'
-	var ls = new LanguageServer(conn,null,{
+	let content = fs.readFileSync('/Users/sindre/repos/vscode-imba/test/one.imba1','utf8')
+	let symbols = util.fastExtractSymbols(content)
+	let logsym = do(sym)
+		console.log sym.kind,sym.name,sym.span
+		for item in sym.children
+			logsym(item)
+
+	logsym(symbols)
+	# console.log symbols
+
+if false
+	let rootFile = '/Users/sindre/repos/vscode-imba/test/main.ts'
+	let ls = new LanguageServer(conn,null,{
 		rootUri: 'file:///Users/sindre/repos/vscode-imba/test'
 		rootFiles: []
 		debug: true
@@ -55,7 +90,19 @@ if true
 	let file = prog.getSourceFile(rootFile)
 	# log file
 
-	let tstokat = do(iloc)
+	let iloc = do(iloc)
+		if typeof iloc == 'string'
+			let index = ifile.doc.getText!.lastIndexOf(iloc)
+			if index >= 0
+				iloc = index + iloc.length
+		return iloc
+
+	let tstokat = do(iloc,offset = 0)
+		if typeof iloc == 'string'
+			let index = ifile.doc.getText!.lastIndexOf(iloc)
+			if index >= 0
+				iloc = index + iloc.length + offset
+
 		ifile.emitFile!
 		ts.findPrecedingToken(ifile.generatedLocFor(iloc),file)
 	
@@ -90,6 +137,7 @@ if true
 		let type = checker.getTypeOfSymbolAtLocation(sym,orig)
 		
 		# log type
+		log "inspected loc {iloc}"
 		lprops type.getApparentProperties!
 
 		if access
@@ -103,6 +151,29 @@ if true
 			lprops typ.getProperties!
 
 	if true
+		log file
+		# inspect file.locals.get('MyArray')
+		# inspect file.locals.get('obj')
+		# inspect file.locals.get('obj2')
+		# inspect file.locals.get('arr')
+		# inspect tstokat('arr =',-2)
+		# inspect tstokat('arr3')
+		# inspect file.locals.get('arr3')
+		inspect file.locals.get('func1')
+
+		let t1 = tstokat('one,',-1)
+		let t2 = tstokat('one +',-2) 
+		let t3 = tstokat('three =',-2) 
+		let s1 = checker.getSymbolAtLocation(t1)
+		let s2 = checker.getSymbolAtLocation(t2)
+		inspect t1
+		inspect t2
+		inspect t3
+		log s1
+		log s2
+		log s1 == s2
+
+	if false
 		# insploc(696)
 		# insploc(726) # arr (List)
 		# insploc(643) # arr (List)
@@ -113,8 +184,27 @@ if true
 		# log tstokat(92)
 		# log tstokat(105)
 		ls.emitDiagnostics!
-		log insploc(176)
-		log file
+
+		log insploc('HELLO')
+		log insploc('LOCAL')
+		
+		
+		let files = ls.getProgram!.getSourceFiles!
+		for item in files
+			if item.fileName.match(/check/)
+				console.dir item, depth: 0
+		
+		for item in files
+			console.log item.fileName
+
+		log insploc('CompletionTypes')
+		log insploc('console')
+
+
+		lprops ifile.getCompletionsAtOffset(iloc('console.'))
+		lprops ifile.getCompletionsAtOffset(iloc('CompletionTypes.'))
+		# lprops ls.getProgram!.getSourceFiles!, 'fileName'
+		# log file
 		# log insploc(105)
 		# lprops ifile.getCompletionsAtOffset(92)
 
@@ -122,8 +212,8 @@ if true
 		# lprops time do type.getProperties!
 		# lprops access(type,'console').getProperties!
 		# log file
-		let glob = checker.resolveName('globalThis',undefined,ts.SymbolFlags.Value,false)
-		let type = checker.getTypeOfSymbolAtLocation(glob,file)
+		# let glob = checker.resolveName('globalThis',undefined,ts.SymbolFlags.Value,false)
+		# let type = checker.getTypeOfSymbolAtLocation(glob,file)
 		# lprops type.getApparentProperties!
 		# log type.getProperty('"assert"')
 		# lprops insploc(909,['call'])
@@ -151,7 +241,7 @@ if true
 		let file = ls.getImbaFile('completion.imba')
 		let compiled-offset = file.generatedLocFor(54)
 		console.log "hello",compiled-offset
-		let res = ls.tls.getCompletionsAtPosition(file.jsPath,compiled-offset,{
+		let res = ls.tls.getCompletionsAtPosition(file.tsPath,compiled-offset,{
 			includeCompletionsWithInsertText: true
 			includeCompletionsForModuleExports: true
 			disableSuggestions: true
@@ -165,7 +255,7 @@ if true
 		# console.log res.entries
 		
 
-let tmpdoc = FullTextDocument.new('','imba',0,'')
+let tmpdoc = new FullTextDocument('','imba',0,'')
 
 def testparse code
 	return

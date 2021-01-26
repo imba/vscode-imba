@@ -1,30 +1,75 @@
+# import {items} from './data'
+import {CompletionTypes} from 'imba/program'
+import {HELLO} from '../node_modules/check/test-ts'
+import {HELLO as H2} from '../node_modules/check/test-ts'
+import {HELLO as LOCAL} from '../test2/check/test'
 
-import {Util} from './util'
-import './setup'
-import './component.js'
-import {items} from './data'
+HELLO
+LOCAL
+console.log
+CompletionTypes.test
 
-Util.bind()
-Util.ping()
+def func1 one,two
+	let three = one + two
+	yes
 
-let u = Util.new()
-u.state = 'test'
-u.add(1,2)
+class MyArray < Array
+ 
+	static def setup
+		yes
 
-tag app-root
-	@hello
-	def setup
+	def again
+		
+		123
+
+	static def create
+
 		self
 
-	def render
-		<self title='roots'>
-			for item in items
-				<div title=item.name>
-			<app-todo title='one' kind=1> "Hello"
-			<app-todo item='two' kind=2> "Hello"
-			<app-todo title='three'> "Hello"
-			<app-link title='three'> "Hello"
-			<app-item title='three'> "Hello"
+	def constructor
+		super
+		storage = "hello"
 
-# let ext = Extern.new
-# ext.hello()
+class List < MyArray
+	static def setup2
+		yes
+
+let ext = []
+ext
+true
+false
+let arr = List
+arr
+true
+
+let arr3
+
+let obj = {
+	one: 10
+	two: 20
+}
+
+const obj2 = {
+	one: 10
+	two: 20
+}
+class Basic
+	def hello
+		true
+
+class Something
+	def constructor
+		$items = new List
+
+	get items
+		$items
+
+	def setup hello = "test"
+		hello
+		$items.length
+		globalThis.setTimeout.test
+		globalThis
+
+let instance = new Something
+instance.items
+true
