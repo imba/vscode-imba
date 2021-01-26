@@ -59,7 +59,8 @@
 				"command": "ximba.incrementByOne",
 				"when": "editorTextFocus && editorLangId == imba",
 				"key": "ctrl+up"
-			},{
+			},
+			{
 				"command": "imba.toggleStyles",
 				"when": "editorTextFocus && foldingEnabled && editorLangId == imba",
 				"key": "shift+alt+m"
@@ -161,7 +162,7 @@
 		]
 	},
 	"dependencies": {
-		"imba": "^2.0.0-alpha.100",
+		"imba": "^2.0.0-alpha.113",
 		"vscode-languageclient": "^6.1.1",
 		"vscode-languageserver": "^6.1.1"
 	},
