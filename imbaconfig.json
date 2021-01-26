@@ -1,0 +1,9 @@
+{
+	"node": {
+		"entryPoints": ["./client/src/index.imba","./server/src/index.imba"],
+		"platform": "node",
+		"outdir": ".",
+		"format": "cjs",
+		"external": ["vscode","vscode-languageserver-types","vscode-uri","typescript"]
+	}
+}

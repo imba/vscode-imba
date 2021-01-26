@@ -489,7 +489,7 @@ export def fastExtractContext code, loc, tokens, compiled = ''
 
 			match = "class {name}"
 			
-		elif let m = line.match(/^(static )?(def|get|set|prop) ([\w\-\$]+)/)
+		elif m = line.match(/^(static )?(def|get|set|prop) ([\w\-\$]+)/)
 			tokenizeFromLoc = -1
 			scope = {type: m[2], name: m[3],body: yes,parent: res.scope,static: !!m[1]}
 			scope[m[2]] = m[3]
@@ -505,17 +505,17 @@ export def fastExtractContext code, loc, tokens, compiled = ''
 
 			match = m[1] + match if m[1]
 
-		elif let m = line.match(/^(if|unless|while|for|try$) /)
+		elif m = line.match(/^(if|unless|while|for|try$) /)
 			if tokenizeFromLoc == -1
 				tokenizeFromLoc = indent.loc
 
-		elif let m = line.match(/^\<([\w\-]+)/)
+		elif m = line.match(/^\<([\w\-]+)/)
 			# find something
 			res.tagtree.push(m[1])
 			res.scope.html = yes
 
 		if match and scope
-			if let m = locationInString(compiled,match,findFromIndex)
+			if m = locationInString(compiled,match,findFromIndex)
 				findFromIndex = m.offset
 				scope.tloc = m
 

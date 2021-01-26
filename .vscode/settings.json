@@ -8,4 +8,7 @@
         "editor.tabSize": 4,
         "editor.autoIndent": "advanced"
       },
+      "files.associations": {
+        "legacy.imba": "imba1"
+    }
 }

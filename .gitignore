@@ -3,6 +3,8 @@ npm-debug.log
 node_modules/
 server/index.js
 server/test.js
+server/dist
 client/index.js
+client/dist
 tmp/
 *.vsix

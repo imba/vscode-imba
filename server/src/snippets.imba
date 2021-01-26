@@ -5,9 +5,9 @@ export const snippets = [
 	
 ]
 
-let dir = path.resolve(__dirname,'snippets')
+let dir = path.resolve(__realname,'..','..','snippets')
+
 for file in fs.readdirSync(dir)
-	
 	let src = path.resolve(dir,file)
 	let body = fs.readFileSync(src,'utf8')
 	let parts = file.replace('.imba','').split('.')

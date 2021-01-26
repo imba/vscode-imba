@@ -18,7 +18,7 @@ const path = require 'path'
 const fs = require 'fs'
 const ts = require 'typescript'
 const glob = require 'glob'
-const imbac = require 'imba/dist/compiler.js'
+const imbac = require 'imba/compiler'
 import {resolveConfigFile} from 'imba/src/compiler/imbaconfig'
 # const imbac = require 'imba/dist/compiler.js'
 

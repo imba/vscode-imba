@@ -33,6 +33,8 @@ languages.setLanguageConfiguration('imba',{
 })
 
 
+const foldingToggles = {}
+
 
 class SemanticTokensProvider
 	def provideDocumentSemanticTokens(doc, token)
@@ -68,8 +70,21 @@ def adjustmentCommand amount = 1
 			editor.edit do(edit)
 				edit.replace(range,edits[2])
 
+def getStyleBlockLines doc
+	let count = doc.lineCount
+	let i = 0
+	let lines = []
+	while i < count
+		let line = doc.lineAt(i)
+		if line.text.match(/^\t*(global )?css\b/)
+			lines.push(i)
+		i++
+	log 'getStyleBlockLines',lines
+	return lines
+
+		
 export def activate context
-	let serverModule = context.asAbsolutePath(path.join('server', 'index.js'))
+	let serverModule = context.asAbsolutePath(path.join('server','dist','src','index.loader.js'))
 	let debugOptions = { execArgv: ['--nolazy', '--inspect=6005'] }
 	
 	log("activating!")
@@ -111,6 +126,27 @@ export def activate context
 
 	commands.registerTextEditorCommand('ximba.incrementByOne',adjustmentCommand(1))
 	commands.registerTextEditorCommand('ximba.decrementByOne',adjustmentCommand(-1))
+
+	commands.registerTextEditorCommand('imba.foldStyles') do(editor,edit)
+		let key = editor.document.uri.toString!
+		let lines = getStyleBlockLines(editor.document)
+		foldingToggles[key] = yes
+		await commands.executeCommand("editor.fold", {selectionLines: lines, direction: 'up'})
+
+	commands.registerTextEditorCommand('imba.unfoldStyles') do(editor,edit)
+		let key = editor.document.uri.toString!
+		let lines = getStyleBlockLines(editor.document)
+		foldingToggles[key] =  no
+		await commands.executeCommand("editor.unfold", {selectionLines: lines})
+
+	commands.registerTextEditorCommand('imba.toggleStyles') do(editor,edit)
+		let key = editor.document.uri.toString!
+		let lines = getStyleBlockLines(editor.document)
+		let bool = foldingToggles[key] or no
+		foldingToggles[key] = !bool
+		let cmd = bool ? 'unfold' : 'fold'
+		log 'toggle folding',cmd,lines,bool
+		await commands.executeCommand("editor.{cmd}", {selectionLines: lines, direction: 'up'})
 
 	# let disposable = client.start()
 	# context.subscriptions.push(client.start!)

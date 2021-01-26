@@ -1,0 +1,6 @@
+{
+    "node": {
+        "external": ["vscode","vscode-languageserver-types","vscode-uri","typescript"],
+        "sourcemap": false
+    }
+}

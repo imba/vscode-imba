@@ -25,7 +25,6 @@ export const ImbaSeverityToLSP = {
 }
 
 # https://github.com/microsoft/TypeScript/blob/master/src/compiler/diagnosticMessages.json
-
 # message: /Type '-?[\d\.]+' is not assignable to type 'string'/
 # ideally only for a
 

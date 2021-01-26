@@ -11,8 +11,8 @@ import * as ts from 'typescript'
 import type {Diagnostic} from 'typescript'
 import type {LanguageServer} from './LanguageServer'
 
-const imbac = require 'imba/dist/compiler.js'
-const imba1c = require './imba1.compiler.js'
+const imbac = require 'imba/compiler'
+const imba1c = require '../imba1.compiler.js'
 
 let imbaOptions = {
 	target: 'tsc'

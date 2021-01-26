@@ -4,7 +4,7 @@
 	"description": "Language support for Imba 2",
 	"version": "2.5.0",
 	"publisher": "scrimba",
-	"main": "./client/index.js",
+	"main": "./client/dist/src/index.js",
 	"icon": "assets/imba.png",
 	"license": "MIT",
 	"author": "Sindre Aarsaether",
@@ -40,6 +40,18 @@
 			{
 				"command": "ximba.decrementByOne",
 				"title": "Decrement by 1"
+			},
+			{
+				"command": "imba.foldStyles",
+				"title": "Fold Style Blocks"
+			},
+			{
+				"command": "imba.unfoldStyles",
+				"title": "Unfold Style Blocks"
+			},
+			{
+				"command": "imba.toggleStyles",
+				"title": "Toggle Style Blocks folding"
 			}
 		],
 		"keybindings": [
@@ -47,6 +59,10 @@
 				"command": "ximba.incrementByOne",
 				"when": "editorLangId == imba",
 				"key": "ctrl+up"
+			},{
+				"command": "imba.toggleStyles",
+				"when": "editorLangId == imba",
+				"key": "shift+alt+m"
 			},
 			{
 				"command": "ximba.decrementByOne",
@@ -150,18 +166,14 @@
 		"vscode-languageserver": "^6.1.1"
 	},
 	"devDependencies": {
-		"@rollup/plugin-json": "^4.0.2",
 		"chroma-js": "^2.1.0",
 		"js-yaml": "^3.14.0",
-		"plist": "^3.0.1",
-		"rollup": "^1.28.0",
-		"rollup-plugin-commonjs": "^10.1.0",
-		"rollup-plugin-node-resolve": "^5.2.0"
+		"plist": "^3.0.1"
 	},
 	"scripts": {
 		"dev:bootstrap": "lerna bootstrap",
-		"watch": "rollup -c --watch",
-		"build": "rollup -c",
+		"watch": "imba watch",
+		"build": "imba build",
 		"prod:version": "lerna version",
 		"build-theme": "imba scripts/compile-theme.imba",
 		"test": "node server/test.js"
