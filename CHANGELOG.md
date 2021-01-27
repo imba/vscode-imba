@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.5.2
+* Upgraded to imba 2 alpha 114
+* Fixed languageserver crash
+
 ## 2.5.1
 * Upgraded to imba 2 alpha 113
 * Fixed several highlighting bugs
