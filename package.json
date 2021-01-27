@@ -2,7 +2,7 @@
 	"name": "vsimba",
 	"displayName": "Imba",
 	"description": "Language support for Imba 2",
-	"version": "2.5.2",
+	"version": "2.5.3",
 	"publisher": "scrimba",
 	"main": "./client/dist/src/index.js",
 	"icon": "assets/imba.png",
@@ -143,6 +143,14 @@
 				"language": "imba",
 				"scopeName": "source.imba",
 				"path": "./syntaxes/imba.tmLanguage"
+			},
+			{
+				"scopeName": "markdown.imba.codeblock",
+				"path": "./syntaxes/imbamd.tmLanguage.json",
+				"injectTo": ["text.html.markdown"],
+				"embeddedLanguages": {
+				  "meta.embedded.block.imba": "imba"
+				}
 			},
 			{
 				"language": "imba1",

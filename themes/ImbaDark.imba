@@ -332,6 +332,7 @@ export let scopes = [
 	# ['source.imba',colors.base]
 	# ['source.imba1',colors.base]
 	['comment',colors.gray600,'italic']
+	['string',colors.string]
 	['keyword',colors.keyword]
 	['storage',colors.keyword]
 	['constant.numeric',colors.blue400]
@@ -428,11 +429,14 @@ export let scopes = [
 	# markdown
 	# ['entity.name.section.markdown','#ffffff']
 	['markup.fenced_code.block.markdown','#77b3d1']
+
 	['punctuation.definition.list_item','#6d829b']
 	['markup.heading.markdown','#ffffff']
 	['markup.heading.1.markdown','#ffffff']
 	['markup.heading.2.markdown','#e0ade3']
 	['markup.inline.raw.string.markdown','#77b3d1']
+	['markup.underline.link',colors.blue200]
+	['markup.quote.markdown',colors.gray400,'italic']
 	
 	
 	

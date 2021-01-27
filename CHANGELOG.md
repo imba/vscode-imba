@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.5.3
+* Improved markdown highlighting in ImbaDark
+* Added highlighting for markdown imba codeblocks
+
 ## 2.5.2
 * Upgraded to imba 2 alpha 114
 * Fixed languageserver crash

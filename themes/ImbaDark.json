@@ -34,6 +34,13 @@
       }
     },
     {
+      "name": "string",
+      "scope": "string",
+      "settings": {
+        "foreground": "#c6f6d5"
+      }
+    },
+    {
       "name": "keyword",
       "scope": "keyword",
       "settings": {
@@ -558,6 +565,21 @@
       "scope": "markup.inline.raw.string.markdown",
       "settings": {
         "foreground": "#77b3d1"
+      }
+    },
+    {
+      "name": "markup.underline.link",
+      "scope": "markup.underline.link",
+      "settings": {
+        "foreground": "#bee3f8"
+      }
+    },
+    {
+      "name": "markup.quote.markdown",
+      "scope": "markup.quote.markdown",
+      "settings": {
+        "foreground": "#cbd5e0",
+        "fontStyle": "italic"
       }
     }
   ],
