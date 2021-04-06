@@ -19,9 +19,7 @@ let imbaOptions = {
 	platform: 'tsc'
 	imbaPath: null
 	silent: yes
-	sourceMap: {
-		hidden: yes
-	}
+	sourcemap: 'hidden'
 }
 
 export class File < Component
@@ -41,6 +39,7 @@ export class File < Component
 
 		program.files[lsPath] = self
 		program.files[imbaPath] = self
+		
 		program.files.push(self)
 	
 		version = 1
@@ -53,7 +52,6 @@ export class File < Component
 		self
 
 	get document
-		let uri = 'file://' + imbaPath
 		program.documents.get(uri)
 
 	get tls
@@ -63,7 +61,7 @@ export class File < Component
 		program
 
 	get uri
-		'file://' + imbaPath
+		util.pathToUri(imbaPath)
 	
 	get doc
 		$doc ||= FullTextDocument.create(uri,'imba',0,ts.sys.readFile(imbaPath))
