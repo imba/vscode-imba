@@ -1,13 +1,18 @@
 import {CompletionItemKind,SymbolKind} from 'vscode-languageserver-types'
 import {URI} from 'vscode-uri'
 import {globals} from './constants'
+import np from 'path'
 
 export def uriToPath uri
 	return uri if uri[0] == '/' or uri.indexOf('://') == -1
-	URI.parse(uri).path
+	URI.parse(uri).fsPath.split(np.sep).join('/')
 
 export def pathToUri path
+	return String URI.file(path)
 	'file://' + path
+
+export def normalizePath path
+	path.split(np.sep).join('/')
 
 export def time cb
 	let t = Date.now!

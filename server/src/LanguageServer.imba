@@ -423,8 +423,9 @@ export class LanguageServer < Component
 
 	def getImbaFile src
 		# let doc = @documents && @documents.get(file.uri or file)
+		let origsrc = src
 		src = util.uriToPath(src)
-		src = path.resolve(self.rootPath,src).replace(/\.(imba|js|ts)$/,'.imba')
+		src = util.normalizePath(path.resolve(self.rootPath,src).replace(/\.(imba|js|ts)$/,'.imba'))
 		# what if it is a local file?
 		let file\File = self.files[src] ||= new File(self,src)
 
