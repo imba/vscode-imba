@@ -1,9 +1,9 @@
 import { Component } from './Component'
 import { snippets } from './snippets'
-import { Location, LocationLink } from 'vscode-languageserver'
+# import { Location, LocationLink } from 'vscode-languageserver'
 import type {TextDocuments,IConnection,InitializeParams,ReferenceParams,CompletionItem, RenameRequest} from 'vscode-languageserver'
 # import { TextDocument } from 'vscode-languageserver-textdocument'
-import {CompletionItemKind,SymbolKind} from 'vscode-languageserver-types'
+import {CompletionItemKind,SymbolKind, Location, LocationLink} from 'vscode-languageserver-types'
 import type { WorkspaceEdit } from 'vscode-languageserver-types'
 import type {CompilerOptions,LanguageService,LanguageServiceHost,UserPreferences} from 'typescript'
 
@@ -17,10 +17,16 @@ import {TAG_NAMES,TAG_TYPES} from './constants'
 const path = require 'path'
 const fs = require 'fs'
 const ts = require 'typescript'
-const glob = require 'glob'
+import * as glob from 'glob'
+import system from './system'
+
+# const glob = require 'glob'
 const imbac = require 'imba/compiler'
+
 import {resolveConfigFile} from 'imba/src/compiler/imbaconfig'
 # const imbac = require 'imba/dist/compiler.js'
+
+global.ts = ts
 
 const tsServiceOptions\CompilerOptions = {
 	allowJs: true
@@ -45,8 +51,8 @@ const tsServiceOptions\CompilerOptions = {
 	lib: ['lib.es6.d.ts','lib.esnext.d.ts']
 	# types: ['node']
 	types: ['node']
+	module: ts.ModuleKind.ESNext
 	forceConsistentCasingInFileNames: true
-	# module: ts.ModuleKind.System
 	moduleResolution: ts.ModuleResolutionKind.NodeJs
 	inlineSources: true
 }
@@ -81,7 +87,7 @@ export class LanguageServer < Component
 		self.rootPath = self.rootUri = util.uriToPath(params.rootUri)
 		self.imbaConfig = resolveConfigFile(self.rootPath,fs:fs,path:path) or {}
 		self.entities = new Entities(self,self.imbaConfig)
-
+		
 		self.rootFiles = o.rootFiles || []
 		self.snapshots = {}
 		self.version = 0
@@ -109,11 +115,12 @@ export class LanguageServer < Component
 		# console.log 'updating settings',settings
 		config.update(settings)
 
-	def start settings
+	def start settings = {}
 		self.settings = settings
 		# console.log 'initialized!',settings
 		
-		tslOptions = Object.assign({},tsServiceOptions)
+		
+		tslOptions = Object.assign({},tsServiceOptions,settings.ts or {})
 		if settings.checkImba !== undefined
 			tslOptions.checkJs = settings.checkImba
 
@@ -151,20 +158,24 @@ export class LanguageServer < Component
 			const resolvedModules = []
 			log 'resolving',moduleNames,containingFile
 			for moduleName of moduleNames
-				
 				# try to use standard resolution
-				let result = ts.resolveModuleName(moduleName, containingFile, options, resolutionHost)
+				let name = moduleName.replace(/\.imba$/,'')
+				let result = ts.resolveModuleName(name, containingFile, options, resolutionHost)
 				if result.resolvedModule
-					console.log 'resolved module',result.resolvedModule
+					log 'resolved module',result.resolvedModule
 					resolvedModules.push(result.resolvedModule)
 				else
-					console.log 'could not resolve module!!!!',moduleName
+					log 'could not resolve module!!!!',moduleName
 					# check fallback locations, for simplicity assume that module at location
 					# should be represented by '.d.ts' file
-					for location of []
-						const modulePath = path.join(location, moduleName + ".d.ts")
-						if fileExists(modulePath)
-							resolvedModules.push({ resolvedFileName: modulePath })
+					# resolve relative to file
+					
+
+					resolvedModules.push(undefined)
+					# for location of []
+					#	const modulePath = path.join(location, moduleName + ".d.ts")
+					#	if fileExists(modulePath)
+					#		resolvedModules.push({ resolvedFileName: modulePath })
 
 			return resolvedModules
 
@@ -174,7 +185,7 @@ export class LanguageServer < Component
 			getTypeRootsVersion: do 1
 			useCaseSensitiveFileNames: do yes
 			# realpath: realpath
-			# resolveModuleNames: resolveModuleNames
+			resolveModuleNames: resolveModuleNames
 			getScriptKind: do(fileName)
 				let file = self.files[fileName]
 				
@@ -203,12 +214,17 @@ export class LanguageServer < Component
 			
 			getCurrentDirectory: do self.rootPath
 			getCompilationSettings: do options
-			getDefaultLibFileName: do(options) ts.getDefaultLibFilePath(options)
+			getDefaultLibFileName: do(options)
+				console.log 'getDefaultLibFileName',options
+				if $web$
+					return "/project/types/lib.dom.d.ts"
+				ts.getDefaultLibFilePath(options)
+
 			getSourceFile: self.getSourceFile.bind(self)
 			fileExists: self.fileExists.bind(self)
 			readFile: self.readFile.bind(self)
 			writeFile: self.writeFile.bind(self)
-			readDirectory: ts.sys.readDirectory
+			readDirectory: self.readDirectory.bind(self)
 			getNewLine: do '\n'
 		}
 
@@ -219,6 +235,10 @@ export class LanguageServer < Component
 
 	def getSourceFile filename, languageVersion
 		log 'getSourceFile',filename
+
+	def readDirectory dir,...params
+		console.log 'read dir',dir,params
+		ts.sys.readDirectory(dir,...params)
 
 	def invalidate
 		version++
@@ -259,7 +279,7 @@ export class LanguageServer < Component
 		if let file = self.files[alt]
 			return file.removed ? false : true
 		
-		if ((alt != fileName) or fileName.match(/\.imba$/)) && ts.sys.fileExists(alt)
+		if ((alt != fileName) or fileName.match(/\.imba$/)) && system.fileExists(alt)
 			if ts.sys.fileExists(alt.replace(/\.imba$/,'.d.ts'))
 				return false
 
@@ -268,18 +288,16 @@ export class LanguageServer < Component
 		return false
 
 	def fileExists fileName
-		let res = self.sourceFileExists(fileName) || ts.sys.fileExists(fileName)
+		let res = self.sourceFileExists(fileName) || system.fileExists(fileName)
 		return res
 
 	def readFile fileName
 		let source = self.files[fileName]
-		# logPath(fileName,'readFile')
-		# log 'readFile',fileName
 		if source
 			source.compile()
 			return String(source.js)
-
-		return ts.sys.readFile(fileName)
+		log 'readFile',fileName
+		return system.readFile(fileName)
 
 	def writeFile fileName, contents
 		log "writeFile",fileName
@@ -417,6 +435,8 @@ export class LanguageServer < Component
 		return file.idoc.getEncodedSemanticTokens!
 
 	def getDefinitionAtPosition uri, pos
+		
+
 		let file = self.getImbaFile(uri)
 		if !file or file.isLegacy
 			return []
@@ -433,11 +453,13 @@ export class LanguageServer < Component
 		let jsloc = file.generatedLocFor(loc)
 		let info = tls.getDefinitionAndBoundSpan(file.lsPath,jsloc)
 
+		log 'get definition',uri,pos,loc,jsloc,info
+
 		if info and info.definitions
 			let sourceSpan = file.textSpanToRange(info.textSpan)
 			let sourceText = file.textSpanToText(info.textSpan)
 			let isLink = sourceText and sourceText.indexOf('-') >= 0
-			console.log 'definitions!',sourceSpan,sourceText,isLink
+			
 
 			let defs = for item of info.definitions
 				# console.log 'get definition',item
@@ -447,12 +469,19 @@ export class LanguageServer < Component
 					let textSpan = ifile.textSpanToRange(item.textSpan)
 					let span = item.contextSpan ? ifile.textSpanToRange(item.contextSpan) : textSpan
 
+					
 					if item.containerName == 'globalThis' and item.name.indexOf('Component') >= 0
 						span = {
 							start: {line: textSpan.start.line, character: 0}
 							end: {line: textSpan.start.line + 1, character: 0}
 						}
-					if isLink
+					
+					log 'definition',item,textSpan,span,item.kind
+					if item.kind == 'module'
+						textSpan = {start: {line:0,character:0},end: {line:0,character:0}}
+						LocationLink.create(ifile.uri,textSpan,textSpan,sourceSpan)
+						# Location.create(ifile.uri,)
+					elif isLink
 						LocationLink.create(ifile.uri,textSpan,span,sourceSpan)
 					else
 						Location.create(ifile.uri,textSpan)

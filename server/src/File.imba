@@ -1,6 +1,6 @@
 import {Component} from './Component'
-import {CompletionItemKind,DiagnosticSeverity,SymbolKind} from 'vscode-languageserver-types'
-import {Location} from 'vscode-languageserver'
+import {CompletionItemKind,DiagnosticSeverity,SymbolKind,Location} from 'vscode-languageserver-types'
+# import {Location} from 'vscode-languageserver'
 
 import * as util from './utils'
 import { FullTextDocument } from './FullTextDocument'
@@ -10,6 +10,7 @@ import {Diagnostics, DiagnosticKind} from './Diagnostics'
 import * as ts from 'typescript'
 import type {Diagnostic} from 'typescript'
 import type {LanguageServer} from './LanguageServer'
+import system from './system'
 
 const imbac = require 'imba/compiler'
 const imba1c = require '../imba1.compiler.js'
@@ -19,11 +20,13 @@ let imbaOptions = {
 	platform: 'tsc'
 	imbaPath: null
 	silent: yes
-	sourceMap: {
-		hidden: yes
-	}
+	sourcemap: 'hidden'
 }
 
+###
+Represents the combination of an imba-file and its compiled ts/js
+with functionality to map locations back and forth between the two
+###
 export class File < Component
 	prop symbols = []
 	removed = no
@@ -66,7 +69,7 @@ export class File < Component
 		'file://' + imbaPath
 	
 	get doc
-		$doc ||= FullTextDocument.create(uri,'imba',0,ts.sys.readFile(imbaPath))
+		$doc ||= FullTextDocument.create(uri,'imba',0,system.readFile(imbaPath))
 	
 	get idoc
 		doc.tokens

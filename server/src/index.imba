@@ -25,8 +25,6 @@ documents.onDidChangeContent do(change)
 documents.onDidSave do(event)
 	server.onDidSave(event) if server
 
-documents.listen(connection)
-
 connection.onInitialize do(params)
 	
 	// Could this start a single instance for multiple workspaces?
@@ -65,7 +63,6 @@ connection.onInitialized do(params)
 	# console.log 'on initialized',params
 	let conf = await connection.workspace.getConfiguration() # ('imba')
 	# console.log 'config',conf
-	
 
 	server.start(conf.imba)
 
