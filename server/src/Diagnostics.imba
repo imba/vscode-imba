@@ -1,4 +1,5 @@
 import {DiagnosticSeverity} from 'vscode-languageserver-types'
+import * as config from './Config'
 
 export const DiagnosticSource = {
 	Compiler: 1
@@ -33,11 +34,20 @@ const SuppressDiagnostics = [
 	code: 2322	
 	text: /^\$\d+/
 	---
+	code: 2322 # should only be for dom nodes?
+	message: /^Type '(boolean|string|number|ImbaAsset)' is not assignable to type '(string|number|boolean)'/
+	---
 	code: 2339
 	message: /on type 'EventTarget'/
 	---
+	code: 2339 # option allow array properties
+	message: /on type '(.*)\[\]'/
+	---
 	code: 2556
 	text: /\.\.\.arguments/
+	---
+	code: 2540 # should be toggled with option
+	message: /^Cannot assign to /
 	---
 	code: 2557
 	text: /\.\.\.arguments/
