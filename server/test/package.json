@@ -1,0 +1,10 @@
+{
+  "devDependencies": {
+    "express": "^4.17.1",
+    "monaco-languageclient": "^0.13.1-next.9"
+  },
+  "dependencies": {
+    "monaco-editor-core": "^0.23.0",
+    "vscode-languageclient": "^7.0.0"
+  }
+}
