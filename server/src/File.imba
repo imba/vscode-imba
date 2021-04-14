@@ -31,45 +31,115 @@ export class File < Component
 	prop symbols = []
 	removed = no
 
-	def constructor program\LanguageServer, path, origPath = null
+	static def build ils,src
+		let ext = util.t2iPath(src.slice(src.lastIndexOf('.')))
+
+		let types = {
+			'.json': JSONFile
+			'.imba': ImbaFile
+			'.imba1': Imba1File
+			'.svg': SVGFile
+			'.png': ImageFile
+			'.jpg': ImageFile
+			'.jpeg': ImageFile
+			'.gif': ImageFile
+			'.html': HTMLFile
+		}
+
+		let cls = types[ext] or File
+		return new cls(ils,src)
+
+	def constructor program\LanguageServer, path
 		super
-		self.program = program
-		imbaPath = path.replace(/\.(imba|jsx?|tsx?)$/,'.imba')
-		tsPath = path.replace(/\.(imba|jsx?|tsx?)$/,'.ts')
-		isLegacy = imbaPath.indexOf('.imba1') > 0 or program.isLegacy
-		lsPath = tsPath
-
-		if program && !program.rootFiles.includes(lsPath) and !isLegacy
-			program.rootFiles.push(lsPath)
-
-		program.files[lsPath] = self
-		program.files[imbaPath] = self
-		
-		program.files.push(self)
-	
 		version = 1
-		logLevel = imbaPath.indexOf('Diagnostics') >= 0 ? 3 : 0
+		self.program = program
+		fileName = util.t2iPath(path)
+		program.files[fileName] = self
+		program.files[tfileName] = self
+		program.files.push(self)
+
+	get shouldEmitDiagnostics
+		no
+	
+	get ils
+		program
+
+	get tls
+		isLegacy ? null : program.tls
+
+	get uri
+		util.pathToUri(fileName)
+
+	get document
+		program.documents.get(uri)
+
+	get tfileName
+		util.i2tPath(fileName)
+
+	get tsPath
+		tfileName
+		
+	get tlsfile
+		ils.getProgram!.getSourceFile(tfileName)
+
+	get tscriptKind
+		ts.ScriptKind.JS
+
+	get imbaPath
+		fileName
+
+	get workspaceSymbols
+		[]
+
+	def getCompiledBody
+		""
+		# String(system.readFile(fileName))
+
+	def getSourceBody
+		doc.getText!
+
+	def getScriptSnapshot
+		#snapshot ||= ts.ScriptSnapshot.fromString(getCompiledBody!)
+
+
+	def textSpanToRange
+		return {start: {line:0,character:0},end: {line:0,character:0}}
+
+	def textSpanToText
+		return ""
+
+	def dispose
+		self
+
+	def onDidChangeTextEditorSelection params
+		yes
+
+
+
+		
+
+export class ImbaFile < File
+
+	def constructor program\LanguageServer, path
+		super
+		isLegacy = fileName.indexOf('.imba1') > 0 or program.isLegacy
+
+		if program && !program.rootFiles.includes(tfileName) and !isLegacy
+			program.rootFiles.push(tfileName)
+
+		logLevel = fileName.indexOf('Diagnostics') >= 0 ? 3 : 0
 		diagnostics = new Diagnostics(self)
 		emitted = {}
 		times = {}
 		_isTyping = no
 		invalidate!
 		self
-
-	get document
-		program.documents.get(uri)
-
-	get tls
-		isLegacy ? null : program.tls
 	
-	get ils
-		program
+	get shouldEmitDiagnostics
+		yes
 
-	get uri
-		util.pathToUri(imbaPath)
-	
 	get doc
-		$doc ||= FullTextDocument.create(uri,'imba',0,system.readFile(imbaPath))
+		$doc ||= FullTextDocument.create(uri,'imba',0,system.readFile(fileName))
 	
 	get idoc
 		doc.tokens
@@ -83,6 +153,14 @@ export class File < Component
 	set isTyping value
 		if _isTyping =? value
 			yes
+
+	def getCompiledBody
+		compile!
+		js
+
+	def getScriptSnapshot
+		getCompiledBody!
+		return jsSnapshot
 
 	def didOpen doc
 		$doc = doc
@@ -109,28 +187,26 @@ export class File < Component
 
 	def didSave doc
 		savedContent = doc.getText!
-		emitFile!
+		emitFile(true)
 		diagnostics.sync!
 		times.saved = Date.now!
 		isTyping = no
 
 	def dispose
-		delete program.files[tsPath]
-		delete program.files[imbaPath]
+		delete program.files[fileName]
 		let idx = program.files.indexOf(self)
 		program.files.splice(idx,1) if idx >= 0
 
-		idx = program.rootFiles.indexOf(lsPath)
+		idx = program.rootFiles.indexOf(fileName)
 		program.rootFiles.splice(idx,1) if idx >= 0
 		program.invalidate!
 		self
 
-	def emitFile
+	def emitFile refresh = yes
 		$cancel('emitFile')
 		
 		let content = doc.getText!
 		if content != lastEmitContent
-			# console.log 'emitFile',imbaPath,!!tls
 			lastEmitContent = content
 			invalidate!
 			version++
@@ -138,8 +214,8 @@ export class File < Component
 			program.invalidate! unless isLegacy
 		
 		if tls
-			tls.getEmitOutput(tsPath)
-			getDiagnostics!
+			tls.getEmitOutput(fileName)
+			getDiagnostics! if refresh
 		else
 			compile!
 		return self
@@ -178,14 +254,15 @@ export class File < Component
 			let body = doc.getText!
 			let iversion = idoc.version
 			let opts = Object.assign({},imbaOptions,{
-				filename: imbaPath
-				sourcePath: imbaPath
+				filename: fileName
+				sourcePath: fileName
 			})
 			let res = null
 
 			try
 				let compiler = isLegacy ? imba1c : imbac
-				res = compiler.compile(body,opts)
+				res = util.time(&,'compilation took') do
+					compiler.compile(body,opts)
 			catch e
 				let loc = e.loc && e.loc()
 				let range = loc && {
@@ -221,7 +298,7 @@ export class File < Component
 			if locs
 				locs.version = iversion
 	
-			js = res.js.replace('$CARET$','valueOf')
+			js = res.js.replace(/\$CARET\$/g,'valueOf')
 			tsVersion = iversion
 			jsSnapshot = ts.ScriptSnapshot.fromString(js)
 			$indexWorkspaceSymbols()
@@ -550,7 +627,7 @@ export class File < Component
 		# find the access chain
 		if tok.match('operator.access')
 			util.time do
-				$flush('emitFile')
+				$flush('emitFile',false)
 				if let type = getTypeOfSymbolAtOffset(tok.offset)
 					target = type
 				# return early
@@ -592,6 +669,7 @@ export class File < Component
 			for item in glob.getProperties!
 				let name = item.escapedName
 				continue unless name.match(/^[A-Z]/)
+				# rather continue unless we're dealing with the node-global?
 				# continue unless item.flags & ts.SymbolFlags.Type
 				
 				add(
@@ -662,3 +740,19 @@ export class File < Component
 			isTyping = no
 			$flush('emitFile')
 			diagnostics.sync!
+
+export class Imba1File < ImbaFile
+
+export class JSONFile < File
+
+export class AssetFile < File
+
+export class HTMLFile < AssetFile
+
+export class ImageFile < AssetFile
+
+export class SVGFile < AssetFile
+
+	def getCompiledBody
+		return 'export default /** @type {ImbaAsset} */({})'
+		# super

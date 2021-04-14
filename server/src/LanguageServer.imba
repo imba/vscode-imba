@@ -24,6 +24,7 @@ import system from './system'
 const imbac = require 'imba/compiler'
 
 import {resolveConfigFile} from 'imba/src/compiler/imbaconfig'
+import ServiceHost from './Host'
 # const imbac = require 'imba/dist/compiler.js'
 
 global.ts = ts
@@ -44,17 +45,16 @@ const tsServiceOptions\CompilerOptions = {
 	allowSyntheticDefaultImports: true
 	suppressExcessPropertyErrors: true
 	suppressImplicitAnyIndexErrors: true
-	traceResolution: true
+	traceResolution: false
 	resolveJsonModule: true
 	incremental: true
-	target: ts.ScriptTarget.Latest
-	lib: ['lib.es6.d.ts','lib.esnext.d.ts']
+	target: ts.ScriptTarget.ES2020
+	# lib: ['lib.esnext.d.ts','lib.dom.d.ts','lib.dom.d.ts']
 	# types: ['node']
 	types: ['node']
 	module: ts.ModuleKind.ESNext
 	forceConsistentCasingInFileNames: true
 	moduleResolution: ts.ModuleResolutionKind.NodeJs
-	inlineSources: true
 }
 
 export class LanguageServer < Component
@@ -81,20 +81,23 @@ export class LanguageServer < Component
 	def constructor(connection\IConnection, documents\TextDocuments, params\InitializeParams, o = {})
 		super
 		files\File[] = []
-
+		self.ts = ts
 		self.documents = documents
 		self.connection = connection
-		self.rootPath = self.rootUri = util.uriToPath(params.rootUri)
+		self.rootPath = util.uriToPath(params.rootUri)
 		self.imbaConfig = resolveConfigFile(self.rootPath,fs:fs,path:path) or {}
 		self.entities = new Entities(self,self.imbaConfig)
 		
 		self.rootFiles = o.rootFiles || []
-		self.snapshots = {}
+
+		self.snapshots = {} # need to be invalidated with program?
 		self.version = 0
 		self.debug = !!o.debug
 		self.cache = {}
 		self.settings = {}
 		self.counters = {diagnostics: 1}
+
+		self.sys = ts.sys || system
 
 		# long promise for tls?
 		# log('imba config',imbaConfig)
@@ -110,7 +113,6 @@ export class LanguageServer < Component
 		if path.match(/\.js$/) and path.match(/vscode-imba/)
 			console.log(...params,path)
 		
-
 	def updateConfiguration settings,all
 		# console.log 'updating settings',settings
 		config.update(settings)
@@ -118,127 +120,38 @@ export class LanguageServer < Component
 	def start settings = {}
 		self.settings = settings
 		# console.log 'initialized!',settings
-		
-		
+				
 		tslOptions = Object.assign({},tsServiceOptions,settings.ts or {})
 		if settings.checkImba !== undefined
 			tslOptions.checkJs = settings.checkImba
 
 		createTypeScriptService tslOptions
-
 		setTimeout(&,0) do indexFiles!
 		return self
-
-	
 		
 	def createTypeScriptService options
 		return if imbaConfig.legacy
 
-		# options.baseUrl =  self.rootPath
-
 		if imbaConfig.alias
-			let paths = options.paths = {}
+			let paths = options.paths ||= {}
 			for own key, value of imbaConfig.alias
 				paths[key] = [value]
 				paths[key + '/*'] = [value + '/*']
 
-		const realpath = do(path)
-			log 'realpath',path
-			return path
-
 		if imbaConfig.types
 			options.types = imbaConfig.types
 
-		const resolutionHost = {
-			fileExists: self.fileExists.bind(self)
-			readFile: self.readFile.bind(self)
-		}
+		#tshost = new ServiceHost(self,options)
+		self.tlsdocs = ts.createDocumentRegistry(yes,self.rootPath)
+		self.tls = ts.createLanguageService(#tshost,tlsdocs)
+		return self
 
-		const resolveModuleNames = do(moduleNames,containingFile)
-			const resolvedModules = []
-			log 'resolving',moduleNames,containingFile
-			for moduleName of moduleNames
-				# try to use standard resolution
-				let name = moduleName.replace(/\.imba$/,'')
-				let result = ts.resolveModuleName(name, containingFile, options, resolutionHost)
-				if result.resolvedModule
-					log 'resolved module',result.resolvedModule
-					resolvedModules.push(result.resolvedModule)
-				else
-					log 'could not resolve module!!!!',moduleName
-					# check fallback locations, for simplicity assume that module at location
-					# should be represented by '.d.ts' file
-					# resolve relative to file
-					
-
-					resolvedModules.push(undefined)
-					# for location of []
-					#	const modulePath = path.join(location, moduleName + ".d.ts")
-					#	if fileExists(modulePath)
-					#		resolvedModules.push({ resolvedFileName: modulePath })
-
-			return resolvedModules
-
-		const servicesHost\LanguageServiceHost = {
-			getScriptFileNames:  do self.rootFiles
-			getProjectVersion:   do '' + self.version
-			getTypeRootsVersion: do 1
-			useCaseSensitiveFileNames: do yes
-			# realpath: realpath
-			resolveModuleNames: resolveModuleNames
-			getScriptKind: do(fileName)
-				let file = self.files[fileName]
-				
-				if file
-					return ts.ScriptKind.JS
-				else
-					return ts.getScriptKindFromFileName(fileName)
-				
-
-			getScriptVersion: do(fileName)
-				let version = self.files[fileName] ? String(self.files[fileName].version.toString()) : "1"
-				return version
-
-			# @param {string} fileName
-			getScriptSnapshot: do(fileName)
-				logPath fileName, 'getScriptSnapshot'
-				if !self.fileExists(fileName)
-					return undefined
-
-				if let file = self.files[fileName]
-					file.compile()
-					return file.jsSnapshot
-
-				let snapshot = self.snapshots[fileName] ||= ts.ScriptSnapshot.fromString(self.readFile(fileName).toString())
-				return snapshot
-			
-			getCurrentDirectory: do self.rootPath
-			getCompilationSettings: do options
-			getDefaultLibFileName: do(options)
-				console.log 'getDefaultLibFileName',options
-				if $web$
-					return "/project/types/lib.dom.d.ts"
-				ts.getDefaultLibFilePath(options)
-
-			getSourceFile: self.getSourceFile.bind(self)
-			fileExists: self.fileExists.bind(self)
-			readFile: self.readFile.bind(self)
-			writeFile: self.writeFile.bind(self)
-			readDirectory: self.readDirectory.bind(self)
-			getNewLine: do '\n'
-		}
-
-		self.tls = ts.createLanguageService(servicesHost,ts.createDocumentRegistry!)
-
-	def resolveModuleNames moduleNames, containingFile
-		log 'resolveModuleNames',containingFile
-
-	def getSourceFile filename, languageVersion
-		log 'getSourceFile',filename
+	def getDirectories dir
+		let res = sys.getDirectories(dir)
+		return res
 
 	def readDirectory dir,...params
-		console.log 'read dir',dir,params
-		ts.sys.readDirectory(dir,...params)
+		return sys.readDirectory(dir,...params)
 
 	def invalidate
 		version++
@@ -252,51 +165,36 @@ export class LanguageServer < Component
 	def addFile fileName
 		fileName = path.resolve(self.rootPath,fileName)
 		# sourceFileExists
-		if self.sourceFileExists(fileName)
-			self.files[fileName].emitFile()
-		return self.files[fileName]
-			
+		let file = getRichFile(fileName,yes)
+		file..emitFile!
+		return file
+
 	def indexFiles
 		let t = Date.now!
 		let matches = glob.sync(path.resolve(self.rootPath,'**','*.imba'),ignore: 'node_modules')
 		matches = matches.filter do(file) file.indexOf('node_modules') == -1
-		allFiles ||= matches.map do(file) getImbaFile(file)
+		allFiles ||= matches.map do(file) getRichFile(file)
 
 		self
 
 	def getProgram
 		tls.getProgram()
 
-	# comment about the source file?
-	def sourceFileExists fileName\string
-		let [m,ext] = (fileName.match(/\.(d\.ts|\w+)$/) or [])
-	
-		let alt = fileName.replace(/\.ts/, '.imba')
-
-		if ext == 'd.ts'
-			return false
-
-		if let file = self.files[alt]
-			return file.removed ? false : true
-		
-		if ((alt != fileName) or fileName.match(/\.imba$/)) && system.fileExists(alt)
-			if ts.sys.fileExists(alt.replace(/\.imba$/,'.d.ts'))
-				return false
-
-			new File(self,alt,fileName)
-			return true
-		return false
+	get tlsprogram
+		tls.getProgram()
 
 	def fileExists fileName
-		let res = self.sourceFileExists(fileName) || system.fileExists(fileName)
-		return res
+		# console.log 'fileExists',fileName,util.t2iPath(fileName)
+		return sys.fileExists(util.t2iPath(fileName))
 
 	def readFile fileName
+		devlog 'readFile',fileName
+
 		let source = self.files[fileName]
 		if source
+			return source.getCompiledBody!
 			source.compile()
-			return String(source.js)
-		log 'readFile',fileName
+		# log 'readFile',fileName
 		return system.readFile(fileName)
 
 	def writeFile fileName, contents
@@ -321,32 +219,35 @@ export class LanguageServer < Component
 		let program = tls.getProgram!
 		let request = ++counters.diagnostics
 
-		console.log 'emitDiagnostics'
-		for file in files
+		let targets = files.filter do $1.shouldEmitDiagnostics
+
+		for file in targets
 			versions[file.tsPath] = {
 				doc: file.doc.version
 				idoc: file.idoc.version
 			}
 
 		if true # setTimeout(&,10) do 
-			console.log 'getSemanticDiagnostics'
+			devlog 'getSemanticDiagnostics'
 			let entries = program.getSemanticDiagnostics!
 			if request != counters.diagnostics
-				console.log 'other diagnostics are on the way'
+				devlog 'other diagnostics are on the way'
 				return
 
+			# console.log 'received diagnostics',entries
+
 			for entry in entries when entry.file
-				# console.log 'diagnostic entry',entry.file.fileName
+				# console.log 'diagnostic entry',entry.file
 				if let file = files[entry.file.fileName]
 					let items = map[file.tsPath] ||= []
 					items.push(entry)
 
 			if true # setTimeout(&,10) do
-				console.log 'updateDiagnostics'
-				for file in files
+				devlog 'updateDiagnostics'
+				for file in targets
 					file.updateDiagnostics(map[file.tsPath],versions[file.tsPath])
 		
-		console.log 'emitDiagnostics took',Date.now! - t0
+		# console.log 'emitDiagnostics took',Date.now! - t0
 		self
 
 	def getSemanticDiagnostics
@@ -427,16 +328,24 @@ export class LanguageServer < Component
 		src = util.uriToPath(src)
 		src = util.normalizePath(path.resolve(self.rootPath,src).replace(/\.(imba|js|ts)$/,'.imba'))
 		# what if it is a local file?
-		let file\File = self.files[src] ||= new File(self,src)
+		return self.files[src] || File.build(self,src)
 
-		return file
+	def getRichFile src,onlyIfExists = no
+		if src.indexOf('file://') == 0
+			src = util.uriToPath(src)
+
+		src = util.normalizePath(path.resolve(self.rootPath,src))
+
+		if onlyIfExists and !system.fileExists(src)
+			return null
+
+		return self.files[src] || File.build(self,src)
 
 	def getSemanticTokens uri
 		let file = self.getImbaFile(uri)
 		return file.idoc.getEncodedSemanticTokens!
 
 	def getDefinitionAtPosition uri, pos
-		
 
 		let file = self.getImbaFile(uri)
 		if !file or file.isLegacy
@@ -452,7 +361,7 @@ export class LanguageServer < Component
 			return []
 
 		let jsloc = file.generatedLocFor(loc)
-		let info = tls.getDefinitionAndBoundSpan(file.lsPath,jsloc)
+		let info = tls.getDefinitionAndBoundSpan(file.tsPath,jsloc)
 
 		log 'get definition',uri,pos,loc,jsloc,info
 
@@ -461,7 +370,6 @@ export class LanguageServer < Component
 			let sourceText = file.textSpanToText(info.textSpan)
 			let isLink = sourceText and sourceText.indexOf('-') >= 0
 			
-
 			let defs = for item of info.definitions
 				# console.log 'get definition',item
 				let ifile = self.files[item.fileName]
@@ -480,6 +388,7 @@ export class LanguageServer < Component
 					log 'definition',item,textSpan,span,item.kind
 					if item.kind == 'module'
 						textSpan = {start: {line:0,character:0},end: {line:0,character:0}}
+						console.log 'LocationLink',ifile.uri,textSpan,sourceSpan
 						LocationLink.create(ifile.uri,textSpan,textSpan,sourceSpan)
 						# Location.create(ifile.uri,)
 					elif isLink

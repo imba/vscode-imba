@@ -11,14 +11,22 @@ export def pathToUri path
 	return String URI.file(path)
 	'file://' + path
 
+export def t2iPath path
+	return path
+	path.replace('.ils.ts','')
+
+export def i2tPath path
+	return path
+	path.replace(/(\.ils\.ts)?$/,'.ils.ts')
+
 export def normalizePath path
 	path.split(np.sep).join('/')
 
-export def time cb
+export def time cb,label = 'took'
 	let t = Date.now!
 	let res = cb()
 	let elapsed = Date.now! - t
-	console.log 'took',elapsed
+	console.log label,elapsed
 	return res
 
 export def rangeFromTextSpan span
@@ -118,7 +126,7 @@ export def tsp2lspCompletions items, {file,jsLoc,additions=null,isMemberCompleti
 
 		let meta = {
 			loc: jsLoc
-			path: file.lsPath
+			path: file.tsPath
 			origKind: kind
 			kindModifiers: entry.kindModifiers
 			source: entry.source

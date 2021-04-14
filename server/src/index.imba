@@ -5,6 +5,10 @@ import {snippets} from './snippets'
 import { FullTextDocument } from './FullTextDocument'
 
 let connection = process.argv.length <= 2 ? createConnection(process.stdin, process.stdout) : createConnection()
+import np from 'path'
+connection.console.log(`Console test.`)
+
+const helperdir = np.resolve(__realname,'..','..','helpers')
 
 const documents = new TextDocuments(FullTextDocument)
 documents.listen(connection)
@@ -24,12 +28,16 @@ documents.onDidChangeContent do(change)
 
 documents.onDidSave do(event)
 	server.onDidSave(event) if server
+	return
+
 
 connection.onInitialize do(params)
-	
-	// Could this start a single instance for multiple workspaces?
+	console.log 'connection.onInitialize'
+	# Could this start a single instance for multiple workspaces?
 	# connection.console.log("[Server({process.pid}) {params.rootUri}] Started and initialize received")
-	server = new LanguageServer(connection,documents,params)
+	server = new LanguageServer(connection,documents,params,{
+		rootFiles: [np.resolve(helperdir,'imba.d.ts')]
+	})
 
 	return {
 		capabilities: {
@@ -81,6 +89,11 @@ connection.onInitialized do(params)
 
 	connection.onNotification('clearProgramProblems') do
 		console.log 'clear diagnostics problems'
+		server.clearProblems!
+		# server.emitDiagnostics!
+
+	connection.onNotification('debugService') do
+		console.log 'debug info about the file etc now'
 		server.clearProblems!
 		# server.emitDiagnostics!
 
