@@ -35,13 +35,22 @@ const SuppressDiagnostics = [
 	text: /^\$\d+/
 	---
 	code: 2322 # should only be for dom nodes?
-	message: /^Type '(boolean|string|number|ImbaAsset)' is not assignable to type '(string|number|boolean)'/
+	message: /^Type '(boolean|string|number|ImbaAsset|typeof import\("data:text\/asset;\*"\))' is not assignable to type '(string|number|boolean)'/
 	---
 	code: 2339
 	message: /on type 'EventTarget'/
 	---
+	code: 2339
+	message: /\$CARET\$/
+	---
 	code: 2339 # option allow array properties
 	message: /on type '(.*)\[\]'/
+	---
+	code: 2339 # option allow array properties
+	message: /on type 'Window'/
+	---
+	code: 2339 # option allow array properties
+	message: /on type 'Window & typeof globalThis'/
 	---
 	code: 2556
 	text: /\.\.\.arguments/
@@ -97,6 +106,8 @@ export class Diagnostic
 			let end = doc.positionAt(lend)
 			
 			range = doc.rangeAt(lstart,lend)
+			range.#lstart = lstart
+			range.#lend = lend
 
 
 		if msg.match('does not exist on type')
@@ -138,6 +149,7 @@ export class Diagnostics
 				for item in customRules
 					if typeof item == 'string'
 						options.suppress.push(new RegExp(item))
+			#tsDiagnostics = items
 			items = items.map do Diagnostic.fromTypeScript(kind,$1,doc,options)
 			items = items.filter do $1
 			
