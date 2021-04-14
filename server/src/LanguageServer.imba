@@ -426,7 +426,8 @@ export class LanguageServer < Component
 		
 		if item.data.symbolPath
 			let file = files[item.data.path]
-			let details = file.getCompletionDetailsForPath(item.data.symbolPath)
+			let sym = file.getSymbolAtPath(item.data.symbolPath)
+			let details = sym..getCompletionDetails()
 
 			if details
 				item.detail = ts.displayPartsToString(details.displayParts)

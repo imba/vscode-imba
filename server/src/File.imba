@@ -562,6 +562,25 @@ export class ImbaFile < File
 		let sym = checker.resolveName('globalThis',undefined,ts.SymbolFlags.Value,false)
 		checker.getTypeOfSymbolAtLocation(sym,file)
 
+	def getSymbolAtPath path
+		let {file,checker,program} = getTypeContext!
+		let type = null
+		let target = null
+		let parts = path.split('.')
+
+		let getCompletionDetails = do
+			ts.Completions.createCompletionDetailsForSymbol(this,checker,file,file)
+		
+		while let part = parts.shift!
+			let sym = target ? target.#type.getProperty(part) : file.locals.get(part)
+			let type = sym.#type = checker.getTypeOfSymbolAtLocation(sym,file)
+			sym.#parent = target
+			sym.getCompletionDetails = getCompletionDetails
+			target = sym
+		
+		return target
+		
+
 	def getCompletionDetailsForPath path
 		let {file,checker,program} = getTypeContext!
 		let type = null
