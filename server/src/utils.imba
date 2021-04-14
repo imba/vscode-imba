@@ -3,6 +3,8 @@ import {URI} from 'vscode-uri'
 import {globals} from './constants'
 import np from 'path'
 
+import {SymbolFlags} from 'typescript'
+
 export def uriToPath uri
 	return uri if uri[0] == '/' or uri.indexOf('://') == -1
 	URI.parse(uri).fsPath.split(np.sep).join('/')
@@ -105,6 +107,12 @@ export def matchFuzzyString query,string
 export def convertSymbolKind kind, entry
 	return SYMBOL_KIND_MAP[kind] or SymbolKind.Field
 
+export def tsSymbolFlagsToKindString flags
+	if flags & SymbolFlags.Method
+		'method'
+	else
+		'property'
+
 export def tsp2lspSymbolName name
 	if let m = name.match(/([A-Z][\w\-]+)Component$/)
 		return kebabCase(name.slice(0,-9))
@@ -115,7 +123,7 @@ export def tjs2imba text
 	text = text.replace(/\;/g,'')
 	return text
 
-export def tsp2lspCompletions items, {file,jsLoc,additions=null,isMemberCompletion=no}
+export def tsp2lspCompletions items, {file,jsLoc,additions=null,isMemberCompletion=no,addSelf=no}
 	let results = []
 	let map = {}
 	for entry in items
@@ -126,7 +134,7 @@ export def tsp2lspCompletions items, {file,jsLoc,additions=null,isMemberCompleti
 
 		let meta = {
 			loc: jsLoc
-			path: file.tsPath
+			path: file.fileName
 			origKind: kind
 			kindModifiers: entry.kindModifiers
 			source: entry.source
@@ -174,14 +182,15 @@ export def tsp2lspCompletions items, {file,jsLoc,additions=null,isMemberCompleti
 		results.push(item)
 
 	# add self
-	results.push({
-		label: 'self',
-		kind: CompletionItemKind.Variable,
-		sortText: '3'
-		data: {
-			resolved: yes
-		}
-	})
+	if addSelf
+		results.push({
+			label: 'self',
+			kind: CompletionItemKind.Variable,
+			sortText: '3'
+			data: {
+				resolved: yes
+			}
+		})
 
 	return results
 

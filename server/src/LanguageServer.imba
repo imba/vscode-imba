@@ -423,6 +423,17 @@ export class LanguageServer < Component
 		inspect item
 		if item and (!item.data or item.data.resolved)
 			return item
+		
+		if item.data.symbolPath
+			let file = files[item.data.path]
+			let details = file.getCompletionDetailsForPath(item.data.symbolPath)
+
+			if details
+				item.detail = ts.displayPartsToString(details.displayParts)
+				item.documentation = ts.displayPartsToString(details.documentation)
+			item.data.resolved = yes
+			return item
+
 
 		let source = item.data.source
 		let name = item.data.origName or item.label

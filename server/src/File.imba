@@ -544,10 +544,15 @@ export class ImbaFile < File
 		if base
 			if let sym = file.locals.get(base.path)
 				type = checker.getTypeOfSymbolAtLocation(sym,file)
+				type.#path = "{base.path}"
 		
 		if type and scope.member? and !scope.static?
 			let sym = type.getProperty('prototype')
 			type = checker.getTypeOfSymbolAtLocation(sym,file)
+			type.#checker = checker
+			type.#symbol = sym
+			type.#file = file
+			type.#path = "{base.path}.prototype"
 
 		return type
 
@@ -557,15 +562,59 @@ export class ImbaFile < File
 		let sym = checker.resolveName('globalThis',undefined,ts.SymbolFlags.Value,false)
 		checker.getTypeOfSymbolAtLocation(sym,file)
 
+	def getCompletionDetailsForPath path
+		let {file,checker,program} = getTypeContext!
+		let type = null
+		let target = null
+		let parts = path.split('.')
+		
+		while let part = parts.shift!
+			let sym = target ? target.#type.getProperty(part) : file.locals.get(part)
+			let type = sym.#type = checker.getTypeOfSymbolAtLocation(sym,file)
+			if !parts.length
+				sym.#details = ts.Completions.createCompletionDetailsForSymbol(sym,checker,file,file)
+			target = sym
+		
+		if target and target.#details
+			return target.#details
+		
+		return
+
+
 	def getTypeOfSymbolAtOffset offset
 		let {file,checker,program} = getTypeContext!
-		let tok = ts.findPrecedingToken(generatedLocFor(offset),file)
+		let tsloc = generatedLocFor(offset)
+		let tok = ts.findPrecedingToken(tsloc,file)
+		let origTok = tok
+		if $web$
+			global.T = tok
+			global.checker = checker
+			global.checkerNode = origTok
+		devlog 'getTypeOfSymbolAtOffset',tsloc,offset,tok
 
-		if tok and tok.kind == 24
-			tok = tok.parent.expression
+		let type = null
 
-		let sym = checker.getSymbolAtLocation(tok)
-		let type = checker.getTypeOfSymbolAtLocation(sym,file)
+		let logtok = do(tok)
+			devlog "tok {tok.kind}",tok,checker.getTypeAtLocation(tok)
+
+		if tok and (tok.kind == 24 or tok.kind == 28)
+			tok = tok.parent
+
+			if tok.kind == 201
+				logtok tok._children[0]
+				type = checker.getTypeAtLocation(tok._children[0])
+			else
+				tok = tok.expression
+		
+		unless type
+			try
+				let sym = checker.getSymbolAtLocation(tok)
+				type = checker.getTypeOfSymbolAtLocation(sym,file)
+
+		if type
+			type.#node = origTok
+			type.#file = file
+			type.#checker = checker
 		return type
 
 	def getCompletionsAtOffset offset, options = {}
@@ -582,6 +631,7 @@ export class ImbaFile < File
 		let suggest = ctx.suggest
 		let flags = suggest.flags
 		let filters = {kinds: []}
+		let tsoffset = null
 		let keywordFilter = 0
 
 		let add = do(item)
@@ -626,11 +676,14 @@ export class ImbaFile < File
 
 		# find the access chain
 		if tok.match('operator.access')
-			util.time do
-				$flush('emitFile',false)
-				if let type = getTypeOfSymbolAtOffset(tok.offset)
-					target = type
-				# return early
+			tsoffset = generatedLocFor(offset)
+			util.time do $flush('emitFile',false)
+			let tscompletions = tls.getCompletionsAtPosition(fileName,tsoffset,{})
+			let completions = util.tsp2lspCompletions(tscompletions.entries,{file:self,jsLoc:tsoffset})
+			return completions
+
+			if let type = getTypeOfSymbolAtOffset(offset)
+				target = type
 
 		if tok.match('identifier')
 			filters.startsWith = ctx.before.token
@@ -641,17 +694,31 @@ export class ImbaFile < File
 
 		if target && !ctx.scope.class?
 			# console.dir target, depth: 0
-			for item in target.getApparentProperties!
+			devlog 'completions for target',target
+
+			let props = target.getApparentProperties!
+
+			if $web$
+				global.props = props
+
+			for item in props
+				devlog 'get property',item
 				let name = item.escapedName
 				continue if name.match(/^(__@|")/)
 				continue unless item.flags & ts.SymbolFlags.Value
+				let kind = util.tsSymbolFlagsToKindString(item.flags)
+				let data = {resolved: yes, symbolFlags: item.flags, path: fileName}
+
+				if target.#path
+					data.symbolPath = "{target.#path}.{name}"
+					data.resolved = no
 
 				add(
 					label: name
-					kind: 'property'
+					kind: kind
 					sortText: '0'
 					symbol: item
-					data: {resolved: yes}
+					data: data
 				)
 		
 		# if target is implicit value
