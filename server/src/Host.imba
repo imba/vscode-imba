@@ -23,7 +23,7 @@ class ResolutionHost
 			for ext in ['.imba','']
 				let src = fileName.replace(/(\.imba)?\.ts$/,ext)
 				if src.match(/\.(imba1?|svg|jpe?g|gif|png|html|txt|css)$/) and #host.fileExists(src)
-					#hit = src
+					#hit = {resolvedFileName: src,extension: ".ts"}
 					return true
 
 		#host.fileExists(fileName)
@@ -113,10 +113,11 @@ export default class Host < Component
 
 		devlog 'resolving',moduleNames,containingFile,$0
 
-		let cached = #cache[containingFile]
+		# let cached = #cache[containingFile]
+		let dir = np.dirname(containingFile)
 
-		if cached
-			return cached
+		# if cached
+		# 	return cached
 
 		results = for name of moduleNames
 			#resolver.#reset!
@@ -127,15 +128,22 @@ export default class Host < Component
 			if name.indexOf('data:text/asset') == 0
 				continue undefined
 
+			let key = "{dir}:{name}"
+			if #cache[key]
+				continue #cache[key]
+
 			# try to use standard resolution			
 			name = name.replace(/\.imba$/,'').replace(/\?.+$/,'')
 			let ext = np.extname(name)
 			let result = ts.resolveModuleName(name, containingFile, #options, #resolver)
+			let hit = #resolver.#hit || result.resolvedModule || undefined
+			#cache[key] = hit
+
 			# console.log 'tested',moduleName,context,result
-			if let hit = #resolver.#hit
-				{resolvedFileName: hit,extension: ".ts"}
-			else
-				result.resolvedModule || undefined
+			# if let hit = #resolver.#hit
+			# 	{resolvedFileName: hit,extension: ".ts"}
+			# else
+			# 	result.resolvedModule || undefined
+
 		devlog 'resolved',moduleNames,results
-		#cache[containingFile] = results
 		return results

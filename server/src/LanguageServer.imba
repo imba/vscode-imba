@@ -43,6 +43,7 @@ const tsServiceOptions\CompilerOptions = {
 	noImplicitUseStrict: true
 	noStrictGenericChecks: true
 	allowSyntheticDefaultImports: true
+	assumeChangesOnlyAffectDirectDependencies: false
 	suppressExcessPropertyErrors: true
 	suppressImplicitAnyIndexErrors: true
 	traceResolution: false
