@@ -16,15 +16,20 @@ export class Component
 		global.clearTimeout($timeouts[name])
 		delete $timeouts[name]
 
-	def $call name
+	def $call name,...params
 		$cancel(name)
-		self[name]()
+		self[name](...params)
 
-	def $flush name
-		$call(name) if $timeouts[name]
+	def $flush name,...params
+		$call(name,...params) if $timeouts[name]
 
 	def log ...params
 		if config.get('verbose')
+			console.log(...params)
+		return
+
+	def devlog ...params
+		if $web$
 			console.log(...params)
 		return
 	
