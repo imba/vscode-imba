@@ -144,9 +144,6 @@ export class ImbaFile < File
 	get idoc
 		doc.tokens
 
-	get tsfile
-		ils.getProgram!.getSourceFile(tsPath)
-
 	get isTyping
 		_isTyping
 
@@ -556,12 +553,6 @@ export class ImbaFile < File
 
 		return type
 
-	def getGlobalType
-		# could be cached?
-		let {file,checker,program} = getTypeContext!
-		let sym = checker.resolveName('globalThis',undefined,ts.SymbolFlags.Value,false)
-		checker.getTypeOfSymbolAtLocation(sym,file)
-
 	def getSymbolAtPath path
 		let {file,checker,program} = getTypeContext!
 		let type = null
@@ -573,32 +564,20 @@ export class ImbaFile < File
 		
 		while let part = parts.shift!
 			let sym = target ? target.#type.getProperty(part) : file.locals.get(part)
+			if !target and !sym and part == 'global'
+				sym = checker.resolveName('globalThis',undefined,ts.SymbolFlags.Value,false)
+			return null unless sym
+
 			let type = sym.#type = checker.getTypeOfSymbolAtLocation(sym,file)
 			sym.#parent = target
 			sym.getCompletionDetails = getCompletionDetails
 			target = sym
 		
 		return target
-		
 
-	def getCompletionDetailsForPath path
-		let {file,checker,program} = getTypeContext!
-		let type = null
-		let target = null
-		let parts = path.split('.')
-		
-		while let part = parts.shift!
-			let sym = target ? target.#type.getProperty(part) : file.locals.get(part)
-			let type = sym.#type = checker.getTypeOfSymbolAtLocation(sym,file)
-			if !parts.length
-				sym.#details = ts.Completions.createCompletionDetailsForSymbol(sym,checker,file,file)
-			target = sym
-		
-		if target and target.#details
-			return target.#details
-		
-		return
-
+	def getTypeAtPath path
+		let sym = getSymbolAtPath(path)
+		return sym and sym.#type
 
 	def getTypeOfSymbolAtOffset offset
 		let {file,checker,program} = getTypeContext!
@@ -751,7 +730,7 @@ export class ImbaFile < File
 		
 		if target == that and !ctx.scope.class?
 			# also show for target?
-			let glob = getGlobalType!
+			let glob = getTypeAtPath('global')
 			for item in glob.getProperties!
 				let name = item.escapedName
 				continue unless name.match(/^[A-Z]/)
