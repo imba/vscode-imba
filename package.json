@@ -184,7 +184,9 @@
 	"scripts": {
 		"dev:bootstrap": "lerna bootstrap",
 		"watch": "imba watch",
-		"build": "imba build",
+		"build:client": "cd client && imba build -m -S src/index.imba",
+		"build:server": "cd server && imba build -m -S src/index.imba",
+		"build": "npm run build:client && npm run build:server",
 		"prod:version": "lerna version",
 		"build-theme": "imba scripts/compile-theme.imba",
 		"test": "node server/test.js"
