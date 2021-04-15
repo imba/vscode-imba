@@ -8,7 +8,6 @@
   },
   "main": "dist/src/index.js",
   "scripts": {
-    "postinstall": "node ./node_modules/vscode/bin/install"
   },
   "dependencies": {
     "vscode-languageclient": "^6.1.1"

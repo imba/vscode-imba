@@ -10,6 +10,15 @@ npm install -g lerna # yarn global add lerna
 npm run dev:bootstrap # yarn dev:bootstrap
 ```
 
+### Compiling the code
+
+To compile the imba code to javascript, use the `build` script in the root
+directory:
+
+```
+npm run build
+```
+
 ###  Creating a Local Version
 
 While you can build your changes manually and copy over files into your
