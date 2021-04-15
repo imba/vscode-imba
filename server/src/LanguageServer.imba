@@ -50,8 +50,6 @@ const tsServiceOptions\CompilerOptions = {
 	resolveJsonModule: true
 	incremental: true
 	target: ts.ScriptTarget.ES2020
-	# lib: ['lib.esnext.d.ts','lib.dom.d.ts','lib.dom.d.ts']
-	# types: ['node']
 	types: ['node']
 	module: ts.ModuleKind.ESNext
 	forceConsistentCasingInFileNames: true
