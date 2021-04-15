@@ -1,4 +1,4 @@
-import {createConnection, TextDocuments, Location,TextDocumentSyncKind} from 'vscode-languageserver'
+import {createConnection, TextDocuments, Location,TextDocumentSyncKind,InitializeResult} from 'vscode-languageserver'
 import {LanguageServer} from './LanguageServer'
 import {snippets} from './snippets'
 # import { TextDocument } from 'vscode-languageserver-textdocument'
@@ -39,7 +39,7 @@ connection.onInitialize do(params)
 		rootFiles: [np.resolve(helperdir,'imba.d.ts')]
 	})
 
-	return {
+	let res\InitializeResult = {
 		capabilities: {
 			textDocumentSync: TextDocumentSyncKind.Incremental
 			completionProvider: {
@@ -47,7 +47,6 @@ connection.onInitialize do(params)
 				triggerCharacters: ['.', ':', '"', '@','%','\\',"'"]
 			},
 			# signatureHelpProvider: { triggerCharacters: ['('] },
-			signatureHelpProvider: false,
 			documentRangeFormattingProvider: false,
 			hoverProvider: true,
 			documentHighlightProvider: true,
@@ -66,6 +65,7 @@ connection.onInitialize do(params)
 			referencesProvider: true
 		}
 	}
+	return res
 
 connection.onInitialized do(params)
 	# console.log 'on initialized',params

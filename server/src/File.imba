@@ -112,7 +112,7 @@ export class File < Component
 		self
 
 	def onDidChangeTextEditorSelection params
-		yes
+		return
 
 
 
@@ -867,6 +867,7 @@ export class ImbaFile < File
 			isTyping = no
 			$flush('emitFile')
 			diagnostics.sync!
+		return
 
 export class Imba1File < ImbaFile
 
