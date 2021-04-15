@@ -504,6 +504,10 @@ export class ImbaFile < File
 
 			if info and info.markdown
 				return {range: range, contents: {kind: 'markdown', value: info.markdown}}
+
+			# don't fall back to typescript if we're in style mode
+			if (grp.closest('style') or grp.closest('rule')) && !grp.closest('styleinterpolation')
+				return {}
 		catch e
 			devlog 'error in getQuickInfo',e
 			# get quick info via typescript
