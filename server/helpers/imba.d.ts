@@ -72,6 +72,202 @@ interface Object {
     [key: string]: any;
 }
 
+declare class EventModifiers {
+    /**
+     Tells the browser that the default action should not be taken. The event will still continue to propagate up the tree. See Event.preventDefault()
+    */
+    prevent(): EventModifiers;
+    /**
+     Stops the event from propagating up the tree. Event listeners for the same event on nodes further up the tree will not be triggered. See Event.stopPropagation()
+    */
+    stop(): EventModifiers;
+    /**
+     * Indicates that the listeners should be invoked at most once. The listener will automatically be removed when invoked.
+     */
+    once(): EventModifiers;
+
+    capture(): EventModifiers;
+
+    passive(): EventModifiers;
+
+    silence(): EventModifiers;
+    /** The wait modifier delays the execution of subsequent modifiers and callback. It defaults to wait for 250ms, which can be overridden by passing a number or time as the first/only argument. */
+    wait(): EventModifiers;
+
+
+    throttle(): EventModifiers;
+
+
+    debounce(): EventModifiers;
+
+
+    /** Only trigger handler if event.target is the element itself */
+    self():EventModifiers;
+
+    /** Only trigger handler if event.target is the element itself */
+    sel():EventModifiers;
+
+    /** Only trigger handler if event.target is the element itself */
+    if():EventModifiers;
+
+    
+
+    /** Logs to console */
+    log(...data: any[]):EventModifiers;
+}
+
+declare class UIEventModifiers extends EventModifiers {
+
+    /** Only if ctrl key is pressed */
+    ctrl():EventModifiers;
+
+    /** Only if alt key is pressed */
+    alt():EventModifiers;
+
+    /** Only if shift key is pressed */
+    shift():EventModifiers;
+
+    /** Only if meta key is pressed */
+    meta():EventModifiers;
+
+}
+
+declare class MouseEventModifiers extends UIEventModifiers {
+
+}
+
+declare class KeyboardEventModifiers extends UIEventModifiers {
+    /** Only if enter key is pressed */
+    enter():EventModifiers;
+
+    /** Only if left key is pressed */
+    left():EventModifiers;
+
+    /** Only if right key is pressed */
+    right():EventModifiers;
+
+    /** Only if up key is pressed */
+    up():EventModifiers;
+
+    /** Only if down key is pressed */
+    down():EventModifiers;
+
+    /** Only if tab key is pressed */
+    tab():EventModifiers;
+
+    /** Only if esc key is pressed */
+    esc():EventModifiers;
+
+    /** Only if space key is pressed */
+    space():EventModifiers;
+
+    /** Only if del key is pressed */
+    del():EventModifiers;
+}
+
+declare class PointerEventModifiers extends UIEventModifiers {
+    /** Only mouse */
+    mouse(): EventModifiers;
+
+    /** Only pen */
+    pen(): EventModifiers;
+
+    /** Only hand/fingers */
+    touch(): EventModifiers;
+}
+
+declare class PointerGestureModifiers extends PointerEventModifiers {
+    /** Only mouse */
+    moved(): EventModifiers;
+
+    "moved-x"(): EventModifiers;
+
+    "moved-y"(): EventModifiers;
+
+    "moved-up"(): EventModifiers;
+
+    "moved-down"(): EventModifiers;
+
+    /** Only pen */
+    sync(): EventModifiers;
+
+    /** Only hand/fingers */
+    fit(): EventModifiers;
+
+    /** Only hand/fingers */
+    pin(): EventModifiers;
+
+    /** Only hand/fingers */
+    round(): EventModifiers;
+}
+
+
+
+declare class ImbaIntersectEventModifiers extends EventModifiers {
+    in(): EventModifiers;
+
+    out(): EventModifiers;
+
+    css(): EventModifiers;
+}
+
+declare class ImbaResizeEventModifiers extends UIEventModifiers {
+    in(): EventModifiers;
+
+    out(): EventModifiers;
+
+    css(): EventModifiers;
+}
+
+
+interface Event {
+    MODIFIERS: EventModifiers;
+}
+
+interface UIEvent {
+    MODIFIERS: UIEventModifiers;
+}
+
+interface MouseEvent {
+    MODIFIERS: MouseEventModifiers;
+}
+
+interface KeyboardEvent {
+    MODIFIERS: KeyboardEventModifiers;
+}
+
+interface PointerEvent {
+    MODIFIERS: PointerEventModifiers;
+}
+
+interface ResizeEvent {
+    MODIFIERS: ImbaResizeEventModifiers;
+}
+
+declare class PointerGesture extends PointerEvent {
+    MODIFIERS: PointerGestureModifiers;
+}
+
+declare class ImbaIntersectEvent extends Event {
+    MODIFIERS: ImbaIntersectEventModifiers;
+}
+
+declare class ImbaResizeEvent extends UIEvent {
+    MODIFIERS: ImbaResizeEventModifiers;
+}
+
+declare class ImbaSelectionEvent extends Event {
+
+}
+
+
+interface GlobalEventHandlersEventMap {
+    "touch": PointerGesture;
+    "intersect": ImbaIntersectEvent;
+    // "resize": ImbaResizeEvent;
+    "__unknown": CustomEvent;
+}
+
 
 
 declare namespace imba {
@@ -93,6 +289,23 @@ declare namespace imba {
     let colors: string[];
     let router: Router;
 
+    namespace types {
+        let events: GlobalEventHandlersEventMap;
+        let eventHandlers: GlobalEventHandlers;
+
+        namespace html {
+            let tags: HTMLElementTagNameMap;
+            let events: GlobalEventHandlersEventMap;
+        }
+
+        namespace svg {
+            let tags: SVGElementTagNameMap;
+            let events: SVGElementEventMap;
+        }
+    }
+
+    let Element:ImbaElement;
+
     function createIndexedFragment(...arguments: any[]): DocumentFragment;
     function createKeyedFragment(...arguments: any[]): DocumentFragment;
     function createLiveFragment(...arguments: any[]): DocumentFragment;
@@ -112,4 +325,8 @@ declare module "data:text/asset;*" {
     export const url: string;
     export const absPath: string;
     export const path: string;
+}
+
+declare module "imba/compiler" {
+    export function compile(fileName:string,options:any): any;
 }

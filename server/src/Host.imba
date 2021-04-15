@@ -73,9 +73,9 @@ export default class Host < Component
 		#options
 
 	def getDefaultLibFileName options
-		console.log 'getDefaultLibFileName',options
+		devlog 'getDefaultLibFileName',options
 		if $web$
-			return "/project/types/lib.dom.d.ts"
+			return "/types/lib.dom.d.ts"
 		ts.getDefaultLibFilePath(options)
 
 	def getScriptVersion fileName
@@ -129,7 +129,7 @@ export default class Host < Component
 				continue undefined
 
 			let key = "{dir}:{name}"
-			if #cache[key]
+			if #cache.hasOwnProperty(key)
 				continue #cache[key]
 
 			# try to use standard resolution			

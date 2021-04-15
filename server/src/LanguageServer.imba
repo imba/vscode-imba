@@ -424,14 +424,19 @@ export class LanguageServer < Component
 		if item and (!item.data or item.data.resolved)
 			return item
 		
-		if item.data.symbolPath
+		if let path = item.data.symbolPath
 			let file = files[item.data.path]
-			let sym = file.getSymbolAtPath(item.data.symbolPath)
+			let sym = file.getSymbolAtPath(path)
 			let details = sym..getCompletionDetails()
 
 			if details
-				item.detail = ts.displayPartsToString(details.displayParts)
-				item.documentation = ts.displayPartsToString(details.documentation)
+
+				item.detail = util.displayPartsToString(details.displayParts)
+				item.documentation = util.displayPartsToString(details.documentation)
+				if path.match(/imba\.events/)
+					item.detail = item.documentation
+					delete item.documentation
+
 			item.data.resolved = yes
 			return item
 

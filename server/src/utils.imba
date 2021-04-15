@@ -3,7 +3,7 @@ import {URI} from 'vscode-uri'
 import {globals} from './constants'
 import np from 'path'
 
-import {SymbolFlags} from 'typescript'
+import {SymbolFlags,displayPartsToString as tsDisplayPartsToString} from 'typescript'
 
 export def uriToPath uri
 	return uri if uri[0] == '/' or uri.indexOf('://') == -1
@@ -47,6 +47,22 @@ export def rangeFromLocations start, end
 		end:
 			line: Math.max(0, end.line - 1)
 			character: Math.max(0, end.offset - 1)
+
+export def displayPartsToString parts
+	let text = tsDisplayPartsToString(parts)
+
+	if text.match(/: EventModifiers$/)
+		text = text.replace(/^[^\.]+/,'e').replace(': EventModifiers','')
+	
+	return text
+
+export def detailsToMarkdown details
+	let sign = displayPartsToString(details.displayParts)
+	let doc = tsDisplayPartsToString(details.documentation)
+	if sign
+		sign = "```imba\n{sign}\n```"
+	return [sign,doc].join('\n\n')
+
 
 const COMPLETION_KIND_MAP = {
 	property: CompletionItemKind.Field
