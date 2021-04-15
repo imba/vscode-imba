@@ -188,8 +188,13 @@ declare class PointerGestureModifiers extends PointerEventModifiers {
 
     "moved-down"(): EventModifiers;
 
-    /** Only pen */
-    sync(): EventModifiers;
+    /**
+     * A convenient touch modifier that takes care of updating the x,y values of some data during touch. When touch starts sync will remember the initial x,y values and only add/subtract based on movement of the touch.
+     * 
+     * @see https://imba.io/events/touch-events#modifiers-sync
+     */
+    sync(data:object): EventModifiers;
+    sync(data:object,xName:string|null,yName:string|null): EventModifiers;
 
     /** Only hand/fingers */
     fit(): EventModifiers;
@@ -198,7 +203,7 @@ declare class PointerGestureModifiers extends PointerEventModifiers {
     pin(): EventModifiers;
 
     /** Only hand/fingers */
-    round(): EventModifiers;
+    round(nearest?:number): EventModifiers;
 }
 
 
@@ -249,6 +254,13 @@ declare class PointerGesture extends PointerEvent {
 }
 
 declare class ImbaIntersectEvent extends Event {
+    /** The raw IntersectionObserverEntry */
+    entry: IntersectionObserverEntry;
+    /** Ratio of the intersectionRect to the boundingClientRect */
+    ratio: number;
+    /** Difference in ratio since previous event */
+    delta: number;
+
     MODIFIERS: ImbaIntersectEventModifiers;
 }
 
@@ -264,7 +276,6 @@ declare class ImbaSelectionEvent extends Event {
 interface GlobalEventHandlersEventMap {
     "touch": PointerGesture;
     "intersect": ImbaIntersectEvent;
-    // "resize": ImbaResizeEvent;
     "__unknown": CustomEvent;
 }
 
