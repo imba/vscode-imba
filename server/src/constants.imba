@@ -372,23 +372,4 @@ for own name,ref of TAG_NAMES
 	TAG_TYPES[name] = TAG_NAMES[name]
 
 
-export const EVENT_MODIFIERS = [
-	name: 'stop'
-	-
-	name: 'prevent'
-	description: 'If invoked when the cancelable attribute value is true, and while executing a listener for the event with passive set to false, signals to the operation that caused event to be dispatched that it needs to be canceled.'
-	-
-	name: 'ctrl'
-	-
-	name: 'shift'
-	-
-	name: 'alt'
-	-
-	name: 'meta'
-	-
-	name: 'self'
-	-
-	name: 'once'
-]
-
 

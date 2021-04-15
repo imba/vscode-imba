@@ -416,13 +416,7 @@ export class ImbaFile < File
 			let matches = ils.entities.getTagQuery(ctx.tag.name).filter do
 				!$1.static and $1.ownName == ctx.token.value and ($1.type == 'prop' or $1.type == 'set')
 			return matches.map do $1.location
-			# log 'tag attr info',info
-			# return info ? [info.location] : null
-		elif ctx.mode == 'tag.modifier' or ctx.mode == 'tag.event-modifier'
-			let items = ils.entities.getTagEventModifierCompletions(ctx)
-			let item = items.find do $1.label == ctx.token.value
-			if item and item.data.location
-				return [item.data.location]
+
 		return
 	
 	def getAdjustmentEdits pos, amount = 1
@@ -527,12 +521,6 @@ export class ImbaFile < File
 			let info = ils.entities.getTagEventInfo(ctx.token.value,ctx.tag.name)
 			return {range: range, contents: info.description} if info
 
-		elif ctx.mode == 'tag.modifier' or ctx.mode == 'tag.event-modifier'
-			let items = ils.entities.getTagEventModifierCompletions(ctx)
-			let item = items.find do $1.label == ctx.token.value
-			if item
-				return {range: range, contents: (item.detail or item.label)}
-		
 		elif ctx.mode == 'tag.name'
 			let tagName = element.name or ctx.tagName..value
 			log 'tagName',element.name
@@ -776,7 +764,7 @@ export class ImbaFile < File
 				
 				let name = item.escapedName
 				devlog 'get property',item,name
-				continue if name.match(/^(__@|"|__+unknown)/)
+				continue if name.match(/^(__@|"|__+unknown|___)/)
 				continue unless item.flags & ts.SymbolFlags.Value
 				let kind = util.tsSymbolFlagsToKindString(item.flags)
 				let data = {resolved: yes, symbolFlags: item.flags, path: fileName}

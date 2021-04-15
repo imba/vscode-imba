@@ -1,5 +1,5 @@
 import {Component} from './Component'
-import {TAG_NAMES,TAG_TYPES,EVENT_MODIFIERS,keywords} from './constants'
+import {TAG_NAMES,TAG_TYPES,keywords} from './constants'
 import {CompletionItemKind,SymbolKind,InsertTextFormat} from 'vscode-languageserver-types'
 import {convertCompletionKind,matchFuzzyString} from './utils'
 
@@ -373,31 +373,6 @@ export class Entities < Component
 	def getTagFlagCompletions ctx, o = {}
 		let items = []
 		# possibly add flags for tailwind etc
-		return items
-
-	def getTagEventModifierCompletions ctx, o = {}
-		let items = []
-		for item in EVENT_MODIFIERS
-			items.push({
-				label: item.name,
-				kind: CompletionItemKind.Enum,
-				data: {resolved: yes}
-				detail: item.description
-			})
-		
-		if context.tagScope
-			let symbols = getTagSymbols(context.tagScope.name,type: 'def')
-			for sym in symbols
-				continue if sym.ownName.match(/^(unmount|mount|render|setup)/)
-				continue if sym.static
-
-				items.push(
-					label: sym.ownName
-					kind: CompletionItemKind.Method
-					detail: "(method) {sym.name}"
-					data: {resolved: yes, location: sym.location}
-				)
-
 		return items
 
 	def getSnippetsForContext o = {}

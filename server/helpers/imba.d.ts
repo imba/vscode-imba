@@ -1,3 +1,11 @@
+type EventName<T extends string> = `${T}%`;
+
+type LengthUnit = '%' | 'px';
+type Length = `${number}${LengthUnit}` | number;
+
+type TimeUnit = 'ms' | 's';
+type Time = `${number}${TimeUnit}` | number;
+
 interface Element {
     /**
      * Schedule this element to render after imba.commit()
@@ -91,14 +99,13 @@ declare class EventModifiers {
     passive(): EventModifiers;
 
     silence(): EventModifiers;
+    silent(): EventModifiers;
     /** The wait modifier delays the execution of subsequent modifiers and callback. It defaults to wait for 250ms, which can be overridden by passing a number or time as the first/only argument. */
-    wait(): EventModifiers;
+    wait(time?:Time): EventModifiers;
 
+    throttle(time?:Time): EventModifiers;
 
-    throttle(): EventModifiers;
-
-
-    debounce(): EventModifiers;
+    debounce(time?:Time): EventModifiers;
 
 
     /** Only trigger handler if event.target is the element itself */
@@ -110,7 +117,8 @@ declare class EventModifiers {
     /** Only trigger handler if event.target is the element itself */
     if():EventModifiers;
 
-    
+    emit(data?:any): EventModifiers;
+    flag(data?:any): EventModifiers;
 
     /** Logs to console */
     log(...data: any[]):EventModifiers;
@@ -193,20 +201,31 @@ declare class PointerGestureModifiers extends PointerEventModifiers {
      * 
      * @see https://imba.io/events/touch-events#modifiers-sync
      */
-    sync(data:object): EventModifiers;
-    sync(data:object,xName:string|null,yName:string|null): EventModifiers;
+    sync(data:object,xName?:string|null,yName?:string|null): EventModifiers;
 
     /** Only hand/fingers */
-    fit(): EventModifiers;
+    fit(start:Length,end:Length,snap?:number): EventModifiers;
+    fit(context:Element|string,snap?:number): EventModifiers;
+    fit(context:Element|string,start:Length,end:Length,snap?:number): EventModifiers;
+    
 
     /** Only hand/fingers */
     pin(): EventModifiers;
+
+    reframe(): EventModifiers;
 
     /** Only hand/fingers */
     round(nearest?:number): EventModifiers;
 }
 
 
+type IntersectRoot = Element | Document;
+
+type IntersectOptions = {
+    rootMargin?: string;
+    root?: IntersectRoot;
+    thresholds?: number[];
+}
 
 declare class ImbaIntersectEventModifiers extends EventModifiers {
     in(): EventModifiers;
@@ -214,6 +233,12 @@ declare class ImbaIntersectEventModifiers extends EventModifiers {
     out(): EventModifiers;
 
     css(): EventModifiers;
+    
+    ___setup(root?:IntersectRoot,thresholds?:number):void;
+    ___setup(thresholds?:number):void;
+    ___setup(rootMargin:string,thresholds?:number):void;
+    ___setup(rootMargin:string,thresholds?:number):void;
+    ___setup(options:IntersectOptions): void;
 }
 
 declare class ImbaResizeEventModifiers extends UIEventModifiers {
@@ -291,8 +316,8 @@ declare namespace imba {
     function setTimeout(handler: TimerHandler, timeout?: number, ...arguments: any[]): number;
     function clearInterval(handle?: number): void;
     function clearTimeout(handle?: number): void;
-    function commit(): Promise<this>;
-    function render(): Promise<this>;
+    function commit(): Promise<void>;
+    function render(): Promise<void>;
 
     function mount<T>(element: T): T;
 
