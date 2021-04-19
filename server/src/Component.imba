@@ -1,4 +1,5 @@
 import * as config from './Config'
+import * as util from './utils'
 
 export class Component
 	def constructor(...params)
@@ -7,6 +8,9 @@ export class Component
 
 	get config
 		config
+
+	get util
+		util
 
 	def $delay name, timeout = 500
 		global.clearTimeout($timeouts[name])

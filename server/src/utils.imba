@@ -1,9 +1,9 @@
-import {CompletionItemKind,SymbolKind} from 'vscode-languageserver-types'
+import {CompletionItemKind,SymbolKind,MarkupContent} from 'vscode-languageserver-types'
 import {URI} from 'vscode-uri'
 import {globals} from './constants'
 import np from 'path'
 
-import {SymbolFlags,displayPartsToString as tsDisplayPartsToString} from 'typescript'
+import {ModifierFlags,SymbolFlags,displayPartsToString as tsDisplayPartsToString} from 'typescript'
 
 export def uriToPath uri
 	return uri if uri[0] == '/' or uri.indexOf('://') == -1
@@ -31,6 +31,26 @@ export def time cb,label = 'took'
 	console.log label,elapsed
 	return res
 
+export def isReadonly symbol
+	symbol.valueDeclaration.modifierFlagsCache & ModifierFlags.Readonly
+
+export def isAttr symbol
+	let f = symbol.flags
+	f & SymbolFlags.Property && (f & SymbolFlags.Function) == 0 && !isReadonly(symbol) && !symbol.escapedName.match(/^on\w/)
+
+export def symbolFlagsToString flags
+	let out = {
+		toString: do this.#string
+		valueOf: do flags
+	}
+	let m = {}
+	for own k,v of SymbolFlags when typeof v == 'number'
+		if flags & v
+			m[k] = yes
+	Object.assign(out,m)
+	out.#string = Object.keys(m).join(' ')
+	return out
+
 export def rangeFromTextSpan span
 	rangeFromLocations(span.start,span.end)
 
@@ -55,6 +75,12 @@ export def displayPartsToString parts
 		text = text.replace(/^[^\.]+/,'e').replace(': EventModifiers','')
 	
 	return text
+
+export def displayPartsToMarkup parts
+	if parts.length == 1 and parts[0].kind == 'text'
+		let item\MarkupContent = {kind: 'markdown', value: parts[0].text}
+		return item
+	return tsDisplayPartsToString(parts)
 
 export def detailsToMarkdown details
 	let sign = displayPartsToString(details.displayParts)

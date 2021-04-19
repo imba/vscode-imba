@@ -428,12 +428,14 @@ export class LanguageServer < Component
 			let details = sym..getCompletionDetails()
 
 			if details
-
 				item.detail = util.displayPartsToString(details.displayParts)
-				item.documentation = util.displayPartsToString(details.documentation)
-				if path.match(/imba\.events/)
-					item.detail = item.documentation
-					delete item.documentation
+				# item.documentation = util.displayPartsToString(details.documentation)
+
+				item.documentation = util.displayPartsToMarkup(details.documentation)
+				
+				# if path.match(/imba\.events/)
+				# 	item.detail = item.documentation
+				# 	delete item.documentation
 
 			item.data.resolved = yes
 			return item
@@ -530,7 +532,7 @@ export class LanguageServer < Component
 			for sym in symbols
 				cache.symbolmap[sym.name] = sym
 
-		if (options.type instanceof Array)
+		if (options.type isa Array)
 			symbols = symbols.filter do options.type.indexOf($1.type) >= 0
 		elif options.type
 			symbols = symbols.filter do $1.type == options.type

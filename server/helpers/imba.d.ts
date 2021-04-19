@@ -1,3 +1,7 @@
+/// import {HTML} from './imba.dom';
+/// <reference path="./imba.dom.d.ts" />
+/// <reference path="./imba.css.d.ts" />
+
 type EventName<T extends string> = `${T}%`;
 
 type LengthUnit = '%' | 'px';
@@ -304,8 +308,6 @@ interface GlobalEventHandlersEventMap {
     "__unknown": CustomEvent;
 }
 
-
-
 declare namespace imba {
     interface Router {
         refresh(): void;
@@ -324,6 +326,7 @@ declare namespace imba {
     let styles: ImbaStyles;
     let colors: string[];
     let router: Router;
+    let tagtypes: HTML;
 
     namespace types {
         let events: GlobalEventHandlersEventMap;
@@ -340,6 +343,7 @@ declare namespace imba {
         }
     }
 
+    let stylemodifiers: ImbaStyleModifiers;
     let Element:ImbaElement;
 
     function createIndexedFragment(...arguments: any[]): DocumentFragment;

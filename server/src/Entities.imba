@@ -423,16 +423,6 @@ export class Entities < Component
 				sortText: 'self'
 				data: {resolved: true}
 			}
-			for own name,value of $styles.assets
-				items.push {
-					label: "svg-{name}"
-					kind: CompletionItemKind.Value
-					data: {resolved: true}
-					documentation: {
-						kind: 'markdown'
-						value: value.documentation or ''
-					}
-				}
 
 		return items
 

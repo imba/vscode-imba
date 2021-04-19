@@ -61,6 +61,12 @@ const SuppressDiagnostics = [
 	code: 2557
 	text: /\.\.\.arguments/
 	---
+	code: 2554
+	test: do({message})
+		let [m,a,b] = message.match(/Expected (\d+) arguments, but got (\d+)/)
+		return yes if m and parseInt(b) > parseInt(a)
+		return no
+	---
 	code: 2339 # should we always?
 	message: /on type '\{\}'/
 	---
@@ -82,15 +88,17 @@ export class Diagnostic
 		msg = msg.messageText or msg or ''
 		let sev = [WARN,ERR,INFO,INFO][entry.category]
 		let rawCode = file.text.substr(entry.start,entry.length)
+		let rawExpandedCode = file.text.substr(entry.start - 10,entry.length + 10)
 
 		for rule in SuppressDiagnostics
 			if rule.code == entry.code
 				if rule.text isa RegExp
 					if rule.text.test(rawCode)
-						console.log 'skipping rule'
 						return 
 				if rule.message isa RegExp
 					return if rule.message.test(msg)
+				if rule.test isa Function
+					return if rule.test({message: msg, text: rawCode})
 
 		if options.suppress
 			for rule in options.suppress
@@ -113,7 +121,16 @@ export class Diagnostic
 		if msg.match('does not exist on type')
 			sev = WARN
 
-		console.log "ts diagnostic",entry.code,entry.start,entry.length,rawCode,range,entry.messageText
+		if !range or Number.isNaN(range.start.character)
+			return null
+
+		# if config.get('verbose')
+		#	msg += " | " + JSON.stringify([rawCode,entry.code,entry.start,entry.length,rawExpandedCode,range])
+		#
+		#	if msg.indexOf('sys$1') >= 0
+		#		msg += '\n' + file.text
+
+		# console.log "ts diagnostic",entry.code,entry.start,entry.length,rawCode,range,entry.messageText
 		
 		return new Diagnostic({
 			severity: sev

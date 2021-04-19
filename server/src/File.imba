@@ -1,5 +1,5 @@
 import {Component} from './Component'
-import {CompletionItemKind,DiagnosticSeverity,SymbolKind,Location} from 'vscode-languageserver-types'
+import {CompletionItemKind,DiagnosticSeverity,SymbolKind,Location,LocationLink} from 'vscode-languageserver-types'
 # import {Location} from 'vscode-languageserver'
 
 import * as util from './utils'
@@ -8,7 +8,7 @@ import { items } from '../../test/data'
 import {Keywords,KeywordTypes,CompletionTypes,Sym,SymbolFlags} from 'imba/program'
 import {Diagnostics, DiagnosticKind} from './Diagnostics'
 import * as ts from 'typescript'
-import type {Diagnostic} from 'typescript'
+import type {Diagnostic,TypeNode,TypeFlags} from 'typescript'
 import type {LanguageServer} from './LanguageServer'
 import system from './system'
 
@@ -51,6 +51,7 @@ export class File < Component
 
 	def constructor program\LanguageServer, path
 		super
+		isLegacy = no
 		version = 1
 		self.program = program
 		fileName = util.t2iPath(path)
@@ -279,7 +280,7 @@ export class ImbaFile < File
 				jsSnapshot ||= ts.ScriptSnapshot.fromString(js)
 				return self
 
-			diagnostics.update(DiagnosticKind.Compiler,res.diagnostics or [])
+			# diagnostics.update(DiagnosticKind.Compiler,res.diagnostics or [])
 
 			if res.errors && res.errors.length
 				# Should rather keep the last successfully compiled version?
@@ -314,11 +315,44 @@ export class ImbaFile < File
 		$indexWorkspaceSymbols!
 		return cache.workspaceSymbols
 
+	def sourceRangeAt start, end
+		for [ts0,ts1,imba0,imba1] in locs.spans
+			if start == ts0 and end == ts1
+				return idoc.rangeAt(imba0,imba1)
+		return null
+
 	def originalRangesFor jsloc
 		locs.spans.filter do |pair|
 			jsloc >= pair[0] and pair[1] >= jsloc
 
-	def originalRangeFor {start,length}
+	def originalRangeFor {start,length,end = null}
+		if end == null
+			end = start + length
+
+		let starts = []
+		let ends = []
+		let hit = null
+
+		for span in locs.spans
+			if start == span[0]
+				starts.push(span)
+			if end == span[1]
+				ends.push(span)
+
+			if start == span[0] and end == span[1]
+				break hit = span
+		
+		if !hit and starts.length and ends.length
+			hit = [0,0,starts[0][2],ends[0][3]]
+
+		if hit
+			return idoc.rangeAt(hit[2],hit[3])
+		# let min = Math.starts.map do $1[2]
+		# let max = ends.map do $1[2]
+		
+		
+		return null
+
 		let spans = originalRangesFor(start)
 		let hits = spans.length
 		if hits > 0
@@ -327,15 +361,8 @@ export class ImbaFile < File
 				let roff = (start + length) - span[1]
 				if loff == 0 and roff == 0
 					return {start: span[2],length: span[3] - span[2], end: span[3]}
-				
-		return null
 
-	def sourceRangeAt start, end
-		for [ts0,ts1,imba0,imba1] in locs.spans
-			if start == ts0 and end == ts1
-				return idoc.rangeAt(imba0,imba1)
 		return null
-
 
 	# need a better converter
 	def originalLocFor jsloc
@@ -381,6 +408,7 @@ export class ImbaFile < File
 	# need to specify that this converts from typescript
 	def textSpanToRange span
 		if span.length == 0
+			return idoc.rangeAt(originalLocFor(span.start))
 			let pos = doc.positionAt(originalLocFor(span.start))
 			return {start: pos,end: pos}
 		let range = originalRangeFor(span)
@@ -412,12 +440,59 @@ export class ImbaFile < File
 			let info = ils.entities.getTagTypeInfo(ctx.tag.name)
 			return info.map(do $1.location).filter(do $1)
 		elif ctx.mode == 'tag.attr'
-			# let info = ils.entities.getTagAttrInfo(ctx.token.value,ctx.tag.name)
 			let matches = ils.entities.getTagQuery(ctx.tag.name).filter do
 				!$1.static and $1.ownName == ctx.token.value and ($1.type == 'prop' or $1.type == 'set')
 			return matches.map do $1.location
 
-		return
+
+		let jsloc = generatedLocFor(offset)
+		let info = tls.getDefinitionAndBoundSpan(fileName,jsloc) or {definitions:[]}
+
+		return unless info.textSpan
+
+		let sourceSpan = originalRangeFor(info.textSpan)
+		let sourceText = doc.getText!.slice(sourceSpan.start,sourceSpan.end)
+		let isLink = sourceText and sourceText.indexOf('-') >= 0
+
+		devlog 'get definition',uri,pos,offset,jsloc,info,sourceSpan,sourceText,isLink
+		let defs = for item in info.definitions
+			# console.log 'get definition',item
+			let ifile = ils.files[item.fileName]
+			if ifile
+				devlog 'definition',item,ifile
+				let textSpan = ifile.originalRangeFor(item.textSpan)
+				let span = item.contextSpan ? ifile.originalRangeFor(item.contextSpan) : textSpan
+
+				if item.containerName == 'globalThis' and item.name.indexOf('Component') >= 0
+					span = {
+						start: {line: textSpan.start.line, character: 0}
+						end: {line: textSpan.start.line + 1, character: 0}
+					}
+				
+				devlog 'definition',item,textSpan,span,item.kind
+				if item.kind == 'module'
+					textSpan = {start: {line:0,character:0},end: {line:0,character:0}}
+					console.log 'LocationLink',ifile.uri,textSpan,sourceSpan
+					LocationLink.create(ifile.uri,textSpan,textSpan,sourceSpan)
+					# Location.create(ifile.uri,)
+				elif isLink
+					LocationLink.create(ifile.uri,textSpan,span,sourceSpan)
+				else
+					Location.create(ifile.uri,textSpan)
+
+			elif item.name == '__new' and info.definitions.length > 1
+				continue
+			else
+				let span = util.textSpanToRange(item.contextSpan or item.textSpan,item.fileName,tls)
+				if isLink
+					LocationLink.create(util.pathToUri(item.fileName),span,span,sourceSpan)
+				else
+					Location.create(util.pathToUri(item.fileName),span)
+		return defs
+
+	def getDefinitionAtOffset offset
+		getDefinitionAtPosition(positionAt(offset))
+
 	
 	def getAdjustmentEdits pos, amount = 1
 		let loc =  offsetAt(pos)
@@ -428,8 +503,8 @@ export class ImbaFile < File
 		return if isLegacy
 
 		let offset = offsetAt(pos)
-
 		let ctx = idoc.getContextAtOffset(offset)
+
 
 		# see if we should move one step ahead
 		if ctx.after.token == '' and !ctx.before.character.match(/\w/)
@@ -449,13 +524,29 @@ export class ImbaFile < File
 		try
 			let info = null
 			let symbol = null
+
+			if tok.match("tag.flag")
+				info = "```imba\n<el class='... {tok.value} ...'>\n```"
+
+			if tok.match("tag.id")
+				info = "```imba\n<el id='{tok.value.slice(1)}'>\n```"
+
+			if tok.match("style.property.modifier")
+				let [m,pre,post] = tok.value.match(/^(@|\.+)([\w\-\d]*)$/)
+				if pre == '@'
+					symbol = getSymbolAtPath("global.imba.stylemodifiers.{post}")
+				elif pre == '.'
+					info = "Style only applies when element has '{post}' class"
+				elif pre == '..'
+					info = "Style only applies when a parent of element has has '{post}' class"
 			
 			g.listener = grp.closest('listener')
 			g.el = grp.closest('tag')
 			let csspropkey = g.csspropkey = grp.closest('stylepropkey')
 			let cssprop = g.cssprop = grp.closest('styleprop')
 
-			if csspropkey
+			if csspropkey and !symbol and !info
+				devlog 'csspropkey info!!',ctx,csspropkey.modifier,csspropkey.propertyName
 				info = ils.entities.getCSSInfo(ctx)
 
 			if tok.match('style.value')
@@ -480,6 +571,8 @@ export class ImbaFile < File
 				# let details = modsym.getCompletionDetails()
 				# info = comment[0].text
 				# let info = {kind: 'markdown', value: comment[0].text}
+
+			
 
 			if !info and symbol
 				let details = symbol.getCompletionDetails()
@@ -507,6 +600,7 @@ export class ImbaFile < File
 			# get quick info via typescript
 		
 		# log 'getting context',offset,range,ctx.token,ctx.mode
+
 	
 		let element = ctx.tag
 		let elinfo = ctx.tag and ctx.tag.name and ils.entities.getTagTypeInfo(ctx.tag.name)
@@ -589,6 +683,7 @@ export class ImbaFile < File
 		return type
 
 	def getSymbolAtPath path,resolveGlobal = yes
+		devlog "get symbol {path}"
 		let {file,checker,program} = getTypeContext!
 		let type = null
 		let target = null
@@ -600,8 +695,21 @@ export class ImbaFile < File
 		while let part = parts.shift!
 			let alternatives = part.split('|')
 			part = alternatives.shift!
+			let sym = null
+			if part.match(/^\<[\w\-]+\>$/)
+				let name = part.slice(1,-1)
+				let pascal = util.pascalCase(name)
 
-			let sym = target ? target.#type.getProperty(part) : file.locals.get(part)
+				if name == pascal
+					part = name
+					parts.unshift('prototype')
+					# sym = file.locals.get(name)
+				else
+					sym ||= getSymbolAtPath("global.imba.types.html.tags.{name}")
+					sym ||= getSymbolAtPath("global.{util.pascalCase(name)}Component.prototype")
+
+			sym ||= target ? target.#type.getProperty(part) : file.locals.get(part)
+
 			if !target and !sym and (part == 'global' or resolveGlobal)
 				part = 'globalThis' if part == 'global'
 				sym = checker.resolveName(part,undefined,ts.SymbolFlags.Value,false)
@@ -621,8 +729,24 @@ export class ImbaFile < File
 		
 		return target
 
+	def getPropertiesAtPath path, ...filters
+		let type = getTypeAtPath(path)
+		let props = type.getApparentProperties!
+		for filter in filters
+			if filter isa Array
+				props = props.filter do(item) filter.some do $1(item)
+			elif filter isa Function
+				props = props.filter(filter)
+			elif filter isa RegExp
+				props = props.filter do !$1.escapedName.match(filter)
+
+		for item in props
+			props[item.escapedName] = item
+		return props
+
 	def getTypeAtPath path
 		let sym = getSymbolAtPath(path)
+		
 		return sym and sym.#type
 
 	def getTypeOfSymbolAtOffset offset
@@ -681,8 +805,11 @@ export class ImbaFile < File
 		let keywordFilter = 0
 		let resolveLocalsPath = null
 		let props = null
+		let g = {}
+		g.el = grp.closest('tag')
 
 		let add = do(item)
+			devlog 'add item',item.label,item
 			names.set(item.label,item)
 			items.push(item)
 	
@@ -696,23 +823,71 @@ export class ImbaFile < File
 		let t = CompletionTypes
 		let opts = Object.assign({},ils.config.config.suggest,suggest)
 
-		if flags == 0
-			return []
+		if tok.match('operator.equals') and tok.prev.match('tag.attr')
+			let key = "global.imba.tagtypes.{g.el.tagName}.{tok.prev.value}"
+			let type = getTypeAtPath(key)
+
+			if type..types..length
+				target = null
+				for item in type.types
+					add({
+						label: item.value
+						insertText: "'{item.value}'"
+					})
+
+		# if at start of string
+		if tok.match('string.open')
+			target = null
+
+			if grp.match('tagattrvalue')
+				devlog 'matched tag attribute value!!',grp.tagName, grp.propertyName
+				let key = "global.imba.tagtypes.{grp.tagName}.{grp.propertyName}"
+				if let type = getTypeAtPath(key)
+					
+					for item in type.types
+						add({
+							label: item.value
+						})
+					# devlog "found type!!!",type,items
+
+
+		
+
+		
+		if flags & t.Path
+			log 'get path completions!'
+			try
+				let tloc = generatedLocFor(offset)
+				let res = tls.getCompletionsAtPosition(tfileName,tloc,{})
+				return res
+
+			# make sure we have a path for this
 
 		if flags & t.TagName
 			return ils.entities.getTagNameCompletions(ctx.group,opts)
 
 		if flags & t.TagProp
-			return ils.entities.getTagAttrCompletions(ctx.group,opts)
+			devlog 'TagProp completions',flags,g.el,g.el.name,g.el.pathName
+			let key = "<{g.el.name}>"
+			target = getTypeAtPath(key)
+			# props = target.getApparentProperties!
+			props = getPropertiesAtPath(key,util.isAttr,/^on\w/,/__$/)
+			
+			# return ils.entities.getTagAttrCompletions(ctx.group,opts)
+
+		
 		
 		if tok.match('tag.event.name') and false
 			# if flags & t.TagEvent
 			return ils.entities.getTagEventCompletions(ctx.group,opts)
-		
-		# if flags & t.TagEventModifier
-		#	return ils.entities.getTagEventModifierCompletions(ctx.group,opts)
 
-		if flags & t.StyleValue
+		devlog "STYLE PROP???",tok.kind,tok.match('style.property.modifier')
+		if tok.match('style.property.modifier')
+			target = getTypeAtPath('global.imba.stylemodifiers')
+			props = target.getApparentProperties!
+			devlog 'Style modifiers!!!',target,target.#path
+		
+		elif flags & t.StyleValue
 			items = ils.entities.getCSSValueCompletions(ctx,opts)
 
 			if flags & t.StyleProp
@@ -720,7 +895,9 @@ export class ImbaFile < File
 
 			return items
 
-		if flags & t.StyleProp
+		
+
+		elif flags & t.StyleProp
 			return ils.entities.getCSSPropertyCompletions(ctx.group,opts)
 
 		if tok.match('tag.event.name')
@@ -748,22 +925,23 @@ export class ImbaFile < File
 			if let type = getTypeOfSymbolAtOffset(offset)
 				target = type
 
+
+		if flags == 0 and !props and !items.length
+			return []
+
 		if tok.match('identifier')
 			filters.startsWith = ctx.before.token
 		
 		if tok.match('keyword')
-			# could include snippets
 			return []
 
-		if target && !ctx.scope.class?
+		if target && (!ctx.scope.class? or props)
 			# console.dir target, depth: 0
 			devlog 'completions for target',target
 			props ||= target.getApparentProperties!
 
 			for item in props
-				
 				let name = item.escapedName
-				devlog 'get property',item,name
 				continue if name.match(/^(__@|"|__+unknown|___)/)
 				continue unless item.flags & ts.SymbolFlags.Value
 				let kind = util.tsSymbolFlagsToKindString(item.flags)
