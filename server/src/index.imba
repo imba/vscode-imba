@@ -44,7 +44,7 @@ connection.onInitialize do(params)
 			textDocumentSync: TextDocumentSyncKind.Incremental
 			completionProvider: {
 				resolveProvider: true,
-				triggerCharacters: ['.', ':', '"', '@','%','\\',"'"]
+				triggerCharacters: ['.', ':', '"', '@','%','\\',"'",'=']
 			},
 			# signatureHelpProvider: { triggerCharacters: ['('] },
 			documentRangeFormattingProvider: false,

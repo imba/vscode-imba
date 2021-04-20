@@ -263,6 +263,7 @@ export class ImbaFile < File
 				res = util.time(&,'compilation took') do
 					compiler.compile(body,opts)
 			catch e
+				
 				let loc = e.loc && e.loc()
 				let range = loc && {
 					offset: loc[0]
@@ -280,9 +281,10 @@ export class ImbaFile < File
 				jsSnapshot ||= ts.ScriptSnapshot.fromString(js)
 				return self
 
-			# diagnostics.update(DiagnosticKind.Compiler,res.diagnostics or [])
+			diagnostics.update(DiagnosticKind.Compiler,res.diagnostics or [])
 
 			if res.errors && res.errors.length
+				# devlog "compile error!!!",res.errors
 				# Should rather keep the last successfully compiled version?
 				js ||= "// empty"
 				jsSnapshot ||= ts.ScriptSnapshot.fromString(js)
@@ -714,6 +716,7 @@ export class ImbaFile < File
 				part = 'globalThis' if part == 'global'
 				sym = checker.resolveName(part,undefined,ts.SymbolFlags.Value,false)
 
+
 			if !sym and alternatives.length
 				parts.unshift alternatives.join('|')
 				continue
@@ -731,7 +734,10 @@ export class ImbaFile < File
 
 	def getPropertiesAtPath path, ...filters
 		let type = getTypeAtPath(path)
+		return [] unless type
+
 		let props = type.getApparentProperties!
+		
 		for filter in filters
 			if filter isa Array
 				props = props.filter do(item) filter.some do $1(item)
@@ -739,9 +745,16 @@ export class ImbaFile < File
 				props = props.filter(filter)
 			elif filter isa RegExp
 				props = props.filter do !$1.escapedName.match(filter)
+		
+		props.keys = {}
 
 		for item in props
-			props[item.escapedName] = item
+			if let name = item.escapedName
+				try
+					props.keys[name] = item
+					item.#path = "{type.#path}.{name}"
+				catch e
+					devlog e,props.keys,props,name
 		return props
 
 	def getTypeAtPath path
@@ -805,7 +818,10 @@ export class ImbaFile < File
 		let keywordFilter = 0
 		let resolveLocalsPath = null
 		let props = null
+		let noGlobals = !!ctx.scope.class?
+		let noKeywords = no
 		let g = {}
+
 		g.el = grp.closest('tag')
 
 		let add = do(item)
@@ -852,29 +868,28 @@ export class ImbaFile < File
 
 
 		
-
-		
 		if flags & t.Path
-			log 'get path completions!'
 			try
 				let tloc = generatedLocFor(offset)
 				let res = tls.getCompletionsAtPosition(tfileName,tloc,{})
 				return res
 
-			# make sure we have a path for this
-
 		if flags & t.TagName
 			return ils.entities.getTagNameCompletions(ctx.group,opts)
 
 		if flags & t.TagProp
-			devlog 'TagProp completions',flags,g.el,g.el.name,g.el.pathName
-			let key = "<{g.el.name}>"
+			devlog 'TagProp completions',flags,g.el,g.el.tagName,g.el.pathName
+			let key = "<{g.el.tagName}>"
+			noGlobals = true
+			noKeywords = true
 			target = getTypeAtPath(key)
-			# props = target.getApparentProperties!
 			props = getPropertiesAtPath(key,util.isAttr,/^on\w/,/__$/)
-			
-			# return ils.entities.getTagAttrCompletions(ctx.group,opts)
-
+			let attrs = getPropertiesAtPath("global.imba.tagtypes.{g.el.tagName}")
+			devlog 'found attributes',attrs
+			# for item in attrs
+			# 	if props[item.escapedName]
+			# 		props[item.escapedName].#path = item.#path
+			# find the element properties via other 
 		
 		
 		if tok.match('tag.event.name') and false
@@ -882,7 +897,8 @@ export class ImbaFile < File
 			return ils.entities.getTagEventCompletions(ctx.group,opts)
 
 		devlog "STYLE PROP???",tok.kind,tok.match('style.property.modifier')
-		if tok.match('style.property.modifier')
+
+		if tok.match('style.property.modifier') or tok.match('style.selector.modifier')
 			target = getTypeAtPath('global.imba.stylemodifiers')
 			props = target.getApparentProperties!
 			devlog 'Style modifiers!!!',target,target.#path
@@ -917,6 +933,7 @@ export class ImbaFile < File
 		if tok.match('operator.access')
 			# may be worth trying to fake the lookup 
 			util.time(&,'emit') do $flush('emitFile',false)
+			# never fall back to tls if file has not compiled correctly!!
 			tsoffset = generatedLocFor(offset)
 			let tscompletions = tls.getCompletionsAtPosition(fileName,tsoffset,{})
 			let completions = util.tsp2lspCompletions(tscompletions.entries,{file:self,jsLoc:tsoffset})
@@ -943,12 +960,16 @@ export class ImbaFile < File
 			for item in props
 				let name = item.escapedName
 				continue if name.match(/^(__@|"|__+unknown|___)/)
+				continue if name.match(/^\w+\$\d+/) # this is agenerated variable
 				continue unless item.flags & ts.SymbolFlags.Value
 				let kind = util.tsSymbolFlagsToKindString(item.flags)
 				let data = {resolved: yes, symbolFlags: item.flags, path: fileName}
 
+				if item.#path
+					data.symbolPath = item.#path
+
 				if target.#path
-					data.symbolPath = "{target.#path}.{name}"
+					data.symbolPath ||= "{target.#path}.{name}"
 					data.resolved = no
 
 				add(
@@ -960,7 +981,7 @@ export class ImbaFile < File
 				)
 		
 		# if target is implicit value
-		if target == that
+		if target == that and !noKeywords
 			for keyword in suggest.keywords
 				add(
 					label: keyword
@@ -968,14 +989,12 @@ export class ImbaFile < File
 					detail: 'keyword'
 				)
 		
-		if target == that and !ctx.scope.class?
+		if target == that and !noGlobals
 			# also show for target?
 			let glob = getTypeAtPath('global')
 			for item in glob.getProperties!
 				let name = item.escapedName
 				continue unless name.match(/^[A-Z]/)
-				# rather continue unless we're dealing with the node-global?
-				# continue unless item.flags & ts.SymbolFlags.Type
 				
 				add(
 					label: name

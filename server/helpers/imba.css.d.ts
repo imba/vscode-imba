@@ -14,6 +14,16 @@ interface ImbaStyleModifiers {
     /** represents an element without any siblings */
 	only: {name: 'only-child'};
 
+    /** Generally triggered when the user hovers over an element with the cursor (mouse pointer) */
+    hover: void;
+
+    /** Element is being activated by the user. When using a mouse, "activation" typically starts when the user presses down the primary mouse button. */
+    active: void;
+
+    visited: void;
+
+    link: void;
+
     enabled: void;
 
     checked: void;
@@ -76,4 +86,5 @@ interface ImbaStyleModifiers {
 
     /** Intended primarily for screens. */
 	screen: {media: 'screen'}
+
 }

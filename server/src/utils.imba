@@ -34,8 +34,12 @@ export def time cb,label = 'took'
 export def isReadonly symbol
 	symbol.valueDeclaration.modifierFlagsCache & ModifierFlags.Readonly
 
+export def isDeprecated symbol
+	symbol.valueDeclaration.modifierFlagsCache & ModifierFlags.Deprecated
+
 export def isAttr symbol
 	let f = symbol.flags
+	return no if isDeprecated(symbol)
 	f & SymbolFlags.Property && (f & SymbolFlags.Function) == 0 && !isReadonly(symbol) && !symbol.escapedName.match(/^on\w/)
 
 export def symbolFlagsToString flags
