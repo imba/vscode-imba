@@ -302,15 +302,17 @@ export class ImbaFile < File
 			js = res.js.replace(/\$CARET\$/g,'valueOf')
 			tsVersion = iversion
 			jsSnapshot = ts.ScriptSnapshot.fromString(js)
-			$indexWorkspaceSymbols()
+			$indexWorkspaceSymbols!
 
 		return self
 		
 	def $indexWorkspaceSymbols
-		cache.symbols ||= util.fastExtractSymbols(doc.getText!,imbaPath)
-		cache.workspaceSymbols ||= cache.symbols.map do |sym|
+		cache.symbols ||= util.fastExtractSymbols(doc.getText!,fileName)
+		cache.workspaceSymbols ||= cache.symbols.map do(sym)
 			sym.location = Location.create(uri,sym.span)
+			sym.#file = self
 			sym
+
 		return self
 	
 	get workspaceSymbols
@@ -410,6 +412,9 @@ export class ImbaFile < File
 	# need to specify that this converts from typescript
 	def textSpanToRange span
 		if span.length == 0
+			if span.start == 0
+				return idoc.rangeAt(0,0)
+
 			return idoc.rangeAt(originalLocFor(span.start))
 			let pos = doc.positionAt(originalLocFor(span.start))
 			return {start: pos,end: pos}
@@ -461,11 +466,13 @@ export class ImbaFile < File
 			# console.log 'get definition',item
 			let ifile = ils.files[item.fileName]
 			if ifile
-				devlog 'definition',item,ifile
+				
 				let textSpan = ifile.originalRangeFor(item.textSpan)
 				let span = item.contextSpan ? ifile.originalRangeFor(item.contextSpan) : textSpan
+				span ||= textSpan
+				devlog 'definition',item,ifile,textSpan,span,sourceSpan,sourceText
 
-				if item.containerName == 'globalThis' and item.name.indexOf('Component') >= 0
+				if item.containerName == 'globalThis' and item.name.indexOf('$$TAG$$') >= 0
 					span = {
 						start: {line: textSpan.start.line, character: 0}
 						end: {line: textSpan.start.line + 1, character: 0}
@@ -510,7 +517,7 @@ export class ImbaFile < File
 
 		# see if we should move one step ahead
 		if ctx.after.token == '' and !ctx.before.character.match(/\w/)
-			if ctx.after.character.match(/[\w\$]/)
+			if ctx.after.character.match(/[\w\$\@\#\-]/)
 				ctx = idoc.getContextAtOffset(offset + 1)
 
 		let grp = ctx.group
@@ -533,9 +540,11 @@ export class ImbaFile < File
 			if tok.match("tag.id")
 				info = "```imba\n<el id='{tok.value.slice(1)}'>\n```"
 
-			if tok.match("style.property.modifier")
+			if tok.match("style.property.modifier") or tok.match("style.selector.modifier")
 				let [m,pre,post] = tok.value.match(/^(@|\.+)([\w\-\d]*)$/)
-				if pre == '@'
+				devlog 'matching!!',m,pre,post
+
+				if pre == '@' or pre == ''
 					symbol = getSymbolAtPath("global.imba.stylemodifiers.{post}")
 				elif pre == '.'
 					info = "Style only applies when element has '{post}' class"
@@ -566,27 +575,12 @@ export class ImbaFile < File
 			if tok.match('tag.event-modifier')
 				let name = tok.value.replace('.','')
 				let path = "global.imba.types.events.{g.listener.name}|__unknown.MODIFIERS.{name}"
-				symbol = getSymbolAtPath(path)
-				# symbol = getSymbolAtPath("global.imba.events.{g.listener.name}.{name}")
-				# let comment = symbol.getDocumentationComment()
-				# devlog 'modifier',name,g.listener,evsym,symbol
-				# let details = modsym.getCompletionDetails()
-				# info = comment[0].text
-				# let info = {kind: 'markdown', value: comment[0].text}
-
-			
+				symbol = getSymbolAtPath(path)			
 
 			if !info and symbol
 				let details = symbol.getCompletionDetails()
 				let md = util.detailsToMarkdown(details)
-				# let dparts = ts.displayPartsToString(details.displayParts)
-				# let doc = ts.displayPartsToString(details.documentation)
-				# if dparts
-				# 	dparts = "```imba\n{dparts}\n```"
-				# devlog details,dparts,doc
 				info = {markdown: md}
-				# item.detail = ts.displayPartsToString(details.displayParts)
-				# item.documentation = ts.displayPartsToString(details.documentation)
 			
 			if typeof info == 'string'
 				info = {markdown: info}
@@ -644,12 +638,12 @@ export class ImbaFile < File
 		if let gen-offset = generatedLocFor(offset)
 			if let info = tls.getQuickInfoAtPosition(tsPath, gen-offset)
 				let contents = [{
-					value: ts.displayPartsToString(info.displayParts)
+					value: util.displayPartsToString(info.displayParts)
 					language: 'typescript'
 				}]
 
 				if info.documentation
-					contents.push(value: ts.displayPartsToString(info.documentation), language: 'text')
+					contents.push(value: util.displayPartsToString(info.documentation), language: 'text')
 				return {
 					range: range
 					contents: contents
@@ -708,7 +702,7 @@ export class ImbaFile < File
 					# sym = file.locals.get(name)
 				else
 					sym ||= getSymbolAtPath("global.imba.types.html.tags.{name}")
-					sym ||= getSymbolAtPath("global.{util.pascalCase(name)}Component.prototype")
+					sym ||= getSymbolAtPath("global.{name.replace(/\-/g,'_')}$$TAG$$.prototype")
 
 			sym ||= target ? target.#type.getProperty(part) : file.locals.get(part)
 
@@ -805,6 +799,7 @@ export class ImbaFile < File
 		return if isLegacy	
 
 		let ctx = idoc.getContextAtOffset(offset)
+
 		let grp = ctx.group
 		let tok = ctx.token
 		let that = getSelfAtOffset(offset)
@@ -819,22 +814,25 @@ export class ImbaFile < File
 		let resolveLocalsPath = null
 		let props = null
 		let noGlobals = !!ctx.scope.class?
+		let noVars = no
 		let noKeywords = no
 		let g = {}
 
 		g.el = grp.closest('tag')
 
-		let add = do(item)
-			devlog 'add item',item.label,item
-			names.set(item.label,item)
-			items.push(item)
+		let add = do(...parts)
+			for item in parts
+				devlog 'add item',item.label,item
+				names.set(item.label,item)
+				items.push(item)
 	
 		# $delay('emitFile',5000)
-		devlog 'completions in context',that,ctx
+		devlog 'completions in context',that,ctx,offset
+
 		if $web$
 			global.ct = ctx
 			ctx.SELF = that
-		# console.log 'getCompletions',imbaPath,options,tok.type,ctx.before,suggest,!!that
+		devlog 'getCompletions',ctx.before,ctx.after,offset,options
 		# console.log ils.config.config
 		let t = CompletionTypes
 		let opts = Object.assign({},ils.config.config.suggest,suggest)
@@ -842,18 +840,22 @@ export class ImbaFile < File
 		if tok.match('operator.equals') and tok.prev.match('tag.attr')
 			let key = "global.imba.tagtypes.{g.el.tagName}.{tok.prev.value}"
 			let type = getTypeAtPath(key)
-
+			
 			if type..types..length
 				target = null
 				for item in type.types
 					add({
 						label: item.value
 						insertText: "'{item.value}'"
+						sortText:'0'
 					})
+
 
 		# if at start of string
 		if tok.match('string.open')
 			target = null
+			noGlobals = yes
+			noKeywords = yes
 
 			if grp.match('tagattrvalue')
 				devlog 'matched tag attribute value!!',grp.tagName, grp.propertyName
@@ -874,8 +876,17 @@ export class ImbaFile < File
 				let res = tls.getCompletionsAtPosition(tfileName,tloc,{})
 				return res
 
+		if flags & t.Type
+			devlog 'complete types!!'
+			let res = ils.entities.getTypesForFile(self,ctx)
+			return res
+
+
 		if flags & t.TagName
-			return ils.entities.getTagNameCompletions(ctx.group,opts)
+			
+			let res = ils.entities.getTagNameCompletions(ctx.group,opts,self)
+			devlog 'tagname completions!!!',res
+			return res
 
 		if flags & t.TagProp
 			devlog 'TagProp completions',flags,g.el,g.el.tagName,g.el.pathName
@@ -896,8 +907,6 @@ export class ImbaFile < File
 			# if flags & t.TagEvent
 			return ils.entities.getTagEventCompletions(ctx.group,opts)
 
-		devlog "STYLE PROP???",tok.kind,tok.match('style.property.modifier')
-
 		if tok.match('style.property.modifier') or tok.match('style.selector.modifier')
 			target = getTypeAtPath('global.imba.stylemodifiers')
 			props = target.getApparentProperties!
@@ -910,8 +919,6 @@ export class ImbaFile < File
 				items.push(...ils.entities.getCSSPropertyCompletions(ctx.group,opts))
 
 			return items
-
-		
 
 		elif flags & t.StyleProp
 			return ils.entities.getCSSPropertyCompletions(ctx.group,opts)
@@ -929,8 +936,18 @@ export class ImbaFile < File
 			target = getTypeAtPath(path)
 			devlog 'event modifier completion',ev,mod,target.#path
 
+		# completions have already started here
+		if tok.match('accessor')
+			tsoffset = generatedLocFor(offset - ctx.before.token.length)
+			console.log 'accessor completion',tsoffset,tok.type
+			# check that the ts offset is valid?
+			let tscompletions = tls.getCompletionsAtPosition(fileName,tsoffset,{})
+			let completions = util.tsp2lspCompletions(tscompletions.entries,{file:self,jsLoc:tsoffset})
+			return completions
+
 		# find the access chain
 		if tok.match('operator.access')
+			console.log 'operator.access',tok.type
 			# may be worth trying to fake the lookup 
 			util.time(&,'emit') do $flush('emitFile',false)
 			# never fall back to tls if file has not compiled correctly!!
@@ -939,15 +956,16 @@ export class ImbaFile < File
 			let completions = util.tsp2lspCompletions(tscompletions.entries,{file:self,jsLoc:tsoffset})
 			return completions
 
-			if let type = getTypeOfSymbolAtOffset(offset)
-				target = type
+		if tok.match('comment') and ctx.before.token == '#'
+			# complete internal properties
+			yes
 
 
 		if flags == 0 and !props and !items.length
 			return []
 
-		if tok.match('identifier')
-			filters.startsWith = ctx.before.token
+		# if tok.match('identifier')
+		#	filters.startsWith = ctx.before.token
 		
 		if tok.match('keyword')
 			return []
@@ -965,6 +983,8 @@ export class ImbaFile < File
 				let kind = util.tsSymbolFlagsToKindString(item.flags)
 				let data = {resolved: yes, symbolFlags: item.flags, path: fileName}
 
+				# skip the event listener
+				
 				if item.#path
 					data.symbolPath = item.#path
 
@@ -972,8 +992,14 @@ export class ImbaFile < File
 					data.symbolPath ||= "{target.#path}.{name}"
 					data.resolved = no
 
+				name = name.replace(/_\$SYM\$_/g,'#')
+				let label = {name: name}
+
+				if item.parent
+					label.qualifier = util.formatQualifier(item.parent.escapedName)
+
 				add(
-					label: name
+					label: label
 					kind: kind
 					sortText: '0'
 					symbol: item
@@ -991,6 +1017,9 @@ export class ImbaFile < File
 		
 		if target == that and !noGlobals
 			# also show for target?
+
+			
+
 			let glob = getTypeAtPath('global')
 			for item in glob.getProperties!
 				let name = item.escapedName
@@ -999,39 +1028,44 @@ export class ImbaFile < File
 				add(
 					label: name
 					kind: CompletionItemKind.Variable
-					sortText: '0'
+					sortText: '2'
 					symbol: item
 				)
+			
+			unless noVars
+				for variable in vars
+					let sym = variable
+					let name = variable.name
+					if variable.type == 'global'
+						sym = glob.getProperty(name)
 
-			for variable in vars
-				let sym = variable
-				let name = variable.name
-				if variable.type == 'global'
-					sym = glob.getProperty(name)
+					let other = names.get(name)
 
-				let other = names.get(name)
+					if other and other.kind == 'property'
+						other.insertText = other.label = "self.{other.label}"
 
-				if other and other.kind == 'property'
-					other.insertText = other.label = "self.{other.label}"
-
-				add(
-					label: variable.name
-					sortText: '0'
-					symbol: sym
-				)
+					add(
+						label: variable.name
+						sortText: '1'
+						symbol: sym
+					)
+			# check for option as well
+			let imports = ils.entities.getAutoImportsForFile(self)
+			add(...imports)
 
 		# convert to actual completions
 		let results = for item in items
 			let sym = item.symbol
+			let lbl = item.label.name or item.label
 			if sym isa Sym
 				item.kind ||= sym.semanticKind
 				item.label = sym.name
 				item.detail = "{sym.semanticKind} {sym.name}"
 
-			if filters.startsWith
-				let idx = item.label.indexOf(filters.startsWith)
-				if idx != 0 and item.label[idx - 1] != '.'
-					continue
+			if item.sortText == '0'
+				# not if it is related to tags?
+				if lbl.match(/[A-Z]/)
+					item.sortText = '1'
 
 			if filters.kinds.length
 				continue unless filters.kinds.indexOf(item.kind) >= 0

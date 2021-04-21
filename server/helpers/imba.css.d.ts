@@ -87,4 +87,9 @@ interface ImbaStyleModifiers {
     /** Intended primarily for screens. */
 	screen: {media: 'screen'}
 
+    /** Pseudo-element that is the first child of the selected element */
+    before: void;
+
+    /** Pseudo-element that is the last child of the selected element */
+    after: void;
 }

@@ -7,8 +7,7 @@ type EventName<T extends string> = `${T}%`;
 type LengthUnit = '%' | 'px';
 type Length = `${number}${LengthUnit}` | number;
 
-type TimeUnit = 'ms' | 's';
-type Time = `${number}${TimeUnit}` | number;
+type Time = `${number}ms` | `${number}s` | number;
 
 interface Element {
     /**
@@ -43,6 +42,8 @@ interface Element {
         once?: boolean;
         capture?: boolean;
     });
+
+    log(...arguments: any[]): void;
 }
 
 interface EventListenerOptions {

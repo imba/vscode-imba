@@ -1,7 +1,7 @@
 import {Component} from './Component'
-import {TAG_NAMES,TAG_TYPES,keywords} from './constants'
+import {TAG_NAMES,TAG_TYPES,keywords,PRIMITIVE_TYPE_COMPLETIONS} from './constants'
 import {CompletionItemKind,SymbolKind,InsertTextFormat} from 'vscode-languageserver-types'
-import {convertCompletionKind,matchFuzzyString} from './utils'
+import {convertCompletionKind,matchFuzzyString,tsp2lspCompletions,displayPartsToString} from './utils'
 
 import type {CompletionItem} from 'vscode-languageserver-types'
 
@@ -23,6 +23,17 @@ for tagItem in tags
 
 
 const cssProperties = {}
+
+
+const UserPrefs = {
+	imports: {
+		includeCompletionsForModuleExports:true
+		importModuleSpecifierPreference: "shortest"
+		importModuleSpecifierEnding: "minimal"
+		includePackageJsonAutoImports:"on"
+		includeAutomaticOptionalChainCompletions:false
+	}
+}
 
 for entry in cssData.properties
 	cssProperties[entry.name] = entry
@@ -392,8 +403,89 @@ export class Entities < Component
 			})
 
 		return matches
+
+	def isImport item
+		return no if !item.source or item.source.match(/data\:text/)
+		return no if item.source.match(/^node:/)
+		return no if item.source == 'constants'
+		return no if item.source.match(/[\/\\]imba[\/\\]src/)
+		return yes
+
+	def isUpperCase item
+		!!item.name.match(/^[A-Z]/)
+
+	def getGlobalCompletionsForFile file,...filters
+		let end = file.getCompiledBody!.length
+		let res = program.tls.getCompletionsAtPosition(file.fileName,end,UserPrefs.imports)
+		res.entries = util.filterList(res.entries,...filters)
+		
+		return tsp2lspCompletions(res.entries,{file:file,jsLoc:end,additions:{prefs: 'imports'}})
+
+	def getAutoImportsForFile file,ctx={}
+		let end = file.getCompiledBody!.length
+		let res = program.tls.getCompletionsAtPosition(file.fileName,end,UserPrefs.imports)
+		return [] unless res..entries
+
+		res.entries = for item in res.entries
+			continue unless isImport(item)
+			item
+
+		devlog "getAutoImports",res.entries
+
+		return tsp2lspCompletions(res.entries,{file:file,jsLoc:end,additions:{prefs: 'imports'}})
+
+	def getTypesForFile file
+		let items = getGlobalCompletionsForFile(file,[isImport,isUpperCase])
+		items.unshift(...PRIMITIVE_TYPE_COMPLETIONS)
+		return items
+
+	def resolveCompletionEntry item\CompletionItem
+		devlog 'getCompletionEntryDetails',item
+
+		if item.data.resolved or item.data.symbolPath
+			return item
+
+		let source = item.data.source
+		let name = item.data.origName or item.label.name or item.label
+		let prefs = UserPrefs[item.data.prefs] or UserPrefs.imports
+		let details = program.tls.getCompletionEntryDetails(item.data.path,item.data.loc,name,{},source,prefs)
+		devlog 'details',details
+
+		return unless details
+
+		item.detail = displayPartsToString(details.displayParts)
+		item.documentation = displayPartsToString(details.documentation)
+
+		let actions = details.codeActions || []
+		let additionalEdits = []
+		let actionDescs = ''
+		for action in actions
+			actionDescs += action.description + '\n'
+
+			devlog 'codeActions',action
+
+			if let m = action.description.match(/Change '([^']+)' to '([^']+)'/)
+				devlog 'change action',m
+
+				if m[1] == (item.insertText or item.label)
+					item.insertText = util.tjs2imba(m[2])
+					continue
+
+			for change in action.changes
+				let file = program.getRichFile(change.fileName)
+
+				for textedit in change.textChanges
+					let range = file.textSpanToRange(textedit.span)
+					devlog 'additional change here',textedit,range
+					let text = util.tjs2imba(textedit.newText)
+					additionalEdits.push(range: range, newText: text)
+
+		item.detail = util.tjs2imba(actionDescs + item.detail)
+		item.additionalTextEdits = additionalEdits
+		item.data.resolved = yes
+		return item
 	
-	def getTagNameCompletions ctx, o = {}
+	def getTagNameCompletions ctx, o = {}, file = null
 
 		let items\CompletionItem[] = []
 		for own name,ctor of TAG_NAMES
@@ -406,15 +498,43 @@ export class Entities < Component
 
 		let components = program.getWorkspaceSymbols(type: 'tag')
 		let included = {}
+		let importable = []
+		let globals = null
 		
 		for item in components # $cache.components
 			continue if included[item.name]
-			items.push included[item.name] = {
+
+			let entry = {
 				label: item.name
 				kind: CompletionItemKind.Field,
 				sortText: item.name
 				data: {resolved: true}
 			}
+
+			let local? = item.name[0] == item.name[0].toUpperCase!
+
+			if local? and item.#file != file
+				# what if it is already imported
+				
+				if item.modifiers.indexOf('export') >= 0
+					# entry.label = "IMPORT {entry.label}"
+					globals ||= getGlobalCompletionsForFile(file) do(item)
+						item.source or item.kind == 'alias'
+
+					let other = globals.find(do $1.name == item.name)
+					if other
+						if $web$
+							resolveCompletionEntry(other)
+							devlog 'resolved completion',other
+							other.detail = null
+							other.data.resolved = yes
+						entry = other
+						
+					# if globals.find(do $1.label == '')
+				else
+					continue
+
+			items.push included[item.name] = entry
 
 		unless o.mode == 'supertag'
 			items.push {

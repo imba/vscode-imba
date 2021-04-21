@@ -74,9 +74,11 @@ export def rangeFromLocations start, end
 
 export def displayPartsToString parts
 	let text = tsDisplayPartsToString(parts)
+	text = text.replace(/_\$SYM\$_/g,'#')
+	text = text.replace(/([\w\_]+)\$\$TAG\$\$/g) do(m,n) n.replace(/\_/g,'-')
 
-	if text.match(/: EventModifiers$/)
-		text = text.replace(/^[^\.]+/,'e').replace(': EventModifiers','')
+	# if text.match(/: EventModifiers$/)
+	#	text = text.replace(/^[^\.]+/,'e').replace(': EventModifiers','')
 	
 	return text
 
@@ -84,7 +86,7 @@ export def displayPartsToMarkup parts
 	if parts.length == 1 and parts[0].kind == 'text'
 		let item\MarkupContent = {kind: 'markdown', value: parts[0].text}
 		return item
-	return tsDisplayPartsToString(parts)
+	return displayPartsToString(parts)
 
 export def detailsToMarkdown details
 	let sign = displayPartsToString(details.displayParts)
@@ -93,6 +95,12 @@ export def detailsToMarkdown details
 		sign = "```imba\n{sign}\n```"
 	return [sign,doc].join('\n\n')
 
+export def formatQualifier value = ''
+	value = value.replace(/([\w\_]+)\$\$TAG\$\$/g) do(m,n) n.replace(/\_/g,'-')
+	value = value.replace(/_\$SYM\$_/g,'#')
+
+	return '' if value.match(/GlobalEventHandler|EventModifiers|GestureModifiers/)
+	return value
 
 const COMPLETION_KIND_MAP = {
 	property: CompletionItemKind.Field
@@ -166,6 +174,7 @@ export def tsp2lspSymbolName name
 
 export def tjs2imba text
 	text = text.replace(/decorator\$/g,'@')
+	text = text.replace(/\.imba"/g,'"')
 	text = text.replace(/\;/g,'')
 	return text
 
@@ -173,6 +182,13 @@ export def tsp2lspCompletions items, {file,jsLoc,additions=null,isMemberCompleti
 	let results = []
 	let map = {}
 	for entry in items
+
+		if entry.#converted
+			if additions
+				entry.meta = Object.assign({},additions,entry.meta)
+			continue results.push(entry)
+
+		entry.#converted = yes
 
 		let name = entry.name
 		let kind = entry.kind
@@ -190,8 +206,11 @@ export def tsp2lspCompletions items, {file,jsLoc,additions=null,isMemberCompleti
 			continue
 
 		# console.log entry
+		name = name.replace(/_\$SYM\$_/g,'#')
+
 		if name.match(/^is([A-Z])/)
 			name = name[2].toLowerCase! + name.slice(3) + '?'
+		
 		elif name.match(/^decorator\$(.+)/)
 			meta.origKind = 'decorator'
 			meta.origName = name
@@ -199,10 +218,34 @@ export def tsp2lspCompletions items, {file,jsLoc,additions=null,isMemberCompleti
 
 		let item = {
 			label: name,
+			name: name,
 			kind: convertCompletionKind(kind,entry),
 			sortText: entry.sortText
 			data: meta
 		}
+
+		if entry.source and !entry.source.match('ThisProperty')
+			item.insertText = item.filterText = item.label
+			# item.label = "{name} - import"
+
+			if file
+				# TODO only if source is an actual file instead of a package?
+				let qf = entry.source
+
+				if np.isAbsolute(entry.source)
+					let fdir = np.dirname(file.fileName)
+					let sdir = np.dirname(entry.source)
+					qf = np.relative(fdir,entry.source).replace(/\.imba$/,'').split(np.sep).join('/')
+					qf = './' + qf if fdir == sdir
+				
+				if qf.indexOf('node_modules/') >= 0
+					qf = qf.split('node_modules/')[1]
+
+
+				item.label = {
+					name: name
+					qualifier: qf
+				}
 
 		for mod in modifiers when mod
 			meta[mod] = true
@@ -453,9 +496,19 @@ export def findCompiledOffsetForScope scope, javascript
 				findFromOffset = res.offset
 				scop.compiled-offset = res.offset
 	return scope
-		
 
-	
+export def filterItem item,filters
+	yes	
+
+export def filterList entries,...filters
+	for filter in filters
+		if filter isa Array
+			entries = entries.filter do(item) filter.some do $1(item)
+		elif filter isa Function
+			entries = entries.filter(filter)
+		elif filter isa RegExp
+			entries = entries.filter do !$1.escapedName.match(filter)
+	return entries	
 
 export def fastExtractContext code, loc, tokens, compiled = ''
 	let lft = loc

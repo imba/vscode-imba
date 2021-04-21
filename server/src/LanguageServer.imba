@@ -48,6 +48,7 @@ const tsServiceOptions\CompilerOptions = {
 	suppressImplicitAnyIndexErrors: true
 	traceResolution: false
 	resolveJsonModule: true
+	# maxNodeModuleJsDepth:1
 	incremental: true
 	target: ts.ScriptTarget.ES2020
 	types: ['node']
@@ -139,6 +140,9 @@ export class LanguageServer < Component
 
 		if imbaConfig.types
 			options.types = imbaConfig.types
+		
+		options.rootDir = self.rootPath
+			
 
 		#tshost = new ServiceHost(self,options)
 		self.tlsdocs = ts.createDocumentRegistry(yes,self.rootPath)
@@ -378,7 +382,7 @@ export class LanguageServer < Component
 					let span = item.contextSpan ? ifile.textSpanToRange(item.contextSpan) : textSpan
 
 					
-					if item.containerName == 'globalThis' and item.name.indexOf('Component') >= 0
+					if item.containerName == 'globalThis' and item.name.indexOf('$$TAG$$') >= 0
 						span = {
 							start: {line: textSpan.start.line, character: 0}
 							end: {line: textSpan.start.line + 1, character: 0}
@@ -410,16 +414,26 @@ export class LanguageServer < Component
 		let file = getImbaFile(uri)
 		let loc = typeof pos == 'number' ? pos : documents.get(uri).offsetAt(pos)
 
+		
 		try
-			return file.getCompletionsAtOffset(loc,context)
+			let items = file.getCompletionsAtOffset(loc,context)						
 		catch e
 			console.log 'error from getCompletions',e
 			return []
 
-
 	def doResolve item\CompletionItem
+		item = #resolveCompletionItem(item)
+		if item.label.name and !item.insertText
+			item.insertText = item.label.name
+		return item
+
+	def #resolveCompletionItem item\CompletionItem
 		inspect item
+
+		let resolved = entities.resolveCompletionEntry(item)
+		
 		if item and (!item.data or item.data.resolved)
+			
 			return item
 		
 		if let path = item.data.symbolPath

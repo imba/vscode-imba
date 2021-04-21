@@ -165,7 +165,10 @@ connection.onCompletion do(event)
 
 connection.onCompletionResolve do(item)
 	try
-		return server.doResolve(item)
+		let res = server.doResolve(item)
+		if res.label.name and !res.insertText
+			res.insertText = res.label.name
+		return res
 	catch e
 		console.log 'onCompletionResolve error',e,item
 

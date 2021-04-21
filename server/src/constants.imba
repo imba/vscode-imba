@@ -38,6 +38,28 @@ export const globals = {
 	'_': 1
 }
 
+export const PRIMITIVE_TYPE_COMPLETIONS = [
+	label: {name: 'number'}
+	sortText: '0'
+	data: {resolved: yes}
+	-
+	label: {name:'string'}
+	sortText: '0'
+	data: {resolved: yes}
+	-
+	label: {name:'any'}
+	sortText: '0'
+	data: {resolved: yes}
+	-
+	label: {name:'object'}
+	sortText: '0'
+	data: {resolved: yes}
+	-
+	label: {name:'unknown'}
+	sortText: '0'
+	data: {resolved: yes}
+]
+
 export const TAG_TYPES = {
 	"": [-1,{id: 1,className: 'class',slot: 1,part: 1,elementTiming: 'elementtiming'}]
 	HTML: [-1,{title: 1,lang: 1,translate: 1,dir: 1,accessKey: 'accesskey',draggable: 1,spellcheck: 1,autocapitalize: 1,inputMode: 'inputmode',style: 1,tabIndex: 'tabindex',enterKeyHint: 'enterkeyhint'}]
