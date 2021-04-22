@@ -99,7 +99,7 @@ export def formatQualifier value = ''
 	value = value.replace(/([\w\_]+)\$\$TAG\$\$/g) do(m,n) n.replace(/\_/g,'-')
 	value = value.replace(/_\$SYM\$_/g,'#')
 
-	return '' if value.match(/GlobalEventHandler|EventModifiers|GestureModifiers/)
+	return '' if value.match(/GlobalEventHandler|EventModifiers|GestureModifiers|StyleModifiers/)
 	return value
 
 const COMPLETION_KIND_MAP = {
@@ -174,7 +174,7 @@ export def tsp2lspSymbolName name
 
 export def tjs2imba text
 	text = text.replace(/decorator\$/g,'@')
-	text = text.replace(/\.imba"/g,'"')
+	text = text.replace(/\.imba(?=["'])/g,'')
 	text = text.replace(/\;/g,'')
 	return text
 

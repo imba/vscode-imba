@@ -277,7 +277,7 @@ export class ImbaFile < File
 				}
 				diagnostics.update(DiagnosticKind.Compiler,[err])
 				result = {error: err}
-				js ||= "// empty"
+				js ||= 'export {};\n\n'
 				jsSnapshot ||= ts.ScriptSnapshot.fromString(js)
 				return self
 
@@ -286,7 +286,7 @@ export class ImbaFile < File
 			if res.errors && res.errors.length
 				# devlog "compile error!!!",res.errors
 				# Should rather keep the last successfully compiled version?
-				js ||= "// empty"
+				js ||= 'export {};\n\n'
 				jsSnapshot ||= ts.ScriptSnapshot.fromString(js)
 				result = {error: res.errors[0]}
 				return
@@ -996,7 +996,11 @@ export class ImbaFile < File
 				let label = {name: name}
 
 				if item.parent
-					label.qualifier = util.formatQualifier(item.parent.escapedName)
+					let pname = item.parent.escapedName
+					label.qualifier = util.formatQualifier(pname)
+					devlog 'PARENT',pname
+					if pname == 'ImbaStyleModifiers'
+						try label.qualifier = item.getDocumentationComment()[0].text.split('\n')[0]
 
 				add(
 					label: label

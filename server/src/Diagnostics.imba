@@ -43,6 +43,9 @@ const SuppressDiagnostics = [
 	code: 2339
 	message: /\$CARET\$/
 	---
+	code: 2339
+	message: /Property '_\$SYM\$/
+	---
 	code: 2339 # option allow array properties
 	message: /on type '(.*)\[\]'/
 	---

@@ -75,10 +75,12 @@ interface ImbaStyleModifiers {
 
 	ssr: {flag: '_ssr_'}
 
-    /** The viewport is in a landscape orientation, i.e., the width is greater than the height. */
+    /** (orientation: landscape)
+     * The viewport is in a landscape orientation, i.e., the width is greater than the height. */
     landscape: {media: '(orientation: landscape)'}
 
-    /** The viewport is in a portrait orientation, i.e.,  the height is greater than or equal to the width.  */
+    /** (orientation: portrait)
+     * The viewport is in a portrait orientation, i.e.,  the height is greater than or equal to the width.  */
 	portrait: {media: '(orientation: portrait)'}
 
     /** Intended for paged material and documents viewed on a screen in print preview mode. */
