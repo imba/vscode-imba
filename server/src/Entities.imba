@@ -22,7 +22,7 @@ for tagItem in tags
 	tags[tagItem.name] = tagItem
 
 
-const cssProperties = {}
+export const cssProperties = {}
 
 
 const UserPrefs = {
@@ -43,6 +43,7 @@ for own k,v of cssAliases
 	unless v isa Array
 		if let orig = cssProperties[v]
 			defn = Object.assign(alias: yes,expanded: orig.name,orig)
+			defn.name = k
 			orig.abbr = k
 	else
 		let origs = v.map do cssProperties[$1]
@@ -446,6 +447,8 @@ export class Entities < Component
 			return item
 
 		let source = item.data.source
+		return unless item.data.path
+
 		let name = item.data.origName or item.label.name or item.label
 		let prefs = UserPrefs[item.data.prefs] or UserPrefs.imports
 		let details = program.tls.getCompletionEntryDetails(item.data.path,item.data.loc,name,{},source,prefs)
@@ -596,10 +599,11 @@ export class Entities < Component
 				propalias = p.propertyName
 
 		let property = cssProperties[String(propalias)]
-
+		console.log "css property",property
 		return [] unless property
 
-		let name = property.name
+		let name = property.expanded or property.name
+
 		let values = (property.values or []).slice(0)
 		let syntax = property.syntax or ''
 		# console.log 'css value completions',name
@@ -616,6 +620,11 @@ export class Entities < Component
 			# if place
 			if kind == '<color>'
 				name = 'color'
+		
+		# possibly add types from 
+		if values.length == 0
+			if syntax.indexOf('<color>') >= 0
+				values.push(...Object.values($colors))
 
 		if name == 'transition'
 			if nr == 1
@@ -649,8 +658,13 @@ export class Entities < Component
 			values = Object.values($styles.ff) # .concat(values)
 		elif name == 'box-shadow'
 			values = Object.values($styles.bxs) # .concat(values)
-		
+
 		let map = items.$values = {}
+		
+		# only uniques
+		values = values.filter do(val,i)
+			values.indexOf(val) == i
+		
 		for val,i in values
 			let sort = 1000 + (val.name[0] == '-' ? (i + 100) : i)
 			let detail = val.detail or val.description

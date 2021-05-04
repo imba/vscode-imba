@@ -1,93 +1,3 @@
-/// import {HTML} from './imba.dom';
-/// <reference path="./imba.dom.d.ts" />
-/// <reference path="./imba.css.d.ts" />
-/// <reference path="./imba.events.d.ts" />
-
-type EventName<T extends string> = `${T}%`;
-
-type LengthUnit = '%' | 'px';
-type Length = `${number}${LengthUnit}` | number;
-
-type Time = `${number}ms` | `${number}s` | number;
-
-type Selector = string;
-
-interface Element {
-    /**
-     * Schedule this element to render after imba.commit()
-     */
-    schedule(): this;
-    unschedule(): this;
-    data: any;
-    hotkey: any;
-    hotkey__: any;
-    route: any;
-    route__: any;
-    $key: any;
-
-    emit(event:string, params?: any, options?: any): Event;
-    focus(options?: any): void;
-    blur(): void;
-    
-    [key: string]: any;
-
-    setAttribute(name: string, value: boolean): void;
-    setAttribute(name: string, value: number): void;
-
-    addEventListener(event: string, listener: (event: Event) => void, options?: {
-        passive?: boolean;
-        once?: boolean;
-        capture?: boolean;
-    });
-
-    removeEventListener(event: string, listener: (event: Event) => void, options?: {
-        passive?: boolean;
-        once?: boolean;
-        capture?: boolean;
-    });
-
-    log(...arguments: any[]): void;
-}
-
-interface EventListenerOptions {
-    passive?: boolean;
-    once?: boolean;
-}
-
-interface Storage {
-    setItem(key: string, value: number): void;
-}
-
-
-declare class ImbaElement extends HTMLElement {
-    /**
-  * Creates an instance of documenter.
-  */
-    suspend(): this;
-    unsuspend(): this;
-    [key: string]: any;
-}
-
-interface ImbaStyles {
-    [key: string]: any;
-}
-
-interface ImbaAsset {
-    body: string;
-    url: string;
-    absPath: string;
-    path: string;
-}
-
-interface Event {
-    detail: any;
-    originalEvent: Event | null;
-}
-
-interface Object {
-    [key: string]: any;
-}
-
 declare class EventModifiers {
     /**
      Tells the browser that the default action should not be taken. The event will still continue to propagate up the tree. See Event.preventDefault()
@@ -318,7 +228,6 @@ declare class ImbaSelectionEvent extends Event {
 
 }
 
-
 interface GlobalEventHandlersEventMap {
     "touch": PointerGesture;
     "intersect": ImbaIntersectEvent;
@@ -326,69 +235,104 @@ interface GlobalEventHandlersEventMap {
 }
 
 interface ImbaEvents {
+    /** The loading of a resource has been aborted. */
+    abort: UIEvent;
+    animationcancel: AnimationEvent;
+    /** A CSS animation has completed. */
+    animationend: AnimationEvent;
+    /** A CSS animation is repeated. */
+    animationiteration: AnimationEvent;
+    /** A CSS animation has started. */
+    animationstart: AnimationEvent;
+
+    auxclick: MouseEvent;
+    /** An element has lost focus (does not bubble). */
+    blur: FocusEvent;
+
+    cancel: Event;
+    /** The user agent can play the media, but estimates that not enough data has been loaded to play the media up to its end without having to stop for further buffering of content. */
+    canplay: Event;
+    /** The user agent can play the media up to its end without having to stop for further buffering of content. */
+    canplaythrough: Event;
+    /** The change event is fired for <input>, <select>, and <textarea> elements when a change to the element's value is committed by the user. */
+    change: Event;
+    /** A pointing device button has been pressed and released on an element. */
+    click: MouseEvent;
+    close: Event;
+    contextmenu: MouseEvent;
+    cuechange: Event;
+    dblclick: MouseEvent;
+    drag: DragEvent;
+    dragend: DragEvent;
+    dragenter: DragEvent;
+    dragexit: Event;
+    dragleave: DragEvent;
+    dragover: DragEvent;
+    dragstart: DragEvent;
+    drop: DragEvent;
+    durationchange: Event;
+    emptied: Event;
+    ended: Event;
+    error: ErrorEvent;
+    focus: FocusEvent;
+    focusin: FocusEvent;
+    focusout: FocusEvent;
+    gotpointercapture: PointerEvent;
+    input: Event;
+    invalid: Event;
+    keydown: KeyboardEvent;
+    keypress: KeyboardEvent;
+    keyup: KeyboardEvent;
+    load: Event;
+    loadeddata: Event;
+    loadedmetadata: Event;
+    loadstart: Event;
+    lostpointercapture: PointerEvent;
+    mousedown: MouseEvent;
+    mouseenter: MouseEvent;
+    mouseleave: MouseEvent;
+    mousemove: MouseEvent;
+    mouseout: MouseEvent;
+    mouseover: MouseEvent;
+    mouseup: MouseEvent;
+    pause: Event;
+    play: Event;
+    playing: Event;
+    pointercancel: PointerEvent;
     pointerdown: PointerEvent;
-}
-
-declare namespace imba {
-    interface Router {
-        refresh(): void;
-        alias(from:string,to:string): void;
-    }
-
-    function setInterval(handler: TimerHandler, timeout?: number, ...arguments: any[]): number;
-    function setTimeout(handler: TimerHandler, timeout?: number, ...arguments: any[]): number;
-    function clearInterval(handle?: number): void;
-    function clearTimeout(handle?: number): void;
-    function commit(): Promise<void>;
-    function render(): Promise<void>;
-
-    function mount<T>(element: T): T;
-
-    let styles: ImbaStyles;
-    let colors: string[];
-    let router: Router;
-    let tagtypes: HTML;
-
-    namespace types {
-        let ievents: ImbaEvents;
-        let events: GlobalEventHandlersEventMap;
-        let eventHandlers: GlobalEventHandlers;
-
-        namespace html {
-            let tags: HTMLElementTagNameMap;
-            let events: GlobalEventHandlersEventMap;
-        }
-
-        namespace svg {
-            let tags: SVGElementTagNameMap;
-            let events: SVGElementEventMap;
-        }
-    }
-
-    let stylemodifiers: ImbaStyleModifiers;
-    let Element:ImbaElement;
-
-    function createIndexedFragment(...arguments: any[]): DocumentFragment;
-    function createKeyedFragment(...arguments: any[]): DocumentFragment;
-    function createLiveFragment(...arguments: any[]): DocumentFragment;
-    
-    function emit(source: any, event:string, params: any[]): void;
-    function listen(target: any, event:string, listener:any, path?: any): void;
-    function once(target: any, event:string, listener:any, path?: any): void;
-    function unlisten(target: any, event:string, listener:any, path?: any): void;
-    function indexOf(target: any, source:any): boolean;
-    function serve(target: any, options?:any): any;
-}
-
-declare module "data:text/asset;*" {
-    const value: ImbaAsset;
-    export default value;
-    export const body: string;
-    export const url: string;
-    export const absPath: string;
-    export const path: string;
-}
-
-declare module "imba/compiler" {
-    export function compile(fileName:string,options:any): any;
+    pointerenter: PointerEvent;
+    pointerleave: PointerEvent;
+    pointermove: PointerEvent;
+    pointerout: PointerEvent;
+    pointerover: PointerEvent;
+    pointerup: PointerEvent;
+    progress: ProgressEvent;
+    ratechange: Event;
+    reset: Event;
+    resize: UIEvent;
+    scroll: Event;
+    securitypolicyviolation: SecurityPolicyViolationEvent;
+    seeked: Event;
+    seeking: Event;
+    select: Event;
+    selectionchange: Event;
+    selectstart: Event;
+    stalled: Event;
+    submit: Event;
+    suspend: Event;
+    timeupdate: Event;
+    toggle: Event;
+    touch: PointerGesture;
+    touchcancel: TouchEvent;
+    touchend: TouchEvent;
+    touchmove: TouchEvent;
+    touchstart: TouchEvent;
+    transitioncancel: TransitionEvent;
+    transitionend: TransitionEvent;
+    transitionrun: TransitionEvent;
+    transitionstart: TransitionEvent;
+    volumechange: Event;
+    waiting: Event;
+    wheel: WheelEvent;
+    [event: string]: CustomEvent;
 }

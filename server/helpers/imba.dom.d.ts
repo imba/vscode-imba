@@ -2,8 +2,6 @@ interface HTMLElementAttributes {
 	/** Provides a hint for generating a keyboard shortcut for the current element. This attribute consists of a space-separated list of characters. The browser should use the first one that exists on the computer keyboard layout. */
 	accesskey: string;
 
-    "@click": Event;
-
 	/** Controls whether and how text input is automatically capitalized as it is entered/edited by the user. It can have the following values:
 	
 	*   `off` or `none`, no autocapitalization is applied (all letters default to lowercase)
@@ -86,7 +84,7 @@ interface HTMLElementAttributes {
 	*   `no`, which indicates that the element will not be translated. */
 	translate: "yes" | "no";
 }
-interface HTML {
+interface ImbaHTMLTags {
 	/** The html element represents the root of an HTML document. */
 	html: {
 		/** Specifies the URI of a resource manifest indicating resources that should be cached locally. See [Using the application cache](https://developer.mozilla.org/en-US/docs/Web/HTML/Using_the_application_cache) for details. */

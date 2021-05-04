@@ -44,7 +44,7 @@ connection.onInitialize do(params)
 			textDocumentSync: TextDocumentSyncKind.Incremental
 			completionProvider: {
 				resolveProvider: true,
-				triggerCharacters: ['.', ':', '"', '@','%','\\',"'",'=']
+				triggerCharacters: ['.', ':', '"', '@','%','\\',"'",'=','<']
 			},
 			# signatureHelpProvider: { triggerCharacters: ['('] },
 			documentRangeFormattingProvider: false,
@@ -52,6 +52,10 @@ connection.onInitialize do(params)
 			documentHighlightProvider: true,
 			documentSymbolProvider: true,
 			workspaceSymbolProvider: true,
+			documentOnTypeFormattingProvider: {
+				firstTriggerCharacter: '<'
+				moreTriggerCharacter: ['>']
+			}
 			renameProvider: true,
 			semanticTokensProvider: {
 				legend: {
@@ -147,6 +151,11 @@ connection.onRenameRequest do(event)
 	if server
 		return server.onRenameRequest(event)
 	return
+
+connection.onDocumentOnTypeFormatting do(event)
+	console.log 'document type formatting',event
+	server..onDocumentOnTypeFormatting(event)
+	return null
 
 connection.onHover do(event)
 	# console.log "onhover",event

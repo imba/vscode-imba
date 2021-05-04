@@ -12,6 +12,11 @@ export const keywords = [
 	'import'
 ]
 
+export const IDL_MAPPING = {
+	tabindex: 'tabIndex'
+	contenteditable: 'contentEditable'
+}
+
 
 export const globals = {
 	'global': 1

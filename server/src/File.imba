@@ -11,6 +11,9 @@ import * as ts from 'typescript'
 import type {Diagnostic,TypeNode,TypeFlags} from 'typescript'
 import type {LanguageServer} from './LanguageServer'
 import system from './system'
+import { CompletionsContext } from './Completions'
+import { ProgramSnapshot } from './Checker'
+import Compilation from './Compilation'
 
 const imbac = require 'imba/compiler'
 const imba1c = require '../imba1.compiler.js'
@@ -58,6 +61,8 @@ export class File < Component
 		program.files[fileName] = self
 		program.files[tfileName] = self
 		program.files.push(self)
+		#compilations = []
+		#compilationMap = {}
 
 	get shouldEmitDiagnostics
 		no
@@ -115,8 +120,6 @@ export class File < Component
 	def onDidChangeTextEditorSelection params
 		return
 
-
-
 		
 
 export class ImbaFile < File
@@ -130,6 +133,7 @@ export class ImbaFile < File
 
 		logLevel = fileName.indexOf('Diagnostics') >= 0 ? 3 : 0
 		diagnostics = new Diagnostics(self)
+		#emptySnapshot = ts.ScriptSnapshot.fromString('export {}')
 		emitted = {}
 		times = {}
 		_isTyping = no
@@ -157,6 +161,7 @@ export class ImbaFile < File
 		js
 
 	def getScriptSnapshot
+		
 		getCompiledBody!
 		return jsSnapshot
 
@@ -213,6 +218,7 @@ export class ImbaFile < File
 		
 		if tls
 			tls.getEmitOutput(fileName)
+			#checker = null
 			getDiagnostics! if refresh
 		else
 			compile!
@@ -245,6 +251,23 @@ export class ImbaFile < File
 			symbols: null
 		}
 		self
+		
+	def scheduleCompilation
+		let item = #compilationMap[idoc.version] || new Compilation(self)
+		#compilations.unshift(item) unless #compilations.indexOf(item) >= 0
+		return item
+		
+	get currentCompilation
+		let curr = #compilations.find(do $1.js)
+		curr ||= scheduleCompilation!.compile!
+		return curr
+		
+	set compilation value
+		# we have a new full compilation
+		yes
+	
+	get compilations
+		#compilations
 
 	def compile
 		return if isLegacy
@@ -260,7 +283,7 @@ export class ImbaFile < File
 
 			try
 				let compiler = isLegacy ? imba1c : imbac
-				res = util.time(&,'compilation took') do
+				res = util.time(&,"{fileName} compiled in") do
 					compiler.compile(body,opts)
 			catch e
 				
@@ -284,6 +307,7 @@ export class ImbaFile < File
 			diagnostics.update(DiagnosticKind.Compiler,res.diagnostics or [])
 
 			if res.errors && res.errors.length
+				# even if there are errors, should we not remember the last compiled version?
 				# devlog "compile error!!!",res.errors
 				# Should rather keep the last successfully compiled version?
 				js ||= 'export {};\n\n'
@@ -302,6 +326,7 @@ export class ImbaFile < File
 			js = res.js.replace(/\$CARET\$/g,'valueOf')
 			tsVersion = iversion
 			jsSnapshot = ts.ScriptSnapshot.fromString(js)
+			jsSnapshot.version = iversion
 			$indexWorkspaceSymbols!
 
 		return self
@@ -651,6 +676,9 @@ export class ImbaFile < File
 
 		return null
 
+	get checker
+		#checker ||= new ProgramSnapshot(ils.getProgram!,self)
+
 	def getTypeContext
 		let prog = ils.getProgram!
 		return {file: prog.getSourceFile(tsPath), checker: prog.getTypeChecker!, program: prog}
@@ -792,7 +820,35 @@ export class ImbaFile < File
 			type.#checker = checker
 		return type
 
+	def completions offset, options = {}
+		let completions = new CompletionsContext(self,offset,options)
+		return completions
+
 	def getCompletionsAtOffset offset, options = {}
+		let completions = new CompletionsContext(self,offset,options)
+		if $web$
+			global.cl = completions
+		
+		let out = completions.serialize!
+		# console.log 'returned completions',out
+		return out
+
+		let results = #getCompletionsAtOffset(offset,options) or []
+		# return results
+		return unless results
+		
+		let remove = []
+		for item in results
+			let lbl = item.label.name or item.label
+			if lbl.match(/\w\$\d+$/)
+				remove.push(item)
+		
+		results = results.filter do remove.indexOf($1) == -1
+		console.log 'results from completions',results
+		return results
+			
+
+	def #getCompletionsAtOffset offset, options = {}
 		let items = []
 		let names = new Map
 
@@ -822,7 +878,7 @@ export class ImbaFile < File
 
 		let add = do(...parts)
 			for item in parts
-				devlog 'add item',item.label,item
+				# devlog 'add item',item.label,item
 				names.set(item.label,item)
 				items.push(item)
 	
@@ -849,6 +905,7 @@ export class ImbaFile < File
 						insertText: "'{item.value}'"
 						sortText:'0'
 					})
+				devlog "drop target!!!",items
 
 
 		# if at start of string
@@ -873,7 +930,7 @@ export class ImbaFile < File
 		if flags & t.Path
 			try
 				let tloc = generatedLocFor(offset)
-				let res = tls.getCompletionsAtPosition(tfileName,tloc,{})
+				let res =  util.tsp2lspCompletions(tls.getCompletionsAtPosition(tfileName,tloc,{}).entries,{file:self,jsLoc:tsoffset})
 				return res
 
 		if flags & t.Type
@@ -964,11 +1021,24 @@ export class ImbaFile < File
 		if flags == 0 and !props and !items.length
 			return []
 
+		# if we are inside a tag tree - add automatic completions for tags with autoinserted braces
+		if grp.match('tagcontent') and ctx.scope.match('tagcontent')
+			# cannot be inside string etc
+			# devlog "IS INSIDE TAG CONTENT!!"
+			noGlobals = true
+			let res = ils.entities.getTagNameCompletions(ctx.group,opts,self)
+			for item in res
+				item.insertText = "<{item.label.name or item.label}>"
+				item.sortText = '0'
+				add(item)
+
 		# if tok.match('identifier')
 		#	filters.startsWith = ctx.before.token
 		
 		if tok.match('keyword')
 			return []
+
+		devlog 'check completion',target,ctx.scope.class?
 
 		if target && (!ctx.scope.class? or props)
 			# console.dir target, depth: 0
@@ -995,10 +1065,11 @@ export class ImbaFile < File
 				name = name.replace(/_\$SYM\$_/g,'#')
 				let label = {name: name}
 
+				# devlog 'handle item',name,item
+
 				if item.parent
 					let pname = item.parent.escapedName
 					label.qualifier = util.formatQualifier(pname)
-					devlog 'PARENT',pname
 					if pname == 'ImbaStyleModifiers'
 						try label.qualifier = item.getDocumentationComment()[0].text.split('\n')[0]
 
@@ -1021,8 +1092,6 @@ export class ImbaFile < File
 		
 		if target == that and !noGlobals
 			# also show for target?
-
-			
 
 			let glob = getTypeAtPath('global')
 			for item in glob.getProperties!

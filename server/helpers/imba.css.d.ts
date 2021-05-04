@@ -35,34 +35,38 @@ interface ImbaStyleModifiers {
     focin: void;
 
 
-    /** (min-width: 480px) */
+    /** @detail (min-width: 480px) */
     xs: {media: '(min-width: 480px)' }
-    /** (min-width: 640px) */
+    /** @detail (min-width: 640px) */
     sm: {media: '(min-width: 640px)' }
-    /** (min-width: 768px) */
+    /** @detail (min-width: 768px) */
     md: {media: '(min-width: 768px)' }
-    /** (min-width: 1024px) */
+    /** @detail (min-width: 1024px) */
     lg: {media: '(min-width: 1024px)' }
-    /** (min-width: 1280px) */
+    /** @detail (min-width: 1280px) */
     xl: {media: '(min-width: 1280px)' }
 
-    /** (max-width: 479px) */
+    /** @detail (max-width: 479px) */
     'lt-xs': {media: '(max-width: 479px)' }
-    /** (max-width: 639px) */
+    /** @detail (max-width: 639px) */
     'lt-sm': {media: '(max-width: 639px)' }
-    /** (max-width: 767px) */
+    /** @detail (max-width: 767px) */
     'lt-md': {media: '(max-width: 767px)' }
-    /** (max-width: 1023px) */
+    /** @detail (max-width: 1023px) */
     'lt-lg': {media: '(max-width: 1023px)' }
-    /** (max-width: 1279px) */
+    /** @detail (max-width: 1279px) */
     'lt-xl': {media: '(max-width: 1279px)' }
 
     // color modifiers
 
-    /** Indicates that user has notified that they prefer an interface that has a dark theme. */
+    /** Indicates that user has notified that they prefer an interface that has a dark theme. 
+     * @detail (prefers-color-scheme: dark)
+    */
     dark: {media: '(prefers-color-scheme: dark)'}
 
-    /** Indicates that user has notified that they prefer an interface that has a light theme, or has not expressed an active preference. */
+    /** Indicates that user has notified that they prefer an interface that has a light theme, or has not expressed an active preference. 
+     * @detail (prefers-color-scheme: light)
+    */
     light: {media: '(prefers-color-scheme: light)'}
 
     touch: {flag: '_touch_'}
@@ -75,18 +79,24 @@ interface ImbaStyleModifiers {
 
 	ssr: {flag: '_ssr_'}
 
-    /** (orientation: landscape)
+    /** 
+     * @detail (orientation: landscape)
      * The viewport is in a landscape orientation, i.e., the width is greater than the height. */
     landscape: {media: '(orientation: landscape)'}
 
-    /** (orientation: portrait)
+    /** 
+     * @detail (orientation: portrait)
      * The viewport is in a portrait orientation, i.e.,  the height is greater than or equal to the width.  */
 	portrait: {media: '(orientation: portrait)'}
 
-    /** Intended for paged material and documents viewed on a screen in print preview mode. */
+    /** Intended for paged material and documents viewed on a screen in print preview mode. 
+     * @detail (media: print)
+    */
     print: {media: 'print'}
 
-    /** Intended primarily for screens. */
+    /** Intended primarily for screens.
+     * @detail (media: screen)
+    */
 	screen: {media: 'screen'}
 
     /** Pseudo-element that is the first child of the selected element */

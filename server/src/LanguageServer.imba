@@ -5,12 +5,13 @@ import type {TextDocuments,IConnection,InitializeParams,ReferenceParams,Completi
 # import { TextDocument } from 'vscode-languageserver-textdocument'
 import {CompletionItemKind,SymbolKind, Location, LocationLink} from 'vscode-languageserver-types'
 import type { WorkspaceEdit } from 'vscode-languageserver-types'
-import type {CompilerOptions,LanguageService,LanguageServiceHost,UserPreferences} from 'typescript'
+import type {CompilerOptions,LanguageService,LanguageServiceHost,UserPreferences,Program} from 'typescript'
 
 import {URI} from 'vscode-uri'
 import {File} from './File'
 import {Entities} from './Entities'
 import * as util from './utils'
+import {ProgramSnapshot} from './Completions'
 
 import {TAG_NAMES,TAG_TYPES} from './constants'
 
@@ -185,6 +186,10 @@ export class LanguageServer < Component
 
 	get tlsprogram
 		tls.getProgram()
+
+	def getSnapshot
+		let prog = tls.getProgram()
+		prog.#snapshot ||= new ProgramSnapshot(prog)
 
 	def fileExists fileName
 		# console.log 'fileExists',fileName,util.t2iPath(fileName)
@@ -412,14 +417,20 @@ export class LanguageServer < Component
 	# should delegate this through to the file itself
 	def getCompletionsAtPosition uri, pos, context = {}
 		let file = getImbaFile(uri)
+		console.log 'get completions',uri,pos,context
 		let loc = typeof pos == 'number' ? pos : documents.get(uri).offsetAt(pos)
 
 		
 		try
-			let items = file.getCompletionsAtOffset(loc,context)						
+			let items = file.getCompletionsAtOffset(loc,context)
+			return items				
 		catch e
 			console.log 'error from getCompletions',e
 			return []
+
+	def getEditsForFileRename from, to
+		
+		self
 
 	def doResolve item\CompletionItem
 		item = #resolveCompletionItem(item)
@@ -450,13 +461,16 @@ export class LanguageServer < Component
 				# if path.match(/imba\.events/)
 				# 	item.detail = item.documentation
 				# 	delete item.documentation
-
+			console.log 'resolved completion item',item
 			item.data.resolved = yes
 			return item
 
 
 		let source = item.data.source
 		let name = item.data.origName or item.label
+
+		return item unless item.data.path
+		
 	
 		let prefs\UserPreferences = {
 			includeCompletionsForModuleExports: true,
@@ -498,6 +512,8 @@ export class LanguageServer < Component
 
 			log item
 			delete item.data
+
+		
 		return item
 
 	def getQuickInfoAtPosition uri, pos
@@ -605,6 +621,13 @@ export class LanguageServer < Component
 				edits.push(range: range, newText: newName)
 		inspect renames
 		return renames
+
+	def onDocumentOnTypeFormatting params
+		console.log "TYPE FORMATTING",params
+		let uri = params.textDocument.uri
+		let file = getImbaFile(uri)
+		yes
+
 
 	def getSymbols uri
 		let file = self.getImbaFile(uri)

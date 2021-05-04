@@ -67,8 +67,8 @@ const SuppressDiagnostics = [
 	code: 2554
 	test: do({message})
 		return no unless typeof message == 'string'
-		let [m,a,b] = message.match(/Expected (\d+) arguments, but got (\d+)/)
-		return yes if m and parseInt(b) > parseInt(a)
+		let m = message.match(/Expected (\d+) arguments, but got (\d+)/)
+		return yes if m and parseInt(m[1]) > parseInt(m[2])
 		return no
 	---
 	code: 2339 # should we always?

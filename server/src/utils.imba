@@ -24,6 +24,15 @@ export def i2tPath path
 export def normalizePath path
 	path.split(np.sep).join('/')
 
+export def normalizeImportPath source, referenced
+	if np.isAbsolute(referenced)
+		let fdir = np.dirname(source)
+		let sdir = np.dirname(referenced)
+		let path = np.relative(fdir,referenced).replace(/\.imba$/,'').split(np.sep).join('/')
+		path = './' + path if fdir == sdir
+		return path
+	return referenced
+
 export def time cb,label = 'took'
 	let t = Date.now!
 	let res = cb()
@@ -102,6 +111,7 @@ export def formatQualifier value = ''
 	return '' if value.match(/GlobalEventHandler|EventModifiers|GestureModifiers|StyleModifiers/)
 	return value
 
+# Not the same conversion as monaco.
 const COMPLETION_KIND_MAP = {
 	property: CompletionItemKind.Field
 	method: CompletionItemKind.Method
@@ -109,6 +119,8 @@ const COMPLETION_KIND_MAP = {
 	operator: CompletionItemKind.Operator
 	class: CompletionItemKind.Class
 	var: CompletionItemKind.Variable
+	variable: CompletionItemKind.Variable
+	param: CompletionItemKind.Variable
 	function: CompletionItemKind.Function
 	const: CompletionItemKind.Constant
 	module: CompletionItemKind.Module
@@ -122,6 +134,9 @@ const COMPLETION_KIND_MAP = {
 }
 
 export def convertCompletionKind kind, entry
+	if typeof kind == 'number'
+		return kind
+
 	return COMPLETION_KIND_MAP[kind] or CompletionItemKind.Method
 
 
@@ -136,6 +151,8 @@ const SYMBOL_KIND_MAP = {
 	"local class": SymbolKind.Class
 	var: SymbolKind.Variable
 	let: SymbolKind.Variable
+	param: SymbolKind.Variable
+	variable: SymbolKind.Variable
 	function: SymbolKind.Function
 	const: SymbolKind.Variable
 	module: SymbolKind.Module
@@ -164,8 +181,17 @@ export def convertSymbolKind kind, entry
 export def tsSymbolFlagsToKindString flags
 	if flags & SymbolFlags.Method
 		'method'
+	elif flags & SymbolFlags.Function
+		'function'
+	elif flags & SymbolFlags.Class
+		'class'
+	elif flags & SymbolFlags.FunctionScopedVariable
+		'param'
+	elif flags & SymbolFlags.Variable
+		'variable'
 	else
 		'property'
+
 
 export def tsp2lspSymbolName name
 	if let m = name.match(/([A-Z][\w\-]+)Component$/)
