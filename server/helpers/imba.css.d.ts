@@ -1,17 +1,27 @@
 interface ImbaStyleModifiers {
-    /** Represents elements whose numeric position in a series of siblings is odd 1, 3, 5, etc */
+    /** Represents elements whose numeric position in a series of siblings is odd 1, 3, 5, etc 
+     * @detail :nth-child(odd)
+    */
     odd: {name: 'nth-child', valueType: 'string',value: 'odd'};
 
-    /** Represents elements whose numeric position in a series of siblings is even 2, 4, 6, etc */
+    /** Represents elements whose numeric position in a series of siblings is even 2, 4, 6, etc 
+     * @detail :nth-child(even)
+    */
     even: {name: 'nth-child', valueType: 'string',value: 'even'};
 
-    /** represents the first element among a group of sibling elements */
+    /** represents the first element among a group of sibling elements
+     * @detail :first-child
+     */
     first: {name: 'first-child'}
     
-    /** represents the last element among a group of sibling elements */
+    /** represents the last element among a group of sibling elements 
+     * @detail :last-child
+    */
 	last: {name: 'last-child'};
 
-    /** represents an element without any siblings */
+    /** represents an element without any siblings 
+     * @detail :only-child
+    */
 	only: {name: 'only-child'};
 
     /** Generally triggered when the user hovers over an element with the cursor (mouse pointer) */
@@ -99,9 +109,13 @@ interface ImbaStyleModifiers {
     */
 	screen: {media: 'screen'}
 
-    /** Pseudo-element that is the first child of the selected element */
+    /** Pseudo-element that is the first child of the selected element 
+     * @detail ::before { ... }
+    */
     before: void;
 
-    /** Pseudo-element that is the last child of the selected element */
+    /** Pseudo-element that is the last child of the selected element 
+     * @detail ::after { ... }
+    */
     after: void;
 }

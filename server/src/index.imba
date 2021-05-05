@@ -18,8 +18,8 @@ let server\LanguageServer
 documents.onDidOpen do(event)
 	let doc = event.document
 	doc.connection = connection
-	if doc.tokens
-		doc.tokens.connection = connection
+	# if doc.tokens
+	#	doc.tokens.connection = connection
 	server.onDidOpen(event) if server
 
 documents.onDidChangeContent do(change)

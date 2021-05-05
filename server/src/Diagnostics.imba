@@ -81,24 +81,33 @@ const SuppressDiagnostics = [
 	message: /unique symbol' cannot be used as an index type/
 ]
 
+
+
 export class Diagnostic
 
 	static def fromCompiler kind, entry, doc
 		return entry
 
 	static def fromTypeScript kind, entry, doc, options = {}
+		if entry.#diagnostic !== undefined
+			return entry.#diagnostic
+		entry.#diagnostic = null
 		let file = entry.file
+		let compilation = file.getCompilation!
+		
+
 		let msg = entry.messageText
 		msg = msg.messageText or msg or ''
 		let sev = [WARN,ERR,INFO,INFO][entry.category]
 		let rawCode = file.text.substr(entry.start,entry.length)
 		let rawExpandedCode = file.text.substr(entry.start - 10,entry.length + 10)
+	
+		console.log 'from typescript',kind,entry.msg,file.path
 
 		for rule in SuppressDiagnostics
 			if rule.code == entry.code
 				if rule.text isa RegExp
-					if rule.text.test(rawCode)
-						return 
+					return if rule.text.test(rawCode)
 				if rule.message isa RegExp
 					return if rule.message.test(msg)
 				if rule.test isa Function
@@ -107,20 +116,8 @@ export class Diagnostic
 		if options.suppress
 			for rule in options.suppress
 				return if rule.test(msg)
-
-		let range = doc.sourceRangeAt(entry.start,entry.start + entry.length)
-
-		unless range
-			let lstart = doc.originalLocFor(entry.start)
-			let lend = doc.originalLocFor(entry.start + entry.length) or (lstart + entry.length)
-			
-			let start = doc.positionAt(lstart)
-			let end = doc.positionAt(lend)
-			
-			range = doc.rangeAt(lstart,lend)
-			range.#lstart = lstart
-			range.#lend = lend
-
+		
+		let range = compilation.o2iRange(entry.start,entry.start + entry.length)
 
 		if msg.match('does not exist on type')
 			sev = WARN
@@ -128,39 +125,91 @@ export class Diagnostic
 		if !range or Number.isNaN(range.start.character)
 			return null
 
-		# if config.get('verbose')
-		#	msg += " | " + JSON.stringify([rawCode,entry.code,entry.start,entry.length,rawExpandedCode,range])
-		#
-		#	if msg.indexOf('sys$1') >= 0
-		#		msg += '\n' + file.text
-
-		# console.log "ts diagnostic",entry.code,entry.start,entry.length,rawCode,range,entry.messageText
-		
-		return new Diagnostic({
+		let diagnostic = new Diagnostic({
 			severity: sev
 			message: msg.messageText or msg
 			range: range
 			data: {
 				kind: kind
-				version: doc.version
+				range: range
+				version: compilation.iversion
 			}
-		})
+		},compilation)
+		diagnostic.#entry = entry
+		entry.#diagnostic = diagnostic
 
-	def constructor {severity,message,range,data}
+		return diagnostic
+
+	def constructor {severity,message,range,data},compilation
 		self.severity = severity
 		self.message = message
 		self.range = range
-		self.data = data
-
+		self.data = data or {}
+		self.data.range = range
+		#cache = {}
+		#compilation = compilation
+		
+	get #range
+		#compilation
+		
+	get #doc
+		#compilation.doc
+	
+	get #file
+		#compilation.file
+		
+	get initialRange
+		data.range
+		
+	get newRange
+		#cache.range ||= #compilation.i2d(data.range)
+		
+	get oldText
+		#oldText ||= initialRange.getText(#compilation.ibody)
+		
+	get newText
+		#cache.text ||= newRange.getText(#doc.content)
+		
+	def toJSON
+		{
+			range: newRange
+			severity: severity
+			message: message
+		}
+		
+	def sync
+		if #version =? #doc.version
+			#cache = {}
+		self
+	
+	get hidden?
+		sync!
+		return yes if newText != oldText
+		return no
 
 export class Diagnostics
 	def constructor doc
 		self.doc = doc
 		self.all = []
 		self.dirty = no
+		
+	def fromTypeScript kind, items
+		let options = {suppress: []}
+		let customRules = doc.program.imbaConfig..diagnostics..suppressErrorRules
+		if customRules isa Array
+			for item in customRules
+				if typeof item == 'string'
+					options.suppress.push(new RegExp(item))
+		# #tsDiagnostics = items
+		items = items.map do Diagnostic.fromTypeScript(kind,$1,doc,options)
+		items = items.filter do $1
+		return items
 	
 	def update kind, items, versions = null
 		dirty = yes
+		
+		# remove the previous diagnostics of the same kind
+		
 		all = all.filter do $1.data.kind != kind
 
 		if kind & DiagnosticKind.TypeScript
@@ -173,16 +222,14 @@ export class Diagnostics
 			#tsDiagnostics = items
 			items = items.map do Diagnostic.fromTypeScript(kind,$1,doc,options)
 			items = items.filter do $1
-			
-		let text = doc.doc.getText! # .slice(lstart,lstart + entry.length)
 
 		for item in items
 			item.data ||= {}
 			item.data.kind ||= kind
-			item.data.version = doc.version
-			if item.range
-				item.data.text ||= text.substr(item.range.offset,item.range.length)
-		# console.log 'update diagnostics',kind,items
+			item.data.version ||= doc.version
+
+		if items.length
+			console.log 'updating diagnostics',kind,items,versions
 		all = all.concat(items)
 		sync!
 		self
@@ -201,34 +248,26 @@ export class Diagnostics
 		let meta = item.data
 
 		if meta.version != version and range
-			let start0 = range.offset
-			let end0 = start0 + range.length
 
-			let start1 = doc.idoc.offsetAtVersion(start0,meta.version)
-			let end1 = doc.idoc.offsetAtVersion(end0,meta.version)
+			let oldRange = item.initialRange
+			let newRange = item.newRange
+			
+			let oldText = item.oldText
+			let newText = item.newText
 
-			log('syncItem',start0,end0,start1,end1,version)
-
-			if start0 != start1 or end1 != end0
-				console.log 'syncing version',start0,end0,start1,end1,version
+			if !newRange.equals(oldRange)
+				console.log 'range has changed!!',oldText,newText
+				item.range = newRange
 				self.dirty = yes
 
-			item.range = doc.rangeAt(start1,end1)
-			
-			# {
-			#	offset: start1
-			# 	length: end1 - start1
-			# }
-
-			let text = doc.doc.getText!.slice(start1,end1)
-
-			if text != meta.text
-				log 'text content of diagnostic range changed',meta.text,text
-				meta.text = text
+			if newText != oldText
+				console.log 'text content of diagnostic range changed',newText,oldText
+				# meta.text = text
 				item.remove = yes
 				self.dirty = yes
 
-			item.data.version = version
+			meta.version = version
+			# item.data.version = version
 
 		return item
 
@@ -243,12 +282,6 @@ export class Diagnostics
 
 	def send
 		dirty = no
-		all = all.filter do !$1.remove
-		# if all.length
-		#	console.log 'send diagnostics',all
-		# for item in all
-		#	if let range = item.range
-		#		range.start = doc.idoc.positionAt(range.offset)
-		#		range.end = doc.idoc.positionAt(range.offset + range.length)
-		log 'sending',all
-		doc.program.connection.sendDiagnostics(uri: doc.uri, diagnostics: all)
+		let send = all.filter do !$1.remove
+		log 'sending',all,send
+		doc.program.connection.sendDiagnostics(uri: doc.uri, diagnostics: send)

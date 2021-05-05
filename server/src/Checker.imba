@@ -2,7 +2,7 @@ import {Component} from './Component'
 import type {Program,TypeChecker} from 'typescript'
 import * as ts from 'typescript'
 import { tsSymbolFlagsToKindString } from './utils'
-import {Sym,Node as ImbaNode} from 'imba/program'
+import {Sym,Node as ImbaNode, Token as ImbaToken} from 'imba/program'
 
 const SymbolObject = ts.objectAllocator.getSymbolConstructor!
 const TypeObject = ts.objectAllocator.getTypeConstructor!
@@ -12,6 +12,21 @@ const Signature = ts.objectAllocator.getSignatureConstructor!
 
 
 const SF = ts.SymbolFlags
+
+extend class SourceFile
+
+	def getCompilation
+		scriptSnapshot.#compilation
+		
+	def i2o i
+		scriptSnapshot.#compilation.i2o(i)
+	
+	def d2o i
+		scriptSnapshot.#compilation.d2o(i)
+		
+	def o2d i
+		scriptSnapshot.#compilation.o2d(i)
+		
 
 extend class NodeObject
 
@@ -143,6 +158,8 @@ export class ProgramSnapshot < Component
 		checker = program.getTypeChecker!
 		self.file = #file = file
 		#blank = file or program.getSourceFiles()[0]
+		if file
+			self.sourceFile = program.getSourceFileByPath(file.fileName)
 		#typeCache = {}
 		
 		self.SF = SF
@@ -164,7 +181,7 @@ export class ProgramSnapshot < Component
 		checker.createArrayType(inner or basetypes.any)
 
 	def resolve name,types = SF.All
-		let sym = checker.resolveName(name,self.fileRef(#file),symbolFlags(types),false)
+		let sym = checker.resolveName(name,#location or loc(#file),symbolFlags(types),false)
 		return sym
 		
 	def parseType string, token, returnAst = no
@@ -180,7 +197,8 @@ export class ProgramSnapshot < Component
 			return ast if returnAst
 			return #typeCache[string] = ast.resolved
 		catch e
-			console.log 'parseType error',e,ast
+			yes
+			# console.log 'parseType error',e,ast
 	
 	def resolveTypeExpression expr, source, ctx
 		let val = expr.getText(source)
@@ -195,7 +213,7 @@ export class ProgramSnapshot < Component
 		
 		if expr.types
 			let types = expr.types.map do resolveTypeExpression($1,source,ctx)
-			console.log 'type unions',types
+			# console.log 'type unions',types
 			return checker.getUnionType(types)
 		if expr.typeName
 			let typ = local(expr.typeName.escapedText,#file,'Type')
@@ -208,8 +226,8 @@ export class ProgramSnapshot < Component
 		
 	
 
-	def local name, target = #file, types = SF.All
-		let sym = checker.resolveName(name,loc(target),symbolFlags(types),false)
+	def local name, target = #location, types = SF.All
+		let sym = checker.resolveName(name,loc(target or #file),symbolFlags(types),false)
 		return sym
 
 	def symbolFlags val
@@ -233,6 +251,7 @@ export class ProgramSnapshot < Component
 
 	def fileRef value
 		return undefined unless value
+		
 		if value.fileName
 			value = value.fileName
 
@@ -240,6 +259,13 @@ export class ProgramSnapshot < Component
 			program.getSourceFileByPath(value)
 		else
 			value
+			
+	set location value
+		let item = loc(value)
+		#location = item
+	
+	get location
+		#location
 
 	def loc item
 		return undefined unless item
@@ -365,10 +391,27 @@ export class ProgramSnapshot < Component
 
 	def path path, base = null
 		yes
+		
+	def getNode input
+		if input isa ImbaToken
+			let span = input.span
+			let offset = sourceFile.d2o(span.offset + span.length)
+			console.log 'get node at',span,offset
+			return loc(offset)
+		return input
+		
+	def getThisContainer node
+		# if node is an imba node
+		if node isa ImbaToken
+			let token = getNode(node)
+			console.log 'found container loc?!',node,token
+			node = token
+		
+		ts.getThisContainer(node,false)
+		
 
-	def resolvePath tok, doc
-		let sym = tok.symbol
-		let typ = tok.type
+	def resolvePath tok, doc, loc = null
+		
 
 		if tok isa Array
 			return tok.map do resolvePath($1,doc)
@@ -392,9 +435,14 @@ export class ProgramSnapshot < Component
 			
 			if tok.match('value')
 				let end = tok.end.prev
-				end = end.prev if end.match('br')
+				while end and end.match('br')
+					end = end.prev
+				# end = end.prev if end.match('br')
 				tok = end
 			# console.log 'checking imba node!!!',tok
+		
+		let sym = tok.symbol
+		let typ = tok.type
 
 		if tok isa Sym
 			let typ = tok.datatype
@@ -407,6 +455,8 @@ export class ProgramSnapshot < Component
 			if tok.body
 				# doesnt make sense
 				return resolveType(tok.body,doc)
+				
+			return basetypes.any
 
 		let value = tok.pops
 
@@ -452,6 +502,22 @@ export class ProgramSnapshot < Component
 
 		if tok.type == 'self'
 			return tok.context.selfScope.selfPath
+		
+		if tok.match('identifier.special')
+			let argIndex = tok.value.match(/^\$\d+$/) and parseInt(tok.value.slice(1)) - 1
+			let container = getThisContainer(tok)
+			console.warn "found arg index!!!",argIndex,container
+			if argIndex == -1
+				return resolve('arguments',container)
+
+			return checker.getContextualTypeForArgumentAtIndex(container,argIndex)
+			
+			
+			# there may already be a variable here with that name -- this is the sloppy way
+			# let type = local()
+			
+			
+			
 
 		if tok.match('identifier')
 			# what if it is inside an object that is flagged as an assignment?
@@ -470,8 +536,10 @@ export class ProgramSnapshot < Component
 					return [scope.selfPath,tok.value]
 				else
 					return type(self.local(tok.value))
-
-			return resolveType(sym,doc)
+			
+			# type should be resolved at the location it is in(!)
+			
+			return resolveType(sym,doc,tok)
 
 		if tok.match('accessor')
 			# let lft = tok.prev.prev

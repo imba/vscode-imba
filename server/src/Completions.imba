@@ -34,8 +34,8 @@ export class Completion
 		}
 
 		setup!
-			
 		triggers options.triggers
+		resolve!
 
 	get #type
 		#symbol.type
@@ -46,6 +46,14 @@ export class Completion
 		for chr of chars
 			list.push(chr) unless list.indexOf(chr) >= 0
 		return self
+	
+	def resolve
+		if #resolved =? yes
+			#resolve!
+		return self
+	
+	def #resolve
+		yes
 		
 
 	def setup
@@ -84,6 +92,7 @@ export class Completion
 		if #options..commitCharacters
 			item.commitCharacters = #options.commitCharacters
 		return item
+	
 
 export class ManualCompletion < Completion
 	constructor symbol, context, o = {}
@@ -92,11 +101,23 @@ export class ManualCompletion < Completion
 		
 
 export class SymCompletion < Completion
+	get #type
+		##type ||= #context.checker.resolvePath(#symbol)
 
 	def setup
 		name = #symbol.name
 		kind = util.convertSymbolKind(#symbol.semanticKind)
+		console.warn "SYM TYPE",#type,#symbol
 		self
+		
+	def #resolve
+		let typ = #type
+		
+		if typ
+			let typestr = #context.checker.checker.typeToString(typ)
+			label.type = typestr
+			
+		
 
 	get qualifier
 		'imba'
@@ -105,9 +126,10 @@ export class SymbolObjectCompletion < Completion
 	def setup
 		let sym = #symbol
 		let par = #symbol.parent
+		name = #symbol.details.name
+		
 		let type = #symbol.type
 		let typesym = type..symbol or sym
-		name = #symbol.details.name
 		kind = util.tsSymbolFlagsToKindString(typesym.flags)
 		# kind = util.convertSymbolKind(#symbol.semanticKind)
 		# let typestr = type and type.checker.typeToString(type)
@@ -135,7 +157,7 @@ export class SymbolObjectCompletion < Completion
 			delete label.qualifier
 
 		if let detail = sym.doctag('detail')
-			label.parameters = detail
+			ns = detail
 
 		if sym.tagname? and sym.mapped?
 			label.type = sym.typeName
@@ -145,9 +167,9 @@ export class SymbolObjectCompletion < Completion
 		if sym.component?
 			sourceFile = sym.sourceFile
 			
-		if #options.value
-			ns = 'self'
-			yes
+		# if #options.value
+		# 	ns = 'self'
+		# 	yes
 			
 		# if typestr 
 		#	label.type ||= typestr\
@@ -191,14 +213,16 @@ export class CompletionsContext < Component
 		file = file
 		pos = pos
 		options = options
-		
 		trigger = options.triggerCharacter
 
 		#prefix = ''
 		#added = {}
 		#uniques = new Map
+		
 		items = []
 		doc = file.idoc
+		compilation = file.currentCompilation
+
 		ctx = doc.getContextAtOffset(pos)
 		tok = ctx.token
 		devlog 'context',ctx
@@ -212,6 +236,13 @@ export class CompletionsContext < Component
 		# only show completions directly after : in styles	
 		if trigger == ':' and !tok.match('style.property.operator')
 			return
+			
+		# try to find the closest matching typescript location and node
+		if true
+			# only if there is a real position?
+			oloc = checker.sourceFile.d2o(pos)
+			checker.location = oloc
+			# console.warn "TLOC IS",oloc,checker.location
 
 
 		# find the actual declarations reference
@@ -344,17 +375,22 @@ export class CompletionsContext < Component
 	def checkVariables
 		return #vars if #vars
 		let scope = checker.sym(ctx.scope.path)
-		devlog 'getting scope',scope
+		# devlog 'getting scope',scope
+		let loc = checker.location or scope
 
-		let vars = #vars = file.idoc.varsAtOffset(pos,yes)
+		let vars = #vars = doc.varsAtOffset(pos,yes)
 
 		for item in vars
-			let tsym = checker.local(item.name,scope)
+			let tsym = checker.local(item.name,loc)
 			checker.type(tsym) # try to resolve the type
 			# let sym = rootsymbols.find(do $1.label == item.name)
 			if tsym and !item.name.match(/ctest/)
+				
 				item.#tsym = tsym
-				devlog "match tsym variable",tsym
+				# check if the location of the ts definition
+				# matches our expectation
+		
+				# devlog "match tsym variable",tsym
 				# devlog 'found symbol for var',item.name,tsym
 
 		return vars

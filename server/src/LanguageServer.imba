@@ -128,6 +128,8 @@ export class LanguageServer < Component
 
 		createTypeScriptService tslOptions
 		setTimeout(&,0) do indexFiles!
+		for file in files
+			file.didLoad!
 		return self
 		
 	def createTypeScriptService options
@@ -221,6 +223,8 @@ export class LanguageServer < Component
 		self
 
 	def emitDiagnostics
+		return self
+
 		let versions = {}
 		let map = {}
 		let t0 = Date.now!
@@ -247,13 +251,13 @@ export class LanguageServer < Component
 			for entry in entries when entry.file
 				# console.log 'diagnostic entry',entry.file
 				if let file = files[entry.file.fileName]
-					let items = map[file.tsPath] ||= []
+					let items = map[file.fileName] ||= []
 					items.push(entry)
 
 			if true # setTimeout(&,10) do
 				devlog 'updateDiagnostics'
 				for file in targets
-					file.updateDiagnostics(map[file.tsPath],versions[file.tsPath])
+					file.updateDiagnostics(map[file.fileName],versions[file.tsPath])
 		
 		# console.log 'emitDiagnostics took',Date.now! - t0
 		self

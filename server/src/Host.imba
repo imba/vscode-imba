@@ -79,9 +79,15 @@ export default class Host < Component
 		ts.getDefaultLibFilePath(options)
 
 	def getScriptVersion fileName
-		# console.log 'getScriptVersion',fileName
-		let version = #ils.files[fileName] ? String(#ils.files[fileName].version.toString()) : "1"
-		return version
+		let file = #ils.files[fileName]
+		
+		# console.log 'getScriptVersion',fileName,!!#ils.files[fileName]
+		if file
+			let snap = file.getScriptSnapshot!
+			if snap
+				return String(snap.iversion or 0)
+			return undefined
+		return "1"
 
 	def getScriptSnapshot fileName
 		let ext = np.extname(fileName) or ''
@@ -90,6 +96,7 @@ export default class Host < Component
 
 		if ext.match(/\.(imba1?|svg|css|png|jpe?g)$/)
 			# should be a rich file
+			# console.log 'getScriptSnapshot',fileName
 			let file = #ils.getRichFile(fileName,yes)
 			return file.getScriptSnapshot! if file
 			return undefined
