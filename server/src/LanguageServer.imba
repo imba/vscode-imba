@@ -97,12 +97,7 @@ export class LanguageServer < Component
 		self.cache = {}
 		self.settings = {}
 		self.counters = {diagnostics: 1}
-
 		self.sys = ts.sys || system
-
-		# long promise for tls?
-		# log('imba config',imbaConfig)
-		# log('assets',Object.keys(imbaConfig.assets or {}))
 
 		for item in imbaConfig.entries
 			if let file = getImbaFile(item.input)
@@ -113,6 +108,16 @@ export class LanguageServer < Component
 	def logPath path,...params
 		if path.match(/\.js$/) and path.match(/vscode-imba/)
 			console.log(...params,path)
+			
+	def emitChanges
+		$cancel('emitChanges')
+		invalidate!
+		# maybe only when we save?!
+		log 'emit changes'
+		emitDiagnostics!
+		# for file in files
+		#	file.emitDiagnostics!
+		self
 		
 	def updateConfiguration settings,all
 		# console.log 'updating settings',settings
@@ -179,8 +184,10 @@ export class LanguageServer < Component
 		let t = Date.now!
 		let matches = glob.sync(path.resolve(self.rootPath,'**','*.imba'),ignore: 'node_modules')
 		matches = matches.filter do(file) file.indexOf('node_modules') == -1
+		
 		allFiles ||= matches.map do(file) getRichFile(file)
-
+		console.log 'indexedFiles',matches,rootFiles.map(do $1)
+		invalidate!
 		self
 
 	def getProgram
@@ -222,45 +229,10 @@ export class LanguageServer < Component
 			file.diagnostics.clear!
 		self
 
-	def emitDiagnostics
+	def emitDiagnostics force = no
+		for file in files when file.shouldEmitDiagnostics
+			file.sendDiagnostics(force)
 		return self
-
-		let versions = {}
-		let map = {}
-		let t0 = Date.now!
-		let program = tls.getProgram!
-		let request = ++counters.diagnostics
-
-		let targets = files.filter do $1.shouldEmitDiagnostics
-
-		for file in targets
-			versions[file.tsPath] = {
-				doc: file.doc.version
-				idoc: file.idoc.version
-			}
-
-		if true # setTimeout(&,10) do 
-			devlog 'getSemanticDiagnostics'
-			let entries = program.getSemanticDiagnostics!
-			if request != counters.diagnostics
-				devlog 'other diagnostics are on the way'
-				return
-
-			# console.log 'received diagnostics',entries
-
-			for entry in entries when entry.file
-				# console.log 'diagnostic entry',entry.file
-				if let file = files[entry.file.fileName]
-					let items = map[file.fileName] ||= []
-					items.push(entry)
-
-			if true # setTimeout(&,10) do
-				devlog 'updateDiagnostics'
-				for file in targets
-					file.updateDiagnostics(map[file.fileName],versions[file.tsPath])
-		
-		# console.log 'emitDiagnostics took',Date.now! - t0
-		self
 
 	def getSemanticDiagnostics
 		let t = Date.now!
@@ -365,58 +337,7 @@ export class LanguageServer < Component
 
 		let loc = self.documents.get(uri).offsetAt(pos)
 		let fileres = file.getDefinitionAtPosition(pos)
-
-		if fileres
-			return fileres
-		
-		unless tls
-			return []
-
-		let jsloc = file.generatedLocFor(loc)
-		let info = tls.getDefinitionAndBoundSpan(file.tsPath,jsloc)
-
-		log 'get definition',uri,pos,loc,jsloc,info
-
-		if info and info.definitions
-			let sourceSpan = file.textSpanToRange(info.textSpan)
-			let sourceText = file.textSpanToText(info.textSpan)
-			let isLink = sourceText and sourceText.indexOf('-') >= 0
-			
-			let defs = for item of info.definitions
-				# console.log 'get definition',item
-				let ifile = self.files[item.fileName]
-				if ifile
-					# console.log 'definition',item
-					let textSpan = ifile.textSpanToRange(item.textSpan)
-					let span = item.contextSpan ? ifile.textSpanToRange(item.contextSpan) : textSpan
-
-					
-					if item.containerName == 'globalThis' and item.name.indexOf('$$TAG$$') >= 0
-						span = {
-							start: {line: textSpan.start.line, character: 0}
-							end: {line: textSpan.start.line + 1, character: 0}
-						}
-					
-					log 'definition',item,textSpan,span,item.kind
-					if item.kind == 'module'
-						textSpan = {start: {line:0,character:0},end: {line:0,character:0}}
-						console.log 'LocationLink',ifile.uri,textSpan,sourceSpan
-						LocationLink.create(ifile.uri,textSpan,textSpan,sourceSpan)
-						# Location.create(ifile.uri,)
-					elif isLink
-						LocationLink.create(ifile.uri,textSpan,span,sourceSpan)
-					else
-						Location.create(ifile.uri,textSpan)
-	
-				elif item.name == '__new' and info.definitions.length > 1
-					continue
-				else
-					let span = util.textSpanToRange(item.contextSpan or item.textSpan,item.fileName,tls)
-					if isLink
-						LocationLink.create(util.pathToUri(item.fileName),span,span,sourceSpan)
-					else
-						Location.create(util.pathToUri(item.fileName),span)
-			return defs
+		return fileres
 
 	# should delegate this through to the file itself
 	def getCompletionsAtPosition uri, pos, context = {}
@@ -424,7 +345,6 @@ export class LanguageServer < Component
 		console.log 'get completions',uri,pos,context
 		let loc = typeof pos == 'number' ? pos : documents.get(uri).offsetAt(pos)
 
-		
 		try
 			let items = file.getCompletionsAtOffset(loc,context)
 			return items				
@@ -433,7 +353,6 @@ export class LanguageServer < Component
 			return []
 
 	def getEditsForFileRename from, to
-		
 		self
 
 	def doResolve item\CompletionItem
@@ -551,10 +470,6 @@ export class LanguageServer < Component
 				sortText: sortText
 				
 			})
-
-		# if query
-		#	items = items.filter do util.matchFuzzyString(item.label,$1.name)
-		
 		return items
 			
 	def getWorkspaceSymbols options = {}
@@ -589,41 +504,29 @@ export class LanguageServer < Component
 
 	def onReferences params\ReferenceParams
 		return [] unless tls
-
 		let uri = params.textDocument.uri
 		let file = getImbaFile(uri)
-		let loc = documents.get(uri).offsetAt(params.position)
-		# @type {number}
-		let tsp-loc = file.generatedLocFor(loc)
-		log 'references',uri,params.position,loc,tsp-loc
-
-		let references = tls.getReferencesAtPosition(file.tsPath,tsp-loc)
-		let results\Location[] = []
-		inspect references
-		for ref in references
-			let ifile\File = files[ref.fileName]
-			let span = ifile.textSpanToRange(ref.textSpan)
-			results.push(Location.create(ifile.uri,span)) if span
-		inspect results
-		return results
+		let iloc = file.offsetAt(params.position)
+		return file.getReferencesAtOffset(iloc)
 
 	def onRenameRequest params
 		let renames\WorkspaceEdit = {changes: {}}
+		
 		try
 			let newName = params.newName
 			let file = getImbaFile(params.textDocument.uri)
 			let iloc = file.offsetAt(params.position)
 			let tloc = file.generatedLocFor(iloc)
-			log 'rename request',iloc,tloc,params
-			let t_renames = tls.findRenameLocations(file.tsPath,tloc,false,false)
-			log t_renames
+			# log 'rename request',iloc,tloc,params
+			let t_renames = tls.findRenameLocations(file.fileName,tloc,false,false)
+			# log t_renames
 
 			for rename in t_renames
 				let dest = getImbaFile(rename.fileName)
 				let edits = (renames.changes[dest.uri] ||= [])
-				let range = dest.textSpanToRange(rename.textSpan)
+				let range = dest.o2d(rename.textSpan)
 				edits.push(range: range, newText: newName)
-		inspect renames
+		# inspect renames
 		return renames
 
 	def onDocumentOnTypeFormatting params

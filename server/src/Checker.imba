@@ -349,8 +349,8 @@ export class ProgramSnapshot < Component
 		if typeof name == 'number'
 			name = String(name)
 
-		if name isa Array
-			console.log 'access the signature of this type!!',item,name
+		# if name isa Array
+		#	console.log 'access the signature of this type!!',item,name
 
 		# console.log 'member',item,name
 		let key = name.replace(/\!$/,'')
@@ -358,7 +358,7 @@ export class ProgramSnapshot < Component
 		let sym = typ.getProperty(key)
 		
 		if key == '__@iterable'
-			console.log "CHECK TYPE",item,name
+			# console.log "CHECK TYPE",item,name
 			let resolvedType = checker.getApparentType(typ)
 			sym = resolvedType.members.get('__@iterator')
 			return type(signature(sym)).resolvedTypeArguments[0]
@@ -396,7 +396,7 @@ export class ProgramSnapshot < Component
 		if input isa ImbaToken
 			let span = input.span
 			let offset = sourceFile.d2o(span.offset + span.length)
-			console.log 'get node at',span,offset
+			# console.log 'get node at',span,offset
 			return loc(offset)
 		return input
 		
@@ -404,7 +404,7 @@ export class ProgramSnapshot < Component
 		# if node is an imba node
 		if node isa ImbaToken
 			let token = getNode(node)
-			console.log 'found container loc?!',node,token
+			# console.log 'found container loc?!',node,token
 			node = token
 		
 		ts.getThisContainer(node,false)
@@ -424,7 +424,7 @@ export class ProgramSnapshot < Component
 			return tok
 
 		if tok isa ImbaNode
-			
+			let node = tok
 			if tok.type == 'type'
 				let val = String(tok)
 				return parseType(val,tok)
@@ -439,6 +439,12 @@ export class ProgramSnapshot < Component
 					end = end.prev
 				# end = end.prev if end.match('br')
 				tok = end
+				let typ = resolvePath(tok,doc,tok)
+				console.log 'resolved type',typ
+				if node.start.next.match('keyword.new')
+					typ = [typ,'prototype']
+				return typ
+				
 			# console.log 'checking imba node!!!',tok
 		
 		let sym = tok.symbol
@@ -506,22 +512,15 @@ export class ProgramSnapshot < Component
 		if tok.match('identifier.special')
 			let argIndex = tok.value.match(/^\$\d+$/) and parseInt(tok.value.slice(1)) - 1
 			let container = getThisContainer(tok)
-			console.warn "found arg index!!!",argIndex,container
+			# console.warn "found arg index!!!",argIndex,container
 			if argIndex == -1
 				return resolve('arguments',container)
 
 			return checker.getContextualTypeForArgumentAtIndex(container,argIndex)
 			
-			
-			# there may already be a variable here with that name -- this is the sloppy way
-			# let type = local()
-			
-			
-			
 
 		if tok.match('identifier')
-			# what if it is inside an object that is flagged as an assignment?
-			
+			# what if it is inside an object that is flagged as an assignment?			
 			if tok.value == 'global'
 				return 'globalThis'
 

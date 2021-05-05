@@ -107,7 +107,7 @@ export class SymCompletion < Completion
 	def setup
 		name = #symbol.name
 		kind = util.convertSymbolKind(#symbol.semanticKind)
-		console.warn "SYM TYPE",#type,#symbol
+		# console.warn "SYM TYPE",#type,#symbol
 		self
 		
 	def #resolve
@@ -250,7 +250,7 @@ export class CompletionsContext < Component
 		let expr = try checker.resolveType(ctx.target,doc)
 		devlog 'target type!!',expr,ctx.target,options
 		
-		console.log ctx.suggest, ctx.token.type
+		# console.log ctx.suggest, ctx.token.type
 
 		if tok.match('string')
 			devlog 'in string!!'
@@ -344,7 +344,7 @@ export class CompletionsContext < Component
 		add(custom,o)
 		
 	def tagattrs o = {}
-		console.log 'check',"ImbaHTMLTags.{o.name}"
+		# console.log 'check',"ImbaHTMLTags.{o.name}"
 		let sym = checker.sym("HTMLElementTagNameMap.{o.name}")
 		# let attrs = checker.props("ImbaHTMLTags.{o.name}")
 		

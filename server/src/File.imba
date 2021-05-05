@@ -99,20 +99,12 @@ export class File < Component
 
 	def getCompiledBody
 		""
-		# String(system.readFile(fileName))
 
 	def getSourceBody
 		doc.getText!
 
 	def getScriptSnapshot
 		#snapshot ||= ts.ScriptSnapshot.fromString(getCompiledBody!)
-
-
-	def textSpanToRange
-		return {start: {line:0,character:0},end: {line:0,character:0}}
-
-	def textSpanToText
-		return ""
 
 	def dispose
 		self
@@ -147,6 +139,7 @@ export class ImbaFile < File
 		diagnostics = new Diagnostics(self)
 		#emptySnapshot = ts.ScriptSnapshot.fromString('export {}')
 		#emptySnapshot.iversion = 0
+		relName = util.normalizeImportPath(program.rootPath,fileName) + '.imba'
 
 		emitted = {}
 		times = {}
@@ -195,8 +188,8 @@ export class ImbaFile < File
 		
 		# diagnostics.sync!
 		times.edited = Date.now!
-		
-		console.log 'didChange',doc.version
+		console.log 'didChange',relName,doc.version
+
 		sendDiagnostics!
 
 		if version > 1
@@ -237,35 +230,17 @@ export class ImbaFile < File
 		
 		if emit.js
 			if emit.#emitted =? yes
-				devlog 'emitting file to ts',fileName
-				program.invalidate!
-				if tls
-					tls.getEmitOutput(fileName)
-				sendDiagnostics!
-		return self
-		
-		let content = doc.getText!
-		if content != lastEmitContent
-			lastEmitContent = content
-			invalidate!
-			version++
-			log 'emitFile',uri,version,isLegacy
-			program.invalidate! unless isLegacy
-		
-		if tls
-			tls.getEmitOutput(fileName)
-			#checker = null
-			getDiagnostics! if refresh
-		else
-			compile!
+				# shouldnt all files re-emit diagnostics?
+				log 'emit',relName
+				program.$delay('emitChanges')
+				# program.invalidate!
+				# if tls
+				# 	tls.getEmitOutput(fileName)
+				$indexWorkspaceSymbols!
+				# sendDiagnostics!
+
 		return self
 
-	def updateDiagnostics items\Diagnostic[] = [], versions
-		let kind = DiagnosticKind.TypeScript | DiagnosticKind.Semantic
-		unless result and result.error
-			diagnostics.update(kind,items,versions)
-		return self
-		
 	def trySemanticDiagnostics
 		return [] unless tls
 		let kind = DiagnosticKind.TypeScript | DiagnosticKind.Semantic
@@ -273,7 +248,7 @@ export class ImbaFile < File
 		devlog 'diagnostics',fileName,entries
 		# return entries
 		let items = entries.map do Diagnostic.fromTypeScript(kind,$1,self)
-		return items
+		return items.filter do !!$1
 		
 	def getCompilerDiagnostics
 		let last = lastCompilation
@@ -286,20 +261,23 @@ export class ImbaFile < File
 			items.push(...getCompilerDiagnostics!)
 		return items
 		
-	def sendDiagnostics
+	def sendDiagnostics force = no
 		let all = getAllDiagnostics!
 		let payload = JSON.stringify(all.filter(do !$1.hidden? ))
+		#sentDiagnostics = '' if force
+
 		if #sentDiagnostics =? payload
+			devlog 'send the diagnostics!!!',uri,payload
 			ils.connection.sendDiagnostics(uri: uri, diagnostics: JSON.parse(payload))
 		return all
 
 	# how is this converting?
 	def positionAt offset
-		doc.positionAt(offset)
+		idoc.positionAt(offset)
 
 	def offsetAt position
 		return position if typeof position == 'number'
-		doc.offsetAt(position)
+		idoc.offsetAt(position)
 
 	def rangeAt start, end
 		idoc.rangeAt(start,end)
@@ -338,65 +316,6 @@ export class ImbaFile < File
 		#compilations
 
 	def compile
-		return if isLegacy
-
-		unless result
-			let body = doc.getText!
-			let iversion = idoc.version
-			let opts = Object.assign({},imbaOptions,{
-				filename: fileName
-				sourcePath: fileName
-			})
-			let res = null
-
-			try
-				let compiler = isLegacy ? imba1c : imbac
-				res = util.time(&,"{fileName} compiled in") do
-					compiler.compile(body,opts)
-			catch e
-				
-				let loc = e.loc && e.loc()
-				let range = loc && {
-					offset: loc[0]
-					length: loc[1] - loc[0]
-				}
-
-				let err = {
-					severity: DiagnosticSeverity.Error
-					message: e.message
-					range: range
-				}
-				diagnostics.update(DiagnosticKind.Compiler,[err])
-				result = {error: err}
-				js ||= 'export {};\n\n'
-				jsSnapshot ||= ts.ScriptSnapshot.fromString(js)
-				return self
-
-			diagnostics.update(DiagnosticKind.Compiler,res.diagnostics or [])
-
-			if res.errors && res.errors.length
-				# even if there are errors, should we not remember the last compiled version?
-				# devlog "compile error!!!",res.errors
-				# Should rather keep the last successfully compiled version?
-				js ||= 'export {};\n\n'
-				jsSnapshot ||= ts.ScriptSnapshot.fromString(js)
-				result = {error: res.errors[0]}
-				return
-			# diagnostics.update(DiagnosticKind.Compiler,[])
-
-			# potential memory leak?
-			result = res
-			locs = res.locs
-
-			if locs
-				locs.version = iversion
-	
-			js = res.js.replace(/\$CARET\$/g,'valueOf')
-			tsVersion = iversion
-			jsSnapshot = ts.ScriptSnapshot.fromString(js)
-			jsSnapshot.version = iversion
-			$indexWorkspaceSymbols!
-
 		return self
 		
 	def $indexWorkspaceSymbols
@@ -412,15 +331,12 @@ export class ImbaFile < File
 		$indexWorkspaceSymbols!
 		return cache.workspaceSymbols
 
-	def sourceRangeAt start, end
-		for [ts0,ts1,imba0,imba1] in locs.spans
-			if start == ts0 and end == ts1
-				return idoc.rangeAt(imba0,imba1)
-		return null
-
 	def originalRangesFor jsloc
 		locs.spans.filter do |pair|
 			jsloc >= pair[0] and pair[1] >= jsloc
+			
+	def o2d o
+		currentCompilation.o2d(o)
 
 	def originalRangeFor {start,length,end = null}
 		if end == null
@@ -428,6 +344,7 @@ export class ImbaFile < File
 			
 		let snap = currentCompilation
 		return snap.o2dRange(start,end)
+
 
 		let starts = []
 		let ends = []
@@ -451,32 +368,16 @@ export class ImbaFile < File
 
 	# need a better converter
 	def originalLocFor jsloc
-		let val = cache.srclocs[jsloc]
-		if val != undefined
-			return val
-
-		let spans = originalRangesFor(jsloc)
-
-		if let span = spans[0]
-			let into = (jsloc - span[0]) / (span[1] - span[0])
-			let offset = Math.floor(into * (span[3] - span[2]))
-			# console.log 'found originalLocFor',jsloc,spans
-			if span[0] == jsloc
-				val = span[2]
-			elif span[1] == jsloc
-				val = span[3]
-			else
-				val = span[2] + offset
-
-		return cache.srclocs[jsloc] = val
+		return emittedCompilation..o2d(jsloc)
 
 	def generatedRangesFor loc
 		return [] unless locs and locs.spans
 
-		locs.spans.filter do |pair|
+		locs.spans.filter do(pair)
 			loc >= pair[2] and pair[3] >= loc
 
 	def generatedLocFor loc
+		return emittedCompilation.d2o(loc)
 		let spans = generatedRangesFor(loc)
 		if let span = spans[0]
 			let into = (loc - span[2]) / (span[3] - span[2])
@@ -490,39 +391,10 @@ export class ImbaFile < File
 				return span[0] + offset
 		return null
 
-	# need to specify that this converts from typescript
-	def textSpanToRange span
-		if span.length == 0
-			if span.start == 0
-				return idoc.rangeAt(0,0)
-
-			return idoc.rangeAt(originalLocFor(span.start))
-			let pos = doc.positionAt(originalLocFor(span.start))
-			return {start: pos,end: pos}
-		let range = originalRangeFor(span)
-		if range
-			# let start = @originalLocFor(span.start)
-			# let end = @originalLocFor(span.start + span.length)
-			# console.log 'textSpanToRange',span,start,end,@locs and @locs.generated
-			{start: doc.positionAt(range.start), end: doc.positionAt(range.end)}
-
-	def textSpanToText span
-		let start = originalLocFor(span.start)
-		let end = originalLocFor(span.start + span.length)
-		return doc.getText!.slice(start,end)
-
-	def getDiagnostics
-		return unless tls and result and !result.error
-
-		let entries = tls.getSemanticDiagnostics(tsPath)
-		let kind = DiagnosticKind.TypeScript | DiagnosticKind.Semantic
-		diagnostics.update(kind,entries)
-		self
-	
 	def getDefinitionAtPosition pos
 		return if isLegacy
 		let offset = offsetAt(pos)
-		
+
 		let snap = currentCompilation
 		let oloc = snap.d2o(offset)
 		let ctx = idoc.getContextAtOffset(offset)
@@ -533,8 +405,9 @@ export class ImbaFile < File
 		
 		return unless info.textSpan
 		
-		let sourceSpan = snap.o2dRange(info.textSpan.start,info.textSpan.start + info.textSpan.length)
+		let sourceSpan = snap.o2d(info.textSpan)
 		let sourceText = sourceSpan.getText(idoc.content)
+		console.log 'sourceSpan',sourceSpan
 		devlog 'definitions',info,sourceSpan,sourceText
 		# let sourceSpan = originalRangeFor(info.textSpan)
 		# let sourceText = doc.getText!.slice(sourceSpan.start,sourceSpan.end)
@@ -542,14 +415,13 @@ export class ImbaFile < File
 
 		devlog 'get definition',uri,pos,offset,oloc,info,sourceSpan,sourceText,isLink
 		let defs = for item in info.definitions
-			# console.log 'get definition',item
 			let ifile = ils.files[item.fileName]
 			if ifile
-				
+				console.log 'get definition',item.fileName,item.textSpan
 				let textSpan = ifile.originalRangeFor(item.textSpan)
 				let span = item.contextSpan ? ifile.originalRangeFor(item.contextSpan) : textSpan
 				span ||= textSpan
-				devlog 'definition',item,ifile,textSpan,span,sourceSpan,sourceText
+				log 'definition',item,ifile,textSpan,span,sourceSpan,sourceText
 
 				if item.containerName == 'globalThis' and item.name.indexOf('$$TAG$$') >= 0
 					span = {
@@ -557,7 +429,7 @@ export class ImbaFile < File
 						end: {line: textSpan.start.line + 1, character: 0}
 					}
 				
-				devlog 'definition',item,textSpan,span,item.kind
+				log 'definition',item,textSpan,span,item.kind
 				if item.kind == 'module'
 					textSpan = {start: {line:0,character:0},end: {line:0,character:0}}
 					console.log 'LocationLink',ifile.uri,textSpan,sourceSpan
@@ -580,13 +452,23 @@ export class ImbaFile < File
 
 	def getDefinitionAtOffset offset
 		getDefinitionAtPosition(positionAt(offset))
-
 	
 	def getAdjustmentEdits pos, amount = 1
 		let loc =  offsetAt(pos)
 		let edit = idoc.adjustmentAtOffset(loc,amount)
 		return edit
 
+	def getReferencesAtOffset offset
+		let tloc = generatedLocFor(offset)
+		log 'references',uri,offset,tloc
+		let refs = tls.getReferencesAtPosition(fileName,tloc)
+		
+		for ref in refs
+			let ifile\ImbaFile = ils.files[ref.fileName]
+			let range = ifile..o2d(ref.textSpan)
+			continue unless range
+			Location.create(ifile.uri,range)
+		
 	def getQuickInfoAtPosition pos
 		return if isLegacy
 		
@@ -852,329 +734,7 @@ export class ImbaFile < File
 			global.cl = completions
 		
 		let out = completions.serialize!
-		# console.log 'returned completions',out
 		return out
-
-		let results = #getCompletionsAtOffset(offset,options) or []
-		# return results
-		return unless results
-		
-		let remove = []
-		for item in results
-			let lbl = item.label.name or item.label
-			if lbl.match(/\w\$\d+$/)
-				remove.push(item)
-		
-		results = results.filter do remove.indexOf($1) == -1
-		console.log 'results from completions',results
-		return results
-			
-
-	def #getCompletionsAtOffset offset, options = {}
-		let items = []
-		let names = new Map
-
-		return if isLegacy	
-
-		let ctx = idoc.getContextAtOffset(offset)
-
-		let grp = ctx.group
-		let tok = ctx.token
-		let that = getSelfAtOffset(offset)
-		let vars = idoc.varsAtOffset(offset,yes)
-		let target = that
-		let mode = null
-		let suggest = ctx.suggest
-		let flags = suggest.flags
-		let filters = {kinds: []}
-		let tsoffset = null
-		let keywordFilter = 0
-		let resolveLocalsPath = null
-		let props = null
-		let noGlobals = !!ctx.scope.class?
-		let noVars = no
-		let noKeywords = no
-		let g = {}
-
-		g.el = grp.closest('tag')
-
-		let add = do(...parts)
-			for item in parts
-				# devlog 'add item',item.label,item
-				names.set(item.label,item)
-				items.push(item)
-	
-		# $delay('emitFile',5000)
-		devlog 'completions in context',that,ctx,offset
-
-		if $web$
-			global.ct = ctx
-			ctx.SELF = that
-		devlog 'getCompletions',ctx.before,ctx.after,offset,options
-		# console.log ils.config.config
-		let t = CompletionTypes
-		let opts = Object.assign({},ils.config.config.suggest,suggest)
-
-		if tok.match('operator.equals') and tok.prev.match('tag.attr')
-			let key = "global.imba.tagtypes.{g.el.tagName}.{tok.prev.value}"
-			let type = getTypeAtPath(key)
-			
-			if type..types..length
-				target = null
-				for item in type.types
-					add({
-						label: item.value
-						insertText: "'{item.value}'"
-						sortText:'0'
-					})
-				devlog "drop target!!!",items
-
-
-		# if at start of string
-		if tok.match('string.open')
-			target = null
-			noGlobals = yes
-			noKeywords = yes
-
-			if grp.match('tagattrvalue')
-				devlog 'matched tag attribute value!!',grp.tagName, grp.propertyName
-				let key = "global.imba.tagtypes.{grp.tagName}.{grp.propertyName}"
-				if let type = getTypeAtPath(key)
-					
-					for item in type.types
-						add({
-							label: item.value
-						})
-					# devlog "found type!!!",type,items
-
-
-		
-		if flags & t.Path
-			try
-				let tloc = generatedLocFor(offset)
-				let res =  util.tsp2lspCompletions(tls.getCompletionsAtPosition(tfileName,tloc,{}).entries,{file:self,jsLoc:tsoffset})
-				return res
-
-		if flags & t.Type
-			devlog 'complete types!!'
-			let res = ils.entities.getTypesForFile(self,ctx)
-			return res
-
-
-		if flags & t.TagName
-			
-			let res = ils.entities.getTagNameCompletions(ctx.group,opts,self)
-			devlog 'tagname completions!!!',res
-			return res
-
-		if flags & t.TagProp
-			devlog 'TagProp completions',flags,g.el,g.el.tagName,g.el.pathName
-			let key = "<{g.el.tagName}>"
-			noGlobals = true
-			noKeywords = true
-			target = getTypeAtPath(key)
-			props = getPropertiesAtPath(key,util.isAttr,/^on\w/,/__$/)
-			let attrs = getPropertiesAtPath("global.imba.tagtypes.{g.el.tagName}")
-			devlog 'found attributes',attrs
-			# for item in attrs
-			# 	if props[item.escapedName]
-			# 		props[item.escapedName].#path = item.#path
-			# find the element properties via other 
-		
-		
-		if tok.match('tag.event.name') and false
-			# if flags & t.TagEvent
-			return ils.entities.getTagEventCompletions(ctx.group,opts)
-
-		if tok.match('style.property.modifier') or tok.match('style.selector.modifier')
-			target = getTypeAtPath('global.imba.stylemodifiers')
-			props = target.getApparentProperties!
-			devlog 'Style modifiers!!!',target,target.#path
-		
-		elif flags & t.StyleValue
-			items = ils.entities.getCSSValueCompletions(ctx,opts)
-
-			if flags & t.StyleProp
-				items.push(...ils.entities.getCSSPropertyCompletions(ctx.group,opts))
-
-			return items
-
-		elif flags & t.StyleProp
-			return ils.entities.getCSSPropertyCompletions(ctx.group,opts)
-
-		if tok.match('tag.event.name')
-			let path = "global.imba.types.events"
-			devlog "get completions for",path
-			target = getTypeAtPath(path)
-
-		if tok.match('tag.event-modifier')
-			let ev = grp.closest('listener')..name
-			let mod = tok.value.replace('.','')
-			let path = "global.imba.types.events.{ev}|click.MODIFIERS"
-			devlog "get completions for",path
-			target = getTypeAtPath(path)
-			devlog 'event modifier completion',ev,mod,target.#path
-
-		# completions have already started here
-		if tok.match('accessor')
-			tsoffset = generatedLocFor(offset - ctx.before.token.length)
-			console.log 'accessor completion',tsoffset,tok.type
-			# check that the ts offset is valid?
-			let tscompletions = tls.getCompletionsAtPosition(fileName,tsoffset,{})
-			let completions = util.tsp2lspCompletions(tscompletions.entries,{file:self,jsLoc:tsoffset})
-			return completions
-
-		# find the access chain
-		if tok.match('operator.access')
-			console.log 'operator.access',tok.type
-			# may be worth trying to fake the lookup 
-			util.time(&,'emit') do $flush('emitFile',false)
-			# never fall back to tls if file has not compiled correctly!!
-			tsoffset = generatedLocFor(offset)
-			let tscompletions = tls.getCompletionsAtPosition(fileName,tsoffset,{})
-			let completions = util.tsp2lspCompletions(tscompletions.entries,{file:self,jsLoc:tsoffset})
-			return completions
-
-		if tok.match('comment') and ctx.before.token == '#'
-			# complete internal properties
-			yes
-
-
-		if flags == 0 and !props and !items.length
-			return []
-
-		# if we are inside a tag tree - add automatic completions for tags with autoinserted braces
-		if grp.match('tagcontent') and ctx.scope.match('tagcontent')
-			# cannot be inside string etc
-			# devlog "IS INSIDE TAG CONTENT!!"
-			noGlobals = true
-			let res = ils.entities.getTagNameCompletions(ctx.group,opts,self)
-			for item in res
-				item.insertText = "<{item.label.name or item.label}>"
-				item.sortText = '0'
-				add(item)
-
-		# if tok.match('identifier')
-		#	filters.startsWith = ctx.before.token
-		
-		if tok.match('keyword')
-			return []
-
-		devlog 'check completion',target,ctx.scope.class?
-
-		if target && (!ctx.scope.class? or props)
-			# console.dir target, depth: 0
-			devlog 'completions for target',target
-			props ||= target.getApparentProperties!
-
-			for item in props
-				let name = item.escapedName
-				continue if name.match(/^(__@|"|__+unknown|___)/)
-				continue if name.match(/^\w+\$\d+/) # this is agenerated variable
-				continue unless item.flags & ts.SymbolFlags.Value
-				let kind = util.tsSymbolFlagsToKindString(item.flags)
-				let data = {resolved: yes, symbolFlags: item.flags, path: fileName}
-
-				# skip the event listener
-				
-				if item.#path
-					data.symbolPath = item.#path
-
-				if target.#path
-					data.symbolPath ||= "{target.#path}.{name}"
-					data.resolved = no
-
-				name = name.replace(/_\$SYM\$_/g,'#')
-				let label = {name: name}
-
-				# devlog 'handle item',name,item
-
-				if item.parent
-					let pname = item.parent.escapedName
-					label.qualifier = util.formatQualifier(pname)
-					if pname == 'ImbaStyleModifiers'
-						try label.qualifier = item.getDocumentationComment()[0].text.split('\n')[0]
-
-				add(
-					label: label
-					kind: kind
-					sortText: '0'
-					symbol: item
-					data: data
-				)
-		
-		# if target is implicit value
-		if target == that and !noKeywords
-			for keyword in suggest.keywords
-				add(
-					label: keyword
-					kind: CompletionItemKind.Keyword
-					detail: 'keyword'
-				)
-		
-		if target == that and !noGlobals
-			# also show for target?
-
-			let glob = getTypeAtPath('global')
-			for item in glob.getProperties!
-				let name = item.escapedName
-				continue unless name.match(/^[A-Z]/)
-				
-				add(
-					label: name
-					kind: CompletionItemKind.Variable
-					sortText: '2'
-					symbol: item
-				)
-			
-			unless noVars
-				for variable in vars
-					let sym = variable
-					let name = variable.name
-					if variable.type == 'global'
-						sym = glob.getProperty(name)
-
-					let other = names.get(name)
-
-					if other and other.kind == 'property'
-						other.insertText = other.label = "self.{other.label}"
-
-					add(
-						label: variable.name
-						sortText: '1'
-						symbol: sym
-					)
-			# check for option as well
-			let imports = ils.entities.getAutoImportsForFile(self)
-			add(...imports)
-
-		# convert to actual completions
-		let results = for item in items
-			let sym = item.symbol
-			let lbl = item.label.name or item.label
-			if sym isa Sym
-				item.kind ||= sym.semanticKind
-				item.label = sym.name
-				item.detail = "{sym.semanticKind} {sym.name}"
-
-			if item.sortText == '0'
-				# not if it is related to tags?
-				if lbl.match(/[A-Z]/)
-					item.sortText = '1'
-
-			if filters.kinds.length
-				continue unless filters.kinds.indexOf(item.kind) >= 0
-
-			item.kind ||= 'variable'
-			if typeof item.kind == 'string'
-				item.kind = util.convertCompletionKind(item.kind)
-
-			delete item.symbol	
-			item.data ||= {resolved: yes}
-			item
-
-		return results
-
 
 	def getSymbols
 		let outline = idoc.getOutline do(item)

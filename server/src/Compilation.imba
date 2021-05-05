@@ -30,6 +30,10 @@ export default class Compilation
 		}
 		
 	def o2iRange start, end, fuzzy = yes
+		# the whole body of the file
+		if start == 0 and end == obody.length
+			return doc.rangeAt(0,ibody.length)
+		
 		for [ts0,ts1,imba0,imba1] in locs.spans
 				if start == ts0 and end == ts1
 					return doc.rangeAt(imba0,imba1)
@@ -71,7 +75,7 @@ export default class Compilation
 		doc.historicalOffset(d,iversion)
 		
 	def i2d i
-		if i and i.start
+		if i and typeof i[0] == 'number'
 			return doc.rangeAt(i2d(i[0]),i2d(i[1]))
 		doc.offsetAtVersion(i,iversion)
 		

@@ -128,8 +128,13 @@ connection.onWorkspaceSymbol do(event)
 
 connection.onDefinition do(event)
 	# console.log 'onDefinition',event
-	let res\any[] = server.getDefinitionAtPosition(event.textDocument.uri,event.position)
-	return res
+	try
+		let res\any[] = server.getDefinitionAtPosition(event.textDocument.uri,event.position)
+		return res
+	catch e
+		console.log 'error',e
+	
+	
 
 connection.onReferences do(event)
 	let res = server.onReferences(event)
