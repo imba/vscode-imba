@@ -10,7 +10,6 @@ const NodeObject = ts.objectAllocator.getNodeConstructor!
 const SourceFile = ts.objectAllocator.getSourceFileConstructor!
 const Signature = ts.objectAllocator.getSignatureConstructor!
 
-
 const SF = ts.SymbolFlags
 
 extend class SourceFile
@@ -114,9 +113,11 @@ extend class SymbolObject
 		#doctags.filter do(item)
 			let match = item.name + ' ' + item.text or ''
 			!!query.test(match)
-			
+
 	def parametersToString
 		if let decl = valueDeclaration
+			return '' if !decl.parameters
+
 			let pars = decl.parameters.map do
 					let out = $1.name.escapedText
 					out += '?' if $1.questionToken
@@ -268,6 +269,7 @@ export class ProgramSnapshot < Component
 		#location
 
 	def loc item
+		console.l
 		return undefined unless item
 		if typeof item == 'number'
 			return ts.findPrecedingToken(item,loc(#file))

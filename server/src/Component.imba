@@ -26,6 +26,13 @@ export class Component
 
 	def $flush name,...params
 		$call(name,...params) if $timeouts[name]
+		
+	def $stamp label = 'time'
+		#prev ||= Date.now!
+		let now = Date.now!
+		console.log "{label}: {now - #prev}"
+		#prev = now
+		self
 
 	def log ...params
 		if config.get('verbose')

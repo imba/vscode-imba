@@ -68,7 +68,7 @@ const SuppressDiagnostics = [
 	test: do({message})
 		return no unless typeof message == 'string'
 		let m = message.match(/Expected (\d+) arguments, but got (\d+)/)
-		return yes if m and parseInt(m[1]) > parseInt(m[2])
+		return yes if m and parseInt(m[2]) > parseInt(m[1])
 		return no
 	---
 	code: 2339 # should we always?
@@ -102,7 +102,7 @@ export class Diagnostic
 		let rawCode = file.text.substr(entry.start,entry.length)
 		let rawExpandedCode = file.text.substr(entry.start - 10,entry.length + 10)
 	
-		console.log 'from typescript',kind,entry.msg,file.path
+		# console.log 'from typescript',kind,entry.msg,file.path
 
 		for rule in SuppressDiagnostics
 			if rule.code == entry.code

@@ -186,16 +186,6 @@ export def activate context
 	workspace.onDidRenameFiles do(ev)
 		client.sendNotification('onDidRenameFiles',ev)
 
-	client.onNotification('closeAngleBracket') do(params)
-		let editor = window.activeTextEditor
-
-		try
-			let str = new SnippetString('$0>')
-			editor.insertSnippet(str,null,{undoStopBefore: false,undoStopAfter: true})
-		catch e
-			console.log "error",e
-
-
 export def deactivate
 	if client
 		client.stop!

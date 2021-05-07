@@ -218,12 +218,14 @@ export class CompletionsContext < Component
 		#prefix = ''
 		#added = {}
 		#uniques = new Map
-		
+		$stamp 'init comp'
 		items = []
 		doc = file.idoc
 		compilation = file.currentCompilation
+		$stamp 'compilation'
 
 		ctx = doc.getContextAtOffset(pos)
+		$stamp 'got context'
 		tok = ctx.token
 		devlog 'context',ctx
 		let flags = ctx.suggest.flags
@@ -243,11 +245,15 @@ export class CompletionsContext < Component
 			oloc = checker.sourceFile.d2o(pos)
 			checker.location = oloc
 			# console.warn "TLOC IS",oloc,checker.location
-
+		$stamp 'set location'
 
 		# find the actual declarations reference
-		checkVariables!
-		let expr = try checker.resolveType(ctx.target,doc)
+		util.time(&,'check variables') do checkVariables!
+		let expr = try 
+			util.time(&,'resolve type') do checker.resolveType(ctx.target,doc)
+			
+		$stamp 'resovled types?'
+
 		devlog 'target type!!',expr,ctx.target,options
 		
 		# console.log ctx.suggest, ctx.token.type
@@ -282,8 +288,10 @@ export class CompletionsContext < Component
 		if expr
 			let props = checker.props(expr,yes).filter do
 				$1.flags & ts.SymbolFlags.Value
+			$stamp 'got props'
 			props = props.filter do $1.escapedName[0] != '"'
 			add(props)
+			
 		
 		elif flags & T.Value
 			# this is the special stuff now
@@ -308,15 +316,13 @@ export class CompletionsContext < Component
 	def check
 		checker.resolveType(ctx.token,file.idoc,ctx)
 
-	def globals
-		self
-
 	def locals
 		self
 
 	def values
-		add('keywords')
+		# add('keywords')
 		add('variables')
+		# add('globals')
 		add('properties',value: yes)
 		self
 		
@@ -397,6 +403,11 @@ export class CompletionsContext < Component
 
 	def variables
 		return checkVariables!
+		
+	def globals
+		#globals ||= checker.props('globalThis')
+		let items = #globals.slice(0).filter do $1.pascal?
+		return items
 
 	def completionForItem item, opts
 		if item isa Completion

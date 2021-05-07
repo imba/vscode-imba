@@ -8,7 +8,7 @@ import type { WorkspaceEdit } from 'vscode-languageserver-types'
 import type {CompilerOptions,LanguageService,LanguageServiceHost,UserPreferences,Program} from 'typescript'
 
 import {URI} from 'vscode-uri'
-import {File} from './File'
+import {File,ImbaFile} from './File'
 import {Entities} from './Entities'
 import * as util from './utils'
 import {ProgramSnapshot} from './Completions'
@@ -114,7 +114,7 @@ export class LanguageServer < Component
 		invalidate!
 		# maybe only when we save?!
 		log 'emit changes'
-		emitDiagnostics!
+		# emitDiagnostics!
 		# for file in files
 		#	file.emitDiagnostics!
 		self
@@ -223,21 +223,42 @@ export class LanguageServer < Component
 		if let file = self.files[fileName]
 			file.removed = true
 			self.version++
+			
 
 	def clearProblems
 		for file in files
 			file.diagnostics.clear!
 		self
+		
+	def getSemanticDiagnosticsForFile file
+		if #program
+			let source = #program.getSourceFileByPath(file.fileName)
+			return #program.getSemanticDiagnostics(source)
+		else
+			tls.getSemanticDiagnostics(file.fileName)
 
 	def emitDiagnostics force = no
-		for file in files when file.shouldEmitDiagnostics
-			file.sendDiagnostics(force)
+		false && util.time(&,'for whole program') do
+			let prog = getProgram!
+			let items = prog.getSemanticDiagnostics!
+			console.log 'found diagnostics',items.length
+		
+		util.time(&,'emitDiagnostics') do
+			let prog = #program = getProgram!
+			# p.getSemanticDiagnostics(f0.checker.sourceFile)
+			# console.log 'emit global diagnostics!'
+			# #program = null
+			for file in files when file.shouldEmitDiagnostics
+				# somehow sort them by priority and do clever optimizations for it.
+				file.emitDiagnostics(force)
+			#program = null
+
 		return self
 
 	def getSemanticDiagnostics
 		let t = Date.now!
 		let entries = tls.getProgram!.getSemanticDiagnostics!
-
+		
 		let info = entries.map do
 			[$1.file.fileName,$1.messageText,$1.start,$1.length,$1.relatedInformation,$1]
 
@@ -304,7 +325,7 @@ export class LanguageServer < Component
 		# @log "server.onDidChangeContent"
 		let doc = event.document
 		if let file = self.getImbaFile(doc.uri)
-			file.didChange(doc,event)
+			util.time(&,'change') do file.didChange(doc,event)
 
 	def getImbaFile src
 		# let doc = @documents && @documents.get(file.uri or file)
@@ -312,7 +333,8 @@ export class LanguageServer < Component
 		src = util.uriToPath(src)
 		src = util.normalizePath(path.resolve(self.rootPath,src).replace(/\.(imba|js|ts)$/,'.imba'))
 		# what if it is a local file?
-		return self.files[src] || File.build(self,src)
+		let file\ImbaFile = self.files[src] || File.build(self,src)
+		return file
 
 	def getRichFile src,onlyIfExists = no
 		if src.indexOf('file://') == 0
@@ -346,7 +368,8 @@ export class LanguageServer < Component
 		let loc = typeof pos == 'number' ? pos : documents.get(uri).offsetAt(pos)
 
 		try
-			let items = file.getCompletionsAtOffset(loc,context)
+			
+			let items = util.time(&,'getCompletions') do file.getCompletionsAtOffset(loc,context)
 			return items				
 		catch e
 			console.log 'error from getCompletions',e

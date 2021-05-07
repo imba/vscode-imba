@@ -179,7 +179,8 @@ export class ImbaFile < File
 		times.opened = Date.now!
 		emitFile(true)
 		log 'didOpen',uri,!!tls
-		sendDiagnostics!
+		emitDiagnostics! if tls
+		self
 
 	def didChange doc, event = null
 		$doc = doc
@@ -187,10 +188,14 @@ export class ImbaFile < File
 		cache.contexts = {}
 		
 		# diagnostics.sync!
+		# sendDiagnostics!
+		syncDiagnostics!
 		times.edited = Date.now!
-		console.log 'didChange',relName,doc.version
-
-		sendDiagnostics!
+		console.log 'didChange',relName,"v{doc.version}"
+		# this should definitely only send the diagnostics
+		# that are currently part of the document?
+		# should definitely not trigger an update
+		
 
 		if version > 1
 			isTyping = yes
@@ -201,7 +206,7 @@ export class ImbaFile < File
 		# $clearSyntacticErrors! # only if our regions have changed?!?
 
 	def didSave doc
-		savedContent = doc.getText!
+		# savedContent = doc.getText!
 		emitFile(true)
 		# diagnostics.sync!
 		times.saved = Date.now!
@@ -209,7 +214,7 @@ export class ImbaFile < File
 	
 	def didLoad
 		if times.opened
-			sendDiagnostics!
+			syncDiagnostics!
 		self
 
 	def dispose
@@ -229,23 +234,23 @@ export class ImbaFile < File
 		emit.compile!
 		
 		if emit.js
+			# this may already be emitted bu the program?
 			if emit.#emitted =? yes
 				# shouldnt all files re-emit diagnostics?
 				log 'emit',relName
-				program.$delay('emitChanges')
-				# program.invalidate!
-				# if tls
-				# 	tls.getEmitOutput(fileName)
+				# program.$delay('emitChanges',100)
+				program.invalidate!
 				$indexWorkspaceSymbols!
-				# sendDiagnostics!
+				$delay('emitDiagnostics',20)
 
 		return self
 
 	def trySemanticDiagnostics
 		return [] unless tls
 		let kind = DiagnosticKind.TypeScript | DiagnosticKind.Semantic
-		let entries = util.time(&,'diag') do tls.getSemanticDiagnostics(fileName)
-		devlog 'diagnostics',fileName,entries
+		# let entries = util.time(&,'diag') do tls.getSemanticDiagnostics(fileName)
+		let entries = ils.getSemanticDiagnosticsForFile(self)
+		devlog 'diagnostics',relName,entries
 		# return entries
 		let items = entries.map do Diagnostic.fromTypeScript(kind,$1,self)
 		return items.filter do !!$1
@@ -256,20 +261,36 @@ export class ImbaFile < File
 
 	def getAllDiagnostics
 		let items = []
-		util.time(&,'calc diagnostics') do
+		util.time(&,"calc diagnostics {relName}") do
 			items.push(...trySemanticDiagnostics!)
 			items.push(...getCompilerDiagnostics!)
 		return items
 		
-	def sendDiagnostics force = no
+	def syncDiagnostics force = no
+		sendDiagnostics!
+	
+	def updateDiagnostics
 		let all = getAllDiagnostics!
-		let payload = JSON.stringify(all.filter(do !$1.hidden? ))
+		return #diagnostics = all
+		
+	def emitDiagnostics force = no
+		updateDiagnostics!
+		sendDiagnostics!
+		return self
+		
+	def sendDiagnostics force = no
+		return self unless #diagnostics
+		
+		let send = #diagnostics.filter(do !$1.hidden? )
+		let payload = JSON.stringify(send)
 		#sentDiagnostics = '' if force
 
 		if #sentDiagnostics =? payload
 			devlog 'send the diagnostics!!!',uri,payload
+			# console.log 'sending diagnostics',relName
 			ils.connection.sendDiagnostics(uri: uri, diagnostics: JSON.parse(payload))
-		return all
+		return self
+		
 
 	# how is this converting?
 	def positionAt offset
@@ -459,8 +480,19 @@ export class ImbaFile < File
 		return edit
 
 	def getReferencesAtOffset offset
+			
+		# get the token information
+		let ctx = idoc.getContextAtOffset(offset)
+		
+		let tok = ctx.token
+		
+		if tok.match('entity.name.component')
+			console.log 'get references for tag!!',tok.value
+			
+		
 		let tloc = generatedLocFor(offset)
 		log 'references',uri,offset,tloc
+
 		let refs = tls.getReferencesAtPosition(fileName,tloc)
 		
 		for ref in refs
@@ -473,7 +505,6 @@ export class ImbaFile < File
 		return if isLegacy
 		
 		let dloc = offsetAt(pos)
-		
 		let snap = currentCompilation
 		let ctx = idoc.getContextAtOffset(dloc)
 
@@ -500,6 +531,10 @@ export class ImbaFile < File
 				info = "```imba\n<el class='... {tok.value} ...'>\n```"
 
 			if tok.match("tag.id")
+				info = "```imba\n<el id='{tok.value.slice(1)}'>\n```"
+				
+			if tok.match("tag.name")
+				console.log 'matched tag name'
 				info = "```imba\n<el id='{tok.value.slice(1)}'>\n```"
 
 			if tok.match("style.property.modifier") or tok.match("style.selector.modifier")
@@ -749,10 +784,11 @@ export class ImbaFile < File
 	def onDidChangeTextEditorSelection event
 		const now = times.selection = Date.now!
 		# console.log 'file selection change',now - times.edited
+		# should only happen if this clearly happens much later than the last change
 		if isTyping and (now - times.edited) > 3
+			console.log 'flushing emitFile',now - times.edited
 			isTyping = no
-			$flush('emitFile')
-			diagnostics.sync!
+			setTimeout(&,1) do $flush('emitFile')
 		return
 
 export class Imba1File < ImbaFile

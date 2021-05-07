@@ -103,6 +103,8 @@ export default class Compilation
 		return null
 		
 	get diagnostics
+		return [] unless result..diagnostics
+
 		#diagnostics ||= result.diagnostics.map do(item)
 			new Diagnostic(item,self)
 		
@@ -112,21 +114,25 @@ export default class Compilation
 		try
 			done = yes
 			let compiler = file.isLegacy ? imba1c : imbac
-			let res = file.util.time(&,"{file.fileName} compiled in") do
+			let res = file.util.time(&,"{file.relName} compiled in") do
 				compiler.compile(ibody,ioptions)
 			# console.log 'compiled!',res
-			obody = res.js.replace(/\$CARET\$/g,'valueOf')
-			self.result = res
-			self.locs = res.locs
+			
+			if res.js
+				obody = res.js.replace(/\$CARET\$/g,'valueOf')
+				self.result = res
+				self.locs = res.locs
 			
 			let errors = res.errors or []
 			
 			if errors.length
 				yes
-			else
+			elif res.js
 				self.js = ts.ScriptSnapshot.fromString(obody)
 				self.js.iversion = iversion
 				self.js.#compilation = self
 			return self
 		catch e
+			console.log 'compiler crashed',file.relName
+			self.result = {diagnostics: []}
 			yes
