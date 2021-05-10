@@ -4,6 +4,16 @@ import * as ts from 'typescript'
 import { tsSymbolFlagsToKindString } from './utils'
 import {Sym,Node as ImbaNode, Token as ImbaToken} from 'imba/program'
 
+const UserPrefs = {
+	imports: {
+		includeCompletionsForModuleExports:true
+		importModuleSpecifierPreference: "shortest"
+		importModuleSpecifierEnding: "minimal"
+		includePackageJsonAutoImports:"on"
+		includeAutomaticOptionalChainCompletions:false
+	}
+}
+
 const SymbolObject = ts.objectAllocator.getSymbolConstructor!
 const TypeObject = ts.objectAllocator.getTypeConstructor!
 const NodeObject = ts.objectAllocator.getNodeConstructor!
@@ -595,3 +605,9 @@ export class ProgramSnapshot < Component
 		let paths = resolvePath(tok,doc)
 		# console.log 'resolving paths',paths
 		return type(paths)
+		
+		
+	def resolveAutoImport name, source
+		let tls = file.ils.tls
+		let loc = file.emittedCompilation.obody.length
+		return tls.getCompletionEntryDetails(file.fileName,loc,name,{},source,UserPrefs.imports)

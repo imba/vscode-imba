@@ -1,8 +1,0 @@
-{
-"compilerOptions": {
-    "baseUrl": ".", // This must be specified if "paths" is.
-    "paths": {
-      "vscode": ["node_modules/monaco-languageclient/lib/vscode-compatibility"] // This mapping is relative to "baseUrl"
-    }
-}
-}

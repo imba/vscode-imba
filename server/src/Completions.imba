@@ -14,6 +14,30 @@ const SymbolObject = ts.objectAllocator.getSymbolConstructor!
 const TypeObject = ts.objectAllocator.getTypeConstructor!
 const NodeObject = ts.objectAllocator.getNodeConstructor!
 
+const Globals = {
+	'global': 1
+	'imba': 1
+	'module': 1
+	'window': 1
+	'document': 1
+	'exports': 1
+	'console': 1
+	'process': 1
+	'parseInt': 1
+	'parseFloat': 1
+	'setTimeout': 1
+	'setInterval': 1
+	'setImmediate': 1
+	'clearTimeout': 1
+	'clearInterval': 1
+	'clearImmediate': 1
+	'globalThis': 1
+	'isNaN': 1
+	'isFinite': 1
+	'__dirname': 1
+	'__filename': 1
+}
+
 export class Completion
 
 	static def fromSymbol symbol
@@ -316,7 +340,7 @@ export class CompletionsContext < Component
 		
 		elif flags & T.Value
 			# this is the special stuff now
-			if ctx.group.match('tagcontent')
+			if ctx.group.closest('tagcontent') and !ctx.group.closest('tag')
 				add('tagnames',kind: 'tag',weight: 300)
 
 			add('values')
@@ -344,8 +368,10 @@ export class CompletionsContext < Component
 		self
 
 	def values
-		add('variables',weight: 200)
+		add('variables',weight: 70)
 		add('globals',weight: 500)
+		
+		# variables should have higher weight - but not the global variables?
 		add('properties',value: yes, weight: 100)
 		add('keywords',weight: 1000)
 		self
@@ -417,24 +443,19 @@ export class CompletionsContext < Component
 		for item in vars
 			let tsym = checker.local(item.name,loc)
 			checker.type(tsym) # try to resolve the type
-			# let sym = rootsymbols.find(do $1.label == item.name)
 			if tsym and !item.name.match(/ctest/)
-				
 				item.#tsym = tsym
-				# check if the location of the ts definition
-				# matches our expectation
-		
-				# devlog "match tsym variable",tsym
-				# devlog 'found symbol for var',item.name,tsym
 
 		return vars
 
 	def variables
-		return checkVariables!
+		let vars = checkVariables!
+		vars.filter do !$1.global?
 		
 	def globals
 		#globals ||= checker.props('globalThis')
-		let items = #globals.slice(0).filter do $1.pascal?
+		let items = #globals.slice(0).filter do
+			$1.pascal? or Globals[$1.escapedName]
 		return items
 
 	def completionForItem item, opts

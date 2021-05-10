@@ -1,3 +1,0 @@
-interface ImbaStyleModifiers {
-    hello: void;
-}

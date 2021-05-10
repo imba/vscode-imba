@@ -152,7 +152,7 @@ export class LanguageServer < Component
 		options.rootDir = self.rootPath
 			
 
-		#tshost = new ServiceHost(self,options)
+		#tshost = self.tlshost = new ServiceHost(self,options)
 		self.tlsdocs = ts.createDocumentRegistry(yes,self.rootPath)
 		self.tls = ts.createLanguageService(#tshost,tlsdocs)
 		return self

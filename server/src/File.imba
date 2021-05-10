@@ -430,8 +430,8 @@ export class ImbaFile < File
 		
 		let sourceSpan = snap.o2d(info.textSpan)
 		let sourceText = sourceSpan.getText(idoc.content)
-		console.log 'sourceSpan',sourceSpan
-		devlog 'definitions',info,sourceSpan,sourceText
+		# console.log 'sourceSpan',sourceSpan
+		log 'definitions',info.definitions,sourceSpan,sourceText
 		# let sourceSpan = originalRangeFor(info.textSpan)
 		# let sourceText = doc.getText!.slice(sourceSpan.start,sourceSpan.end)
 		let isLink = sourceText and sourceText.indexOf('-') >= 0
@@ -439,12 +439,20 @@ export class ImbaFile < File
 		devlog 'get definition',uri,pos,offset,oloc,info,sourceSpan,sourceText,isLink
 		let defs = for item in info.definitions
 			let ifile = ils.files[item.fileName]
-			if ifile
-				console.log 'get definition',item.fileName,item.textSpan
+
+			if item.kind == 'module' or item.kind == 'script'
+				let textSpan = {start: {line:0,character:0},end: {line:0,character:0}}
+				let uri = util.pathToUri(item.fileName)
+				# console.log 'LocationLink',uri,textSpan,sourceSpan
+				continue LocationLink.create(uri,textSpan,textSpan,sourceSpan)
+				
+			elif ifile
+				# console.log 'get definition',item.fileName,item.textSpan
 				let textSpan = ifile.originalRangeFor(item.textSpan)
-				let span = item.contextSpan ? ifile.originalRangeFor(item.contextSpan) : textSpan
+				let span = try
+					item.contextSpan ? ifile.originalRangeFor(item.contextSpan) : textSpan
 				span ||= textSpan
-				log 'definition',item,ifile,textSpan,span,sourceSpan,sourceText
+
 
 				if item.containerName == 'globalThis' and item.name.indexOf('$$TAG$$') >= 0
 					span = {
@@ -452,11 +460,11 @@ export class ImbaFile < File
 						end: {line: textSpan.start.line + 1, character: 0}
 					}
 				
-				log 'definition',item,textSpan,span,item.kind
+				# log 'definition',item,textSpan,span,item.kind
 				if item.kind == 'module'
 					textSpan = {start: {line:0,character:0},end: {line:0,character:0}}
 					console.log 'LocationLink',ifile.uri,textSpan,sourceSpan
-					LocationLink.create(ifile.uri,textSpan,textSpan,sourceSpan)
+					continue LocationLink.create(ifile.uri,textSpan,textSpan,sourceSpan)
 					# Location.create(ifile.uri,)
 				elif isLink
 					LocationLink.create(ifile.uri,textSpan,span,sourceSpan)
@@ -482,14 +490,14 @@ export class ImbaFile < File
 		return edit
 
 	def getReferencesAtOffset offset
-			
+		log 'getReferencesAtOffset',offset
 		# get the token information
 		let ctx = idoc.getContextAtOffset(offset)
 		
 		let tok = ctx.token
 		
-		if tok.match('entity.name.component')
-			console.log 'get references for tag!!',tok.value
+		# if tok.match('entity.name.component')
+		#	console.log 'get references for tag!!',tok.value
 			
 		
 		let tloc = generatedLocFor(offset)
@@ -517,6 +525,9 @@ export class ImbaFile < File
 
 		let grp = ctx.group
 		let tok = ctx.token or {match: (do no)}
+		
+		if tok.match('white')
+			return
 
 		if ctx.token and !ctx.token.value
 			log 'token without value',ctx.token
@@ -531,6 +542,9 @@ export class ImbaFile < File
 		try
 			let info = null
 			let symbol = null
+			if grp.match('path')
+				console.log 'matching path!',grp.value
+			
 
 			if tok.match("tag.flag")
 				info = "```imba\n<el class='... {tok.value} ...'>\n```"
