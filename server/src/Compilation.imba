@@ -109,18 +109,19 @@ export default class Compilation
 			new Diagnostic(item,self)
 		
 	def compile
-		return self if result
+		return self if done
 
 		try
 			done = yes
 			let compiler = file.isLegacy ? imba1c : imbac
 			let res = file.util.time(&,"{file.relName} compiled in") do
 				compiler.compile(ibody,ioptions)
-			# console.log 'compiled!',res
+
+			self.result = res
 			
 			if res.js
 				obody = res.js.replace(/\$CARET\$/g,'valueOf')
-				self.result = res
+				
 				self.locs = res.locs
 			
 			let errors = res.errors or []

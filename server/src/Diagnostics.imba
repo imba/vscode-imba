@@ -86,7 +86,12 @@ const SuppressDiagnostics = [
 export class Diagnostic
 
 	static def fromCompiler kind, entry, doc
-		return entry
+		if entry.#diagnostic
+			return entry.#diagnostic
+		
+		let rich = new Diagnostic(entry)
+		entry.#diagnostic = rich
+		return rich
 
 	static def fromTypeScript kind, entry, doc, options = {}
 		if entry.#diagnostic !== undefined

@@ -26,6 +26,7 @@ export class Completion
 		#context = context
 		#symbol = symbol
 		#options = options
+		weight = 0
 
 		item = {
 			data: data
@@ -54,7 +55,6 @@ export class Completion
 	
 	def #resolve
 		yes
-		
 
 	def setup
 		self
@@ -67,6 +67,9 @@ export class Completion
 
 	set name val
 		label.name = val
+		
+	# set weight num
+	#	item.sortText = 
 		
 	get name
 		label.name
@@ -91,6 +94,8 @@ export class Completion
 	def serialize context
 		if #options..commitCharacters
 			item.commitCharacters = #options.commitCharacters
+		if #options.weight != undefined
+			item.sortText = util.zerofill(#options.weight)
 		return item
 	
 
@@ -102,7 +107,7 @@ export class ManualCompletion < Completion
 
 export class SymCompletion < Completion
 	get #type
-		##type ||= #context.checker.resolvePath(#symbol)
+		##type ||= #context.checker.resolveType(#symbol)
 
 	def setup
 		name = #symbol.name
@@ -124,13 +129,14 @@ export class SymCompletion < Completion
 
 export class SymbolObjectCompletion < Completion
 	def setup
+		let cat = #options.kind
 		let sym = #symbol
 		let par = #symbol.parent
 		name = #symbol.details.name
 		
 		let type = #symbol.type
 		let typesym = type..symbol or sym
-		kind = util.tsSymbolFlagsToKindString(typesym.flags)
+		
 		# kind = util.convertSymbolKind(#symbol.semanticKind)
 		# let typestr = type and type.checker.typeToString(type)
 		
@@ -172,8 +178,23 @@ export class SymbolObjectCompletion < Completion
 		# 	yes
 			
 		# if typestr 
-		#	label.type ||= typestr\
-		triggers '!(,.['
+		#	label.type ||= typestr
+		
+		# not if this is a tag?!
+		if cat == 'tagname'
+			triggers '> .[#'
+			kind = 'value'
+			label.type = null
+		elif cat == 'tag'
+			triggers ' '
+			kind = 'value'
+			label.type = null
+			item.filterText = name
+			item.insertText = "<{name}>"
+			name = item.insertText
+		else
+			triggers '!(,.['
+			kind = util.tsSymbolFlagsToKindString(typesym.flags)
 
 		return self
 		
@@ -277,7 +298,7 @@ export class CompletionsContext < Component
 			add checker.props('ImbaHTMLTags',yes)
 
 		if flags & T.TagName
-			add('tagnames',triggers: '> .[#')
+			add('tagnames',kind: 'tagname')
 		
 		if flags & T.TagProp
 			devlog 'tag attributes',ctx.tag.tagName
@@ -295,6 +316,9 @@ export class CompletionsContext < Component
 		
 		elif flags & T.Value
 			# this is the special stuff now
+			if ctx.group.match('tagcontent')
+				add('tagnames',kind: 'tag',weight: 300)
+
 			add('values')
 			
 			
@@ -320,10 +344,10 @@ export class CompletionsContext < Component
 		self
 
 	def values
-		# add('keywords')
-		add('variables')
-		# add('globals')
-		add('properties',value: yes)
+		add('variables',weight: 200)
+		add('globals',weight: 500)
+		add('properties',value: yes, weight: 100)
+		add('keywords',weight: 1000)
 		self
 		
 	def keywords
@@ -346,7 +370,11 @@ export class CompletionsContext < Component
 	def tagnames o = {}
 		let html = checker.props('HTMLElementTagNameMap')
 		let custom = checker.props('globalThis').filter(do $1.component? )
+		
+		let localTags = checker.getLocalTagsInScope()
+		# check the local items
 		add(html,o)
+		add(localTags,o)
 		add(custom,o)
 		
 	def tagattrs o = {}

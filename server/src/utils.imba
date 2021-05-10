@@ -40,6 +40,18 @@ export def time cb,label = 'took'
 	console.log label,elapsed
 	return res
 
+let fillCache = {}
+
+export def zerofill num, digits = 4
+	return fillCache[num] if fillCache[num]
+	let str = String(num)
+	str = "0000000000".slice(0,9 - str.length) + str
+	return fillCache[num] = str.slice(-digits)
+
+export def isPascal str
+	let chr = str.charCodeAt(0)
+	return chr >= 65 && 90 >= chr
+
 export def isReadonly symbol
 	symbol.valueDeclaration.modifierFlagsCache & ModifierFlags.Readonly
 

@@ -242,6 +242,8 @@ export class ImbaFile < File
 				program.invalidate!
 				$indexWorkspaceSymbols!
 				$delay('emitDiagnostics',20)
+		else
+			$delay('emitDiagnostics',20)
 
 		return self
 
@@ -521,6 +523,9 @@ export class ImbaFile < File
 
 		let range = idoc.getTokenRange(ctx.token)
 		let g = {}
+		
+		# more like completions?
+		let checker = self.checker
 
 		# console.log 'the context we got here',ctx.mode,range
 		try
@@ -535,7 +540,8 @@ export class ImbaFile < File
 				
 			if tok.match("tag.name")
 				console.log 'matched tag name'
-				info = "```imba\n<el id='{tok.value.slice(1)}'>\n```"
+				symbol = checker.getTagSymbol(tok.value)
+				# info = "```imba\n<el id='{tok.value.slice(1)}'>\n```"
 
 			if tok.match("style.property.modifier") or tok.match("style.selector.modifier")
 				let [m,pre,post] = tok.value.match(/^(@|\.+)([\w\-\d]*)$/)
@@ -563,18 +569,33 @@ export class ImbaFile < File
 			if tok.match('tag.event.name')
 				let name = tok.value.replace('@','')
 				# devlog 'tagevent name',name,grp,g.el.name,g.listener.name
-				let path = "global.imba.types.events.{name}|__unknown"
-				symbol = getSymbolAtPath(path)
+				# let path = "global.imba.types.events.{name}|__unknown"
+				symbol = checker.sym("ImbaEvents.{name}")
 				# let info = ils.entities.getTagEventInfo(g.listener.name,g.el.name)
 				# devlog info
 				# return {range: range, contents: info.description} if info
 
 			if tok.match('tag.event-modifier')
 				let name = tok.value.replace('.','')
-				let path = "global.imba.types.events.{g.listener.name}|__unknown.MODIFIERS.{name}"
-				symbol = getSymbolAtPath(path)			
+				# let path = "global.imba.types.events.{g.listener.name}|__unknown.MODIFIERS.{name}"
+				symbol = checker.sym("ImbaEvents.{name}.MODIFIERS.{name}")
 
 			if !info and symbol
+				let display = checker.getSymbolInfo(symbol)
+				
+				if display
+					let out = {
+						range: range
+						contents: [{
+							value: util.displayPartsToString(display.displayParts)
+							language: 'typescript'
+						}]
+					}
+
+					if display.documentation
+						out.contents.push(value: util.displayPartsToString(display.documentation), language: 'text')
+					return out
+				
 				let details = symbol.getCompletionDetails()
 				let md = util.detailsToMarkdown(details)
 				info = {markdown: md}

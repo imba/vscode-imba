@@ -10,6 +10,7 @@ const NodeObject = ts.objectAllocator.getNodeConstructor!
 const SourceFile = ts.objectAllocator.getSourceFileConstructor!
 const Signature = ts.objectAllocator.getSignatureConstructor!
 
+
 const SF = ts.SymbolFlags
 
 extend class SourceFile
@@ -125,7 +126,6 @@ extend class SymbolObject
 
 			return '(' + pars.join(', ') + ')'
 		return ''
-		
 
 extend class Signature
 	def toImbaTypeString
@@ -177,6 +177,38 @@ export class ProgramSnapshot < Component
 			void: checker.getVoidType!
 			"undefined": checker.getUndefinedType!
 		}
+		
+	def getLocalTagsInScope
+		let symbols = checker.getSymbolsInScope(sourceFile,32)
+		for s in symbols
+			type(s)
+		symbols = symbols.filter do(s)
+			let key = type([s,'prototype'])
+			key and key.getProperty('suspend')
+		return symbols
+		# symbols = symbols.filter do(item)
+		#	let type = typ(item)
+		#	# member(item,'')
+
+	def getSymbolInfo symbol
+		symbol = sym(symbol)
+		let out = ts.SymbolDisplay.getSymbolDisplayPartsDocumentationAndSymbolKind(checker,symbol,sourceFile,sourceFile,sourceFile)
+		return out
+	
+	def getTagSymbol name
+		let symbol
+		if util.isPascal(name)
+			symbol = local(name)
+		else
+			# check in global html types
+			symbol = sym("HTMLElementTagNameMap.{name}")
+			
+			unless symbol
+				let key = name.replace(/\-/g,'_') + '$$TAG$$'
+				symbol = sym("globalThis.{key}")
+
+		return symbol
+		
 
 	def arraytype inner
 		checker.createArrayType(inner or basetypes.any)
@@ -344,6 +376,17 @@ export class ProgramSnapshot < Component
 	def propnames item
 		let values = type(item).getProperties!
 		values.map do $1.escapedName
+	
+	def getSelf loc = #location
+		# with imba context, find the closest tag/class declaration
+		# keyword. Find its location relative to the previously compiled
+		# version of the typescript snapshot.
+		# get the symbol and type from there.
+		# possibly access prototype or not based on field
+		# f0.checker.checker.getSymbolAtLocation(f0.checker.loc(25))
+		yes
+		
+		# checker.getSymbolAtLocation(f0.checker.loc(25))
 
 	def member item, name
 		return unless item
@@ -362,12 +405,14 @@ export class ProgramSnapshot < Component
 		if key == '__@iterable'
 			# console.log "CHECK TYPE",item,name
 			let resolvedType = checker.getApparentType(typ)
+			return null unless resolvedType.members
 			sym = resolvedType.members.get('__@iterator')
 			return type(signature(sym)).resolvedTypeArguments[0]
 			#  iter.getCallSignatures()[0].getReturnType()
 			
 		if sym == undefined
 			let resolvedType = checker.getApparentType(typ)
+			return null unless resolvedType.members
 			sym = resolvedType.members.get(name)
 			
 			if name.match(/^\d+$/)
