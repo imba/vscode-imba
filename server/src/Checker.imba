@@ -73,7 +73,7 @@ extend class SymbolObject
 		parent and (/HTMLElementTagNameMap|GlobalEventHandlersEventMap/).test(parent.escapedName)
 
 	get component?
-		escapedName.indexOf('$$TAG$$') > 0
+		escapedName.indexOf('$$TAG$$') > 0 or (self.exports and self.exports.has('$$TAG$$'))
 
 	get localcomponent?
 		component? and pascal?
@@ -85,8 +85,12 @@ extend class SymbolObject
 			''
 
 	get sourceFile
+		if flags & SF.ValueModule
+			return declarations[0]
 		if component?
 			valueDeclaration.#sourceFile
+		elif parent
+			parent.sourceFile
 		else
 			null
 
@@ -165,8 +169,8 @@ export class ProgramSnapshot < Component
 
 	constructor program, file = null
 		super()
-		program = program
-		checker = program.getTypeChecker!
+		self.program\Program = program
+		checker = self.program.getTypeChecker!
 		self.file = #file = file
 		#blank = file or program.getSourceFiles()[0]
 		if file
@@ -175,6 +179,12 @@ export class ProgramSnapshot < Component
 		
 		self.SF = SF
 		self.ts = ts
+		
+	get ils
+		self.file.ils
+		
+	get host
+		ils.tlshost
 
 	# get checker
 	#	#checker ||= program.getTypeChecker!
@@ -497,7 +507,7 @@ export class ProgramSnapshot < Component
 				# end = end.prev if end.match('br')
 				tok = end
 				let typ = resolvePath(tok,doc,tok)
-				console.log 'resolved type',typ
+				# console.log 'resolved type',typ
 				if node.start.next.match('keyword.new')
 					typ = [typ,'prototype']
 				return typ
@@ -611,3 +621,52 @@ export class ProgramSnapshot < Component
 		let tls = file.ils.tls
 		let loc = file.emittedCompilation.obody.length
 		return tls.getCompletionEntryDetails(file.fileName,loc,name,{},source,UserPrefs.imports)
+		
+	def getSymbolToExportInfoMap
+		let first = !#exportInfoMap
+		let items = #exportInfoMap ||= ts.codefix.getSymbolToExportInfoMap(sourceFile,ils.tlshost,program)
+		
+		if first
+			for [k,v] of items
+				continue if k.match(/\|(constants|console|v8)$/)
+
+				let name = k.split('|')[0]
+				if v[0].exportKind == 1 and name.match(/\wImba$/)
+					name = name.slice(0,-4)
+				v[0].symbol.#exportInfoKey = k
+				v[0].importName = name
+		return items
+		
+	def findExportSymbols query, exporter = null
+		let items = getSymbolToExportInfoMap!
+
+		let matches = for [k,v] of items
+			continue if k.match(/\|(constants|console|v8)$/)
+
+			if typeof query == 'string'
+				continue unless k.indexOf(query + '|') == 0
+			elif query isa Function
+				continue unless query(v[0].symbol,v,k)
+			v
+
+		return matches
+	
+	def getImbaSourceFiles
+		program.getSourceFiles!.filter do(item) item.scriptSnapshot.#compilation
+		
+	def getExportedComponents source = null
+		return findExportSymbols do(item) item.component?
+		
+	def getExportedComponentSymbols source = null
+		getExportedComponents!.map do $1[0].symbol
+		
+	def getModuleSpecifierForBestExportInfo symbol
+		if typeof symbol == 'string'
+			let matches = findExportSymbols(symbol)
+			symbol = matches[0]
+			
+		if symbol.#exportInfoKey
+			symbol = getSymbolToExportInfoMap!.get(symbol.#exportInfoKey)
+		
+		let infos = ts.codefix.getModuleSpecifierForBestExportInfo(symbol,sourceFile,program,host,UserPrefs.imports)
+		return infos

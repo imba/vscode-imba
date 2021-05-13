@@ -158,7 +158,7 @@ export class Diagnostic
 		#compilation
 		
 	get #doc
-		#compilation.doc
+		#compilation..doc
 	
 	get #file
 		#compilation.file
@@ -192,6 +192,23 @@ export class Diagnostic
 		return yes if newText != oldText
 		return no
 
+export class FileDiagnostic < Diagnostic
+	
+	get newText
+		''
+	
+	get oldText
+		''
+	
+	get newRange
+		initialRange
+		
+	def sync
+		self
+	
+	get hidden?
+		no
+		
 export class Diagnostics
 	def constructor doc
 		self.doc = doc

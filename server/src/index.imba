@@ -180,7 +180,7 @@ connection.onCompletion do(event)
 connection.onCompletionResolve do(item)
 	try
 		let res = server.doResolve(item)
-		if res.label.name and !res.insertText
+		if res.label.name and res.insertText === undefined
 			res.insertText = res.label.name
 		return res
 	catch e

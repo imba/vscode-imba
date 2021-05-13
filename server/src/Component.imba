@@ -33,6 +33,21 @@ export class Component
 		console.log "{label}: {now - #prev}"
 		#prev = now
 		self
+		
+	def lookupKey key
+		return null
+		
+	def lookupRef ids,index = 0
+		if typeof ids == 'string'
+			ids = ids.split('|')
+
+		let key = ids[index]
+		return self if key === null
+
+		let item = lookupKey(key)
+		if item
+			return item if ids.length == (index + 1)
+			return item.lookupRef(ids,index + 1)
 
 	def log ...params
 		if config.get('verbose')

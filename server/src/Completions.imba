@@ -38,6 +38,8 @@ const Globals = {
 	'__filename': 1
 }
 
+const Keywords = "and await begin break by case catch class const continue css debugger def get set delete do elif else export extends false finally for if import in instanceof is isa isnt let loop module nil no not null of or require return self static super switch tag then this throw true try typeof undefined unless until var when while yes".split(' ')
+
 export class Completion
 
 	static def fromSymbol symbol
@@ -50,6 +52,7 @@ export class Completion
 		#context = context
 		#symbol = symbol
 		#options = options
+		#cache = {}
 		weight = 0
 
 		item = {
@@ -60,10 +63,23 @@ export class Completion
 
 		setup!
 		triggers options.triggers
-		resolve!
+		# resolve!
+		
+	get id
+		return #nr if #nr >= 0
+		#nr = #context.items.indexOf(self)
+	
+	get checker
+		#context.checker
+		
+	get program
+		checker.program
 
 	get #type
 		#symbol.type
+		
+	get doc
+		#context.doc
 		
 	def triggers chars = ''
 		return self unless chars
@@ -72,13 +88,14 @@ export class Completion
 			list.push(chr) unless list.indexOf(chr) >= 0
 		return self
 	
-	def resolve
-		if #resolved =? yes
-			#resolve!
-		return self
-	
 	def #resolve
-		yes
+		if #resolved =? yes
+			# console.log 'resolving item',self
+			resolve!
+		return item
+	
+	def resolve
+		self
 
 	def setup
 		self
@@ -91,10 +108,7 @@ export class Completion
 
 	set name val
 		label.name = val
-		
-	# set weight num
-	#	item.sortText = 
-		
+
 	get name
 		label.name
 
@@ -102,6 +116,12 @@ export class Completion
 		item.detail = val
 
 	set ns val
+		if val isa Array
+			val = val[0]
+		
+		if val and val.text
+			val = val.text
+
 		label.qualifier = val
 	
 	get ns
@@ -111,22 +131,61 @@ export class Completion
 		item.documentation = val
 
 	set sourceFile val
-		if val
-			data.source = val.path
-			ns = util.normalizeImportPath(#context.file.fileName,val.path)
+		if #sourceFile = val
+			sourcePath = val.path
+			# data.source = val.path
+			# ns = util.normalizeImportPath(#context.file.fileName,val.path)
+			
+	set sourcePath val
+		if #sourcePath = val
+			data.source = val
+			ns = util.normalizeImportPath(#context.file.fileName,val)
+			
+	get sourceFile
+		#sourceFile
+		
+	get exportInfo
+		null
 
-	def serialize context
+	def serialize context, stack
+		let key = item.insertText or name
+		
+		if stack[key]
+			return null
+		
+		stack[key] = self
+		
 		if #options..commitCharacters
 			item.commitCharacters = #options.commitCharacters
 		if #options.weight != undefined
 			item.sortText = util.zerofill(#options.weight)
+		item.data.id ||= "{#context.file.id}|{#context.id}|{id}"
 		return item
+		
+	def resolveImportEdits
+		let info = exportInfo
+		if info
+			let specifier = checker.getModuleSpecifierForBestExportInfo(info)
+			let path = specifier.moduleSpecifier
+			
+			let alias = data.name or info[0].importName
+			let name = specifier.importKind == 1 ? 'default' : alias
+
+			let edits = doc.createImportEdit(path,name,alias)
+			
+			if edits.changes.length
+				item.additionalTextEdits = edits.changes
+				ns = "import from '{path}'"
+
+			# console.log edits.changes,info,specifier,item,self
+
+		self
 	
 
 export class ManualCompletion < Completion
 	constructor symbol, context, o = {}
 		super
-		Object.assign(item,o)	
+		Object.assign(item,symbol or {})	
 		
 
 export class SymCompletion < Completion
@@ -139,13 +198,14 @@ export class SymCompletion < Completion
 		# console.warn "SYM TYPE",#type,#symbol
 		self
 		
-	def #resolve
+	def resolve
 		let typ = #type
 		
 		if typ
 			let typestr = #context.checker.checker.typeToString(typ)
 			label.type = typestr
-			
+
+		return self	
 		
 
 	get qualifier
@@ -196,14 +256,20 @@ export class SymbolObjectCompletion < Completion
 		# path should be relative to the file path
 		if sym.component?
 			sourceFile = sym.sourceFile
-			
-		# if #options.value
-		# 	ns = 'self'
-		# 	yes
-			
-		# if typestr 
-		#	label.type ||= typestr
-		
+			if sym.pascal?
+				# what if this already exists though?
+				data.source = sym.sourceFile.path
+				data.name = name
+				
+		if sym.#exportInfoKey
+			# see if this is the local file?
+			name = sym.#exportInfoKey.split('|')[0]
+			unless sym.parent
+				console.log "export key has no parent",sym.#exportInfoKey
+				# console.log "SOURCEFILE",sym,sym.sourceFile
+			else
+				sourcePath = sym.parent.escapedName.slice(1,-1)
+
 		# not if this is a tag?!
 		if cat == 'tagname'
 			triggers '> .[#'
@@ -222,6 +288,17 @@ export class SymbolObjectCompletion < Completion
 
 		return self
 		
+	get exportInfo
+		if #symbol.#exportInfoKey
+			return #context.checker.getSymbolToExportInfoMap!.get(#symbol.#exportInfoKey)
+		return null
+		
+	def resolve
+		yes
+		# name = name + '?!'
+		resolveImportEdits!
+		self
+		
 	def serialize
 		return null if #symbol.internal?
 		super
@@ -229,7 +306,13 @@ export class SymbolObjectCompletion < Completion
 
 export class StyleCompletion < Completion
 	
-export class KeywordCompletion < ManualCompletion
+export class KeywordCompletion < Completion
+	
+	def constructor word,ctx,o = {}
+		super
+		name = word
+		kind = 'keyword'
+		triggers ' '
 	
 export class StylePropCompletion < StyleCompletion
 	def setup
@@ -246,12 +329,33 @@ export class StylePropCompletion < StyleCompletion
 		triggers '@:'
 		item.sortText = sym.alias ? "-{name}" : name.replace(/^\-/,'Z')
 		self
-		
+
+let counter = 1
+let cachedContexts = new Map
 
 export class CompletionsContext < Component
 	
 	get ils
 		file.ils
+		
+	def release
+		cachedContexts.delete(id)
+		self
+		
+	def retain
+		yes
+		# cachedContexts.set(id,self)
+		self
+	
+	static def releaseAll
+		cachedContexts.clear!
+		
+	static def lookup id
+		let [ctxid,itemid] = id.split(':')
+		let res = cachedContexts.get(ctxid)
+		if itemid and res
+			res = res.items[itemid]
+		return res
 	
 	constructor file, pos, options = {}
 		super
@@ -259,7 +363,7 @@ export class CompletionsContext < Component
 		pos = pos
 		options = options
 		trigger = options.triggerCharacter
-
+		id = counter++
 		#prefix = ''
 		#added = {}
 		#uniques = new Map
@@ -299,7 +403,7 @@ export class CompletionsContext < Component
 			
 		$stamp 'resovled types?'
 
-		devlog 'target type!!',expr,ctx.target,options
+		devlog 'target type!!!!',expr,ctx.target,options
 		
 		# console.log ctx.suggest, ctx.token.type
 
@@ -345,18 +449,41 @@ export class CompletionsContext < Component
 
 			add('values')
 			
-			
 		if options.triggerCharacter == '<'
 			let item = new ManualCompletion(null,self,{
 				insertText: " "
 				commitCharacters: [' ']
 				filterText: ''
 				preselect: yes
+				sortText: "0000"
 				kind: CompletionItemKind.Snippet
 				textEdit: {range: doc.rangeAt(pos,pos+1), newText: ''}
 				label: {name: ' '}
 			})
 			add(item)
+		elif options.triggerCharacter == '.' and tok.match('operator.access')
+			
+			let item = new ManualCompletion(null,self,{
+				filterText: ''
+				preselect: yes
+				sortText: "0000"
+				textEdit: {range: doc.rangeAt(pos,pos), newText: ''}
+				kind: CompletionItemKind.Snippet
+				label: {name: ' '}
+			})
+			add(item)
+		self
+		
+	def lookupKey key
+		if items[key]
+			return items[key]
+		
+	def checkAutoImports
+		let out = ils.ts.codefix.getSymbolToExportInfoMap(checker.sourceFile,ils.tlshost,checker.program)
+		# console.log "OUT!",Array.from(out.keys!)
+		for [key,entry] of out
+			console.log key
+		return
 
 	get checker
 		#checker ||= new ProgramSnapshot(file.ils.getProgram!,file)
@@ -373,17 +500,17 @@ export class CompletionsContext < Component
 		
 		# variables should have higher weight - but not the global variables?
 		add('properties',value: yes, weight: 100)
-		add('keywords',weight: 1000)
+		add('autoimports',weight: 700)
+		add('keywords',weight: 650)
 		self
 		
-	def keywords
-		for kw in ctx.suggest.keywords
-			let item = new KeywordCompletion(kw,self,{
-				label: kw
-				triggerCharacters: ' '
-				
-			})
-			item
+	def autoimports
+		checker.findExportSymbols!.map do $1[0].symbol
+		# add('keywords',weight: 1000)
+		
+	def keywords o = {}
+		for kw in Keywords
+			new KeywordCompletion(kw,self,o)
 
 	def properties
 		# find the self-context or path
@@ -398,10 +525,14 @@ export class CompletionsContext < Component
 		let custom = checker.props('globalThis').filter(do $1.component? )
 		
 		let localTags = checker.getLocalTagsInScope()
+		let importTags = checker.getExportedComponentSymbols!
+		
 		# check the local items
 		add(html,o)
 		add(localTags,o)
 		add(custom,o)
+		add(importTags,o)
+	
 		
 	def tagattrs o = {}
 		# console.log 'check',"ImbaHTMLTags.{o.name}"
@@ -482,7 +613,7 @@ export class CompletionsContext < Component
 		return entry
 
 	def add type, options = {}
-
+		
 		if type isa Completion
 			items.push(type) unless items.indexOf(type) >= 0
 			return self
@@ -509,8 +640,9 @@ export class CompletionsContext < Component
 
 	def serialize
 		let entries = []
+		let stack = {}
 		for item in items
-			let entry = item.serialize(self)
+			let entry = item.serialize(self,stack)
 			entries.push(entry) if entry
 			
 		devlog 'serialized',entries,items

@@ -6,7 +6,7 @@ import * as util from './utils'
 import { FullTextDocument } from './FullTextDocument'
 import { items } from '../../test/data'
 import {Keywords,KeywordTypes,CompletionTypes,Sym,SymbolFlags} from 'imba/program'
-import {Diagnostics, Diagnostic, DiagnosticKind} from './Diagnostics'
+import {Diagnostics, Diagnostic, FileDiagnostic, DiagnosticKind} from './Diagnostics'
 import * as ts from 'typescript'
 import type {TypeNode,TypeFlags} from 'typescript'
 import type {LanguageServer} from './LanguageServer'
@@ -56,13 +56,20 @@ export class File < Component
 		super
 		isLegacy = no
 		version = 1
+		id = program.nextId++
 		self.program = program
 		fileName = util.t2iPath(path)
 		program.files[fileName] = self
 		program.files[tfileName] = self
 		program.files.push(self)
+		#completions = null
 		#compilations = []
 		#compilationMap = {}
+		
+	def lookupKey key
+		console.log 'lookupKey',key
+		if #completions and #completions.id == key
+			return #completions
 
 	get shouldEmitDiagnostics
 		no
@@ -137,7 +144,7 @@ export class ImbaFile < File
 
 		logLevel = fileName.indexOf('Diagnostics') >= 0 ? 3 : 0
 		diagnostics = new Diagnostics(self)
-		#emptySnapshot = ts.ScriptSnapshot.fromString('export {}')
+		#emptySnapshot = ts.ScriptSnapshot.fromString('export {};\n\n')
 		#emptySnapshot.iversion = 0
 		relName = util.normalizeImportPath(program.rootPath,fileName) + '.imba'
 
@@ -148,7 +155,7 @@ export class ImbaFile < File
 		self
 	
 	get shouldEmitDiagnostics
-		yes
+		fileName.indexOf('node_modules') == -1
 
 	get doc
 		$doc ||= FullTextDocument.create(uri,'imba',0,system.readFile(fileName))
@@ -246,6 +253,19 @@ export class ImbaFile < File
 			$delay('emitDiagnostics',20)
 
 		return self
+		
+	def trySyntacticDiagnostics
+		
+		if idoc.content.indexOf('\r') >= 0
+			#crlfWarning ||= new FileDiagnostic(
+				severity: 1,
+				message: "Document contains CRLF (\\r\\n) line endings. Switch files.eol to LF(\\n)",
+				range: idoc.rangeAt(0,0),
+				data: {}
+			)
+			return [#crlfWarning]
+
+		return []
 
 	def trySemanticDiagnostics
 		return [] unless tls
@@ -264,6 +284,7 @@ export class ImbaFile < File
 	def getAllDiagnostics
 		let items = []
 		util.time(&,"calc diagnostics {relName}") do
+			items.push(...trySyntacticDiagnostics!)
 			items.push(...trySemanticDiagnostics!)
 			items.push(...getCompilerDiagnostics!)
 		return items
@@ -527,6 +548,11 @@ export class ImbaFile < File
 		let tok = ctx.token or {match: (do no)}
 		
 		if tok.match('white')
+			return
+			
+		if tok.match('keyword')
+			# look for exact match for the 
+			
 			return
 
 		if ctx.token and !ctx.token.value
@@ -798,11 +824,15 @@ export class ImbaFile < File
 		unless emittedCompilation
 			log 'got no working file'
 			return []
+			
+		if #completions
+			#completions.release!
 
-		let completions = new CompletionsContext(self,offset,options)
+		let completions = #completions = new CompletionsContext(self,offset,options)
 		if $web$
 			global.cl = completions
 		
+		completions.retain!
 		let out = completions.serialize!
 		return out
 

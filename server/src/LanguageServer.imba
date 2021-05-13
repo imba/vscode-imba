@@ -11,7 +11,8 @@ import {URI} from 'vscode-uri'
 import {File,ImbaFile} from './File'
 import {Entities} from './Entities'
 import * as util from './utils'
-import {ProgramSnapshot} from './Completions'
+import { ProgramSnapshot } from './Checker'
+import { CompletionsContext } from './Completions'
 
 import {TAG_NAMES,TAG_TYPES} from './constants'
 
@@ -98,12 +99,16 @@ export class LanguageServer < Component
 		self.settings = {}
 		self.counters = {diagnostics: 1}
 		self.sys = ts.sys || system
+		self.nextId = 0
 
 		for item in imbaConfig.entries
 			if let file = getImbaFile(item.input)
 				yes
 
 		self
+	
+	def lookupKey key
+		files.find do $1.id == key
 
 	def logPath path,...params
 		if path.match(/\.js$/) and path.match(/vscode-imba/)
@@ -303,6 +308,7 @@ export class LanguageServer < Component
 		let src = util.uriToPath(event.uri)
 		if files[src]
 			files[src].onDidChangeTextEditorSelection(event)
+			res
 		yes
 
 	def onDidRenameFiles event
@@ -380,11 +386,18 @@ export class LanguageServer < Component
 
 	def doResolve item\CompletionItem
 		item = #resolveCompletionItem(item)
-		if item.label.name and !item.insertText
+		if item.label.name and item.insertText === undefined
 			item.insertText = item.label.name
 		return item
 
 	def #resolveCompletionItem item\CompletionItem
+		let id = item.data..id
+		
+		if id
+			let res = lookupRef(id,0)
+			devlog 'resolveCompletionItem',res
+			if res
+				return res.#resolve!
 		inspect item
 
 		let resolved = entities.resolveCompletionEntry(item)
