@@ -1,5 +1,7 @@
 {
-    "node": {
-        "external": ["dependencies","vscode"]
+    "options": {
+        "node": {
+            "external": ["dependencies","vscode"]    
+        }
     }
 }

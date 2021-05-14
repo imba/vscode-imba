@@ -26,9 +26,18 @@ export def normalizePath path
 
 export def normalizeImportPath source, referenced
 	if np.isAbsolute(referenced)
+		
+		console.log 'normalize path',source,referenced
+
 		let fdir = np.dirname(source)
 		let sdir = np.dirname(referenced)
-		let path = np.relative(fdir,referenced).replace(/\.imba$/,'').split(np.sep).join('/')
+		let paths = np.relative(fdir,referenced).replace(/\.imba$/,'').split(np.sep)
+		let nmi = paths.indexOf('node_modules')
+		if nmi >= 0
+			paths = paths.slice(nmi + 1)
+		
+		let path = paths.join('/')
+		
 		path = './' + path if fdir == sdir
 		return path
 	return referenced
@@ -63,15 +72,25 @@ export def isAttr symbol
 	return no if isDeprecated(symbol)
 	f & SymbolFlags.Property && (f & SymbolFlags.Function) == 0 && !isReadonly(symbol) && !symbol.escapedName.match(/^on\w/)
 
-export def symbolFlagsToString flags
+export def symbolFlagsToString flags, bitsOnly = no
 	let out = {
 		toString: do this.#string
 		valueOf: do flags
 	}
 	let m = {}
-	for own k,v of SymbolFlags when typeof v == 'number'
-		if flags & v
-			m[k] = yes
+
+	if bitsOnly
+		let max = 24
+		let i = 0
+		while (++i < max)
+			let mask = 1 << i
+			if flags & mask
+				let flag = SymbolFlags[mask]
+				m[flag] = yes
+	else
+		for own k,v of SymbolFlags when typeof v == 'number'
+			if flags & v and k.indexOf('Excludes') == -1 and k != 'All'
+				m[k] = yes
 	Object.assign(out,m)
 	out.#string = Object.keys(m).join(' ')
 	return out

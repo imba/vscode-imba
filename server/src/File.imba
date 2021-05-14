@@ -145,7 +145,7 @@ export class ImbaFile < File
 		logLevel = fileName.indexOf('Diagnostics') >= 0 ? 3 : 0
 		diagnostics = new Diagnostics(self)
 		#emptySnapshot = ts.ScriptSnapshot.fromString('export {};\n\n')
-		#emptySnapshot.iversion = 0
+		#emptySnapshot.iversion = -1
 		relName = util.normalizeImportPath(program.rootPath,fileName) + '.imba'
 
 		emitted = {}
@@ -244,6 +244,7 @@ export class ImbaFile < File
 			# this may already be emitted bu the program?
 			if emit.#emitted =? yes
 				# shouldnt all files re-emit diagnostics?
+				#checker = null
 				log 'emit',relName
 				# program.$delay('emitChanges',100)
 				program.invalidate!

@@ -14,6 +14,8 @@ const SymbolObject = ts.objectAllocator.getSymbolConstructor!
 const TypeObject = ts.objectAllocator.getTypeConstructor!
 const NodeObject = ts.objectAllocator.getNodeConstructor!
 
+const SF = ts.SymbolFlags
+
 const Globals = {
 	'global': 1
 	'imba': 1
@@ -49,21 +51,26 @@ export class Completion
 	label = {}
 
 	constructor symbol, context, options = {}
-		#context = context
-		#symbol = symbol
-		#options = options
 		#cache = {}
 		weight = 0
-
+		
 		item = {
 			data: data
 			label: label
 			sortText: ""
 		}
-
+		
+		load(symbol,context,options)
+	
 		setup!
 		triggers options.triggers
 		# resolve!
+		
+	def load symbol, context, options = {}
+		#context = context
+		#symbol = symbol
+		#options = options
+		self
 		
 	get id
 		return #nr if #nr >= 0
@@ -148,17 +155,21 @@ export class Completion
 		null
 
 	def serialize context, stack
+		let o = #options
 		let key = item.insertText or name
 		
 		if stack[key]
 			return null
+			
+		if o.startsWith
+			return null unless key.indexOf(o.startsWith) == 0
 		
 		stack[key] = self
 		
-		if #options..commitCharacters
-			item.commitCharacters = #options.commitCharacters
-		if #options.weight != undefined
-			item.sortText = util.zerofill(#options.weight)
+		if o..commitCharacters
+			item.commitCharacters = o.commitCharacters
+		if o.weight != undefined
+			item.sortText = util.zerofill(o.weight)
 		item.data.id ||= "{#context.file.id}|{#context.id}|{id}"
 		return item
 		
@@ -183,9 +194,10 @@ export class Completion
 	
 
 export class ManualCompletion < Completion
-	constructor symbol, context, o = {}
+	def load symbol, context, o = {}
 		super
-		Object.assign(item,symbol or {})	
+		Object.assign(item,symbol or {})
+		self
 		
 
 export class SymCompletion < Completion
@@ -212,17 +224,56 @@ export class SymCompletion < Completion
 		'imba'
 
 export class SymbolObjectCompletion < Completion
+	
+	def resolveDetails full = yes
+		let cat = #options.kind
+		let sym = #symbol
+		let par = #symbol.parent
+		name = #symbol.imbaName
+
+		let type = #symbol.type or checker.type(#symbol)
+		let typesym = type..symbol or sym
+		let meth = typesym.callable? or type.callSignatures..length
+		# meth ||= type.callSignatures..length
+		
+		try
+			if meth
+				label.parameters = type.parametersToString!
+				let signature = checker.signature(type)
+				type = signature.getReturnType!
+				
+			let typestr = checker.typeToString(type)
+			let docs = sym.getDocumentationComment! or []
+			if docs[0]
+				detail = docs[0].text
+			
+			item.documentation = typestr
+			# console.log 'typestr',typestr
+			label.type = typestr
+
+			# if meth
+			#	let signature = checker.signature(type)
+			#	let returntype = signature.getReturnType!
+		let kind = util.symbolFlagsToString(sym.flags)
+		self
+
 	def setup
 		let cat = #options.kind
 		let sym = #symbol
 		let par = #symbol.parent
-		name = #symbol.details.name
+		let o = #options
+		let f = sym.flags
+		name = #symbol.imbaName
+		
+		if #options.startsWith and name.indexOf(#options.startsWith) != 0
+			return self
 		
 		let type = #symbol.type
 		let typesym = type..symbol or sym
 		
 		# kind = util.convertSymbolKind(#symbol.semanticKind)
 		# let typestr = type and type.checker.typeToString(type)
+		
 		
 		try
 			let docs = sym.getDocumentationComment! or []
@@ -236,18 +287,17 @@ export class SymbolObjectCompletion < Completion
 		if qf == 'ImbaEvents'
 			label.qualifier = 'event'
 			label.type = typesym.label
-
-		if typesym.flags & (ts.SymbolFlags.Function | ts.SymbolFlags.Method)
-			label.parameters = typesym.parametersToString!
 		
-		if sym.modifier?
-			let typestr = type.checker.typeToString(type)
-			let [params,returnType] = typestr.split(' => ')
-			label.parameters = params == '()' ? '' : params
-			delete label.qualifier
+		if true
+			
+			if sym.modifier?
+				let typestr = type.checker.typeToString(type)
+				let [params,returnType] = typestr.split(' => ')
+				label.parameters = params == '()' ? '' : params
+				delete label.qualifier
 
-		if let detail = sym.doctag('detail')
-			ns = detail
+			if let detail = sym.doctag('detail')
+				ns = detail
 
 		if sym.tagname? and sym.mapped?
 			label.type = sym.typeName
@@ -260,15 +310,7 @@ export class SymbolObjectCompletion < Completion
 				# what if this already exists though?
 				data.source = sym.sourceFile.path
 				data.name = name
-				
-		if sym.#exportInfoKey
-			# see if this is the local file?
-			name = sym.#exportInfoKey.split('|')[0]
-			unless sym.parent
-				console.log "export key has no parent",sym.#exportInfoKey
-				# console.log "SOURCEFILE",sym,sym.sourceFile
-			else
-				sourcePath = sym.parent.escapedName.slice(1,-1)
+
 
 		# not if this is a tag?!
 		if cat == 'tagname'
@@ -285,30 +327,77 @@ export class SymbolObjectCompletion < Completion
 		else
 			triggers '!(,.['
 			kind = util.tsSymbolFlagsToKindString(typesym.flags)
+			
+		if o.implicitGlobal
+			kind = 'variable'
+			# ns = 'global'
+		
+		if o.implicitSelf
+			item.filterText = name
+			item.insertText = name
+			name = "self.{name}"
+
+		if false
+			if sym.parameter?
+				ns = 'param'
+			elif sym.variable?
+				ns = 'var'
 
 		return self
 		
-	get exportInfo
-		if #symbol.#exportInfoKey
-			return #context.checker.getSymbolToExportInfoMap!.get(#symbol.#exportInfoKey)
-		return null
+	# get exportInfo
+	# 	if #symbol.#exportInfoKey
+	# 		return #context.checker.getSymbolToExportInfoMap!.get(#symbol.#exportInfoKey)
+	# 	return null
 		
 	def resolve
-		yes
-		# name = name + '?!'
-		resolveImportEdits!
+		resolveDetails!
 		self
 		
 	def serialize
 		return null if #symbol.internal?
 		super
 
+export class ImportCompletion < SymbolObjectCompletion
+	def load info, context, options = {}
+		#info = info
+		super(info.symbol,context,options)
+		
+	def setup
+		super
+		let name = #info.moduleSymbol..escapedName
+		name = name.slice(1,-1) if name[0] == '"' or name[0] == "'"
+		sourcePath = name
+		self
+	
+	def resolve
+		# yes
+		# name = name + '?!'
+		# resolveImportEdits!
+		# console.log 'resolving import completion!!'
+		
+		let specifier = checker.getModuleSpecifierForBestExportInfo([#info])
+		let path = specifier.moduleSpecifier
+		
+		let alias = data.name or #info.importName
+		let name = specifier.importKind == 1 ? 'default' : alias
+
+		let edits = doc.createImportEdit(path,name,alias)
+		
+		if edits.alias
+			item.insertText = edits.alias
+			ns = edits.alias
+
+		elif edits.changes.length
+			item.additionalTextEdits = edits.changes
+			ns = "import from '{path}'"
+		self
 
 export class StyleCompletion < Completion
 	
 export class KeywordCompletion < Completion
 	
-	def constructor word,ctx,o = {}
+	def load word,ctx,o = {}
 		super
 		name = word
 		kind = 'keyword'
@@ -376,10 +465,16 @@ export class CompletionsContext < Component
 		ctx = doc.getContextAtOffset(pos)
 		$stamp 'got context'
 		tok = ctx.token
-		devlog 'context',ctx
+		
 		let flags = ctx.suggest.flags
 		let T = CompletionTypes
 		ctx.tag = ctx.group.closest('tag')
+		prefix = ''
+		
+		if tok.match('identifier')
+			prefix = ctx.before.token
+			
+		devlog 'context',ctx,prefix,options
 		
 		if trigger == '=' and !tok.match('operator.equals.tagop')
 			return
@@ -449,21 +544,20 @@ export class CompletionsContext < Component
 
 			add('values')
 			
-		if options.triggerCharacter == '<'
-			let item = new ManualCompletion(null,self,{
-				insertText: " "
-				commitCharacters: [' ']
+		if trigger == '<' and ctx.after.character == '>'
+			console.log 'adding manual completion!',ctx.after.character == '>'
+			add completionForItem({
+				commitCharacters: [' ','<','=']
 				filterText: ''
 				preselect: yes
 				sortText: "0000"
 				kind: CompletionItemKind.Snippet
+				# textEdit: {range: doc.rangeAt(pos,pos), newText: ''}
 				textEdit: {range: doc.rangeAt(pos,pos+1), newText: ''}
 				label: {name: ' '}
 			})
-			add(item)
-		elif options.triggerCharacter == '.' and tok.match('operator.access')
-			
-			let item = new ManualCompletion(null,self,{
+		elif trigger == '.' and tok.match('operator.access')
+			add completionForItem({
 				filterText: ''
 				preselect: yes
 				sortText: "0000"
@@ -471,7 +565,6 @@ export class CompletionsContext < Component
 				kind: CompletionItemKind.Snippet
 				label: {name: ' '}
 			})
-			add(item)
 		self
 		
 	def lookupKey key
@@ -496,16 +589,18 @@ export class CompletionsContext < Component
 
 	def values
 		add('variables',weight: 70)
-		add('globals',weight: 500)
 		
+		# could also go from the old shared checker?
+		add('globals',weight: 500,startsWith: prefix, implicitGlobal: yes)
+
 		# variables should have higher weight - but not the global variables?
-		add('properties',value: yes, weight: 100)
-		add('autoimports',weight: 700)
-		add('keywords',weight: 650)
+		add('properties',value: yes, weight: 100, implicitSelf: yes)
+		add('keywords',weight: 650,startsWith: prefix)
+		add('autoimports',weight: 700,startsWith: prefix, autoImport: yes)
 		self
 		
 	def autoimports
-		checker.findExportSymbols!.map do $1[0].symbol
+		checker.findExportSymbols(prefix or null)
 		# add('keywords',weight: 1000)
 		
 	def keywords o = {}
@@ -515,6 +610,7 @@ export class CompletionsContext < Component
 	def properties
 		# find the self-context or path
 		let path = ctx.scope.selfScope.selfPath
+		console.log 'selfPath',path
 		# devlog 'selfpath!!',path,ctx.scope,ctx.scope.selfScope
 		let props = checker.props(path,yes)
 		props = props.filter do $1.flags & ts.SymbolFlags.Value
@@ -525,7 +621,7 @@ export class CompletionsContext < Component
 		let custom = checker.props('globalThis').filter(do $1.component? )
 		
 		let localTags = checker.getLocalTagsInScope()
-		let importTags = checker.getExportedComponentSymbols!
+		let importTags = checker.getExportedComponents!
 		
 		# check the local items
 		add(html,o)
@@ -598,16 +694,16 @@ export class CompletionsContext < Component
 
 		let entry = #uniques.get(item)
 		return entry if entry
-		
-		
 
 		if item isa SymbolObject
 			entry = new SymbolObjectCompletion(item,self,opts)
 		elif item isa Sym
 			entry = new SymCompletion(item,self,opts)
-			
+		elif item.hasOwnProperty('exportKind')
+			entry = new ImportCompletion(item,self,opts)
+
 		elif item.label
-			entry = new ManualCompletion(item,self,item)
+			entry = new ManualCompletion(item,self,opts)
 
 		#uniques.set(item,entry)
 		return entry
@@ -628,23 +724,26 @@ export class CompletionsContext < Component
 		
 		let t = Date.now!
 		let results = self[type](options)
+		
+		log "called {type}",Date.now! - t
 
 		if results isa Array
 			for item in results
 				add(completionForItem(item,options))
 				# items.push(completionForItem(item))
+			log "added {results.length} {type} in {Date.now! - t}ms"
 
-			devlog 'adding',type,results,Date.now! - t
 		#added[type] = results or true
 		return self
 
 	def serialize
 		let entries = []
 		let stack = {}
-		for item in items
-			let entry = item.serialize(self,stack)
-			entries.push(entry) if entry
-			
+		util.time(&,'serializing') do
+			for item in items
+				let entry = item.serialize(self,stack)
+				entries.push(entry) if entry
+
 		devlog 'serialized',entries,items
 		return entries
 		

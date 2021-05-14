@@ -5,6 +5,8 @@ import {Position,Range} from 'imba/program'
 const imbac = require 'imba/compiler'
 const imba1c = require '../imba1.compiler.js'
 
+import * as workers from './pooler'
+
 export default class Compilation
 	
 	constructor f
@@ -35,9 +37,9 @@ export default class Compilation
 			return doc.rangeAt(0,ibody.length)
 		
 		for [ts0,ts1,imba0,imba1] in locs.spans
-				if start == ts0 and end == ts1
-					return doc.rangeAt(imba0,imba1)
-		
+			if start == ts0 and end == ts1
+				return doc.rangeAt(imba0,imba1)
+	
 		if fuzzy
 			let i0 = o2i(start)
 			let i1 = o2i(end)
@@ -107,6 +109,41 @@ export default class Compilation
 
 		#diagnostics ||= result.diagnostics.map do(item)
 			new Diagnostic(item,self)
+	
+	def compileAsync
+		#compiling ||= new Promise do(resolve)
+			ioptions.sourceId = "aa"
+			let res
+			let t = Date.now!
+			if file.isLegacy
+				res = await workers.compile_imba1(ibody,ioptions)
+			else
+				res = await workers.compile_imba(ibody,ioptions)
+				
+			self.result = res
+			console.log()
+			console.log 'compiled async ',file.relName,Date.now! - t
+			resolve(self)
+
+	set result res
+		#result = res
+		done = yes
+		if res.js
+			obody = res.js.replace(/\$CARET\$/g,'valueOf')
+			
+			self.locs = res.locs
+		
+		let errors = res.errors or []
+		
+		if errors.length
+			yes
+		elif res.js
+			self.js = ts.ScriptSnapshot.fromString(res.js)
+			self.js.iversion = iversion
+			self.js.#compilation = self
+	
+	get result
+		#result
 		
 	def compile
 		return self if done
@@ -116,24 +153,10 @@ export default class Compilation
 			let compiler = file.isLegacy ? imba1c : imbac
 			let res = file.util.time(&,"{file.relName} compiled in") do
 				compiler.compile(ibody,ioptions)
-
 			self.result = res
-			
-			if res.js
-				obody = res.js.replace(/\$CARET\$/g,'valueOf')
-				
-				self.locs = res.locs
-			
-			let errors = res.errors or []
-			
-			if errors.length
-				yes
-			elif res.js
-				self.js = ts.ScriptSnapshot.fromString(obody)
-				self.js.iversion = iversion
-				self.js.#compilation = self
-			return self
+			#compiling = Promise.resolve(self)
 		catch e
 			console.log 'compiler crashed',file.relName
 			self.result = {diagnostics: []}
 			yes
+		return self

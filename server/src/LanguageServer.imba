@@ -254,7 +254,6 @@ export class LanguageServer < Component
 			# console.log 'emit global diagnostics!'
 			# #program = null
 			for file in files when file.shouldEmitDiagnostics
-				# somehow sort them by priority and do clever optimizations for it.
 				file.emitDiagnostics(force)
 			#program = null
 
@@ -376,6 +375,7 @@ export class LanguageServer < Component
 		try
 			
 			let items = util.time(&,'getCompletions') do file.getCompletionsAtOffset(loc,context)
+			console.log 'found',items..length,'items'
 			return items				
 		catch e
 			console.log 'error from getCompletions',e

@@ -58,6 +58,18 @@ extend class SymbolObject
 
 	get function?
 		flags & ts.SymbolFlags.Function
+		
+	get method?
+		flags & ts.SymbolFlags.Method
+	
+	get callable?
+		function? or method?
+		
+	get parameter?
+		flags & ts.SymbolFlags.FunctionScopedVariable
+		
+	get variable?
+		flags & ts.SymbolFlags.BlockScopedVariable
 
 	get pascal?
 		let chr = escapedName.charCodeAt(0)
@@ -107,6 +119,15 @@ extend class SymbolObject
 		meta.name = name
 		return meta
 		
+	get imbaName
+		return #imbaName if #imbaName
+		let name = escapedName
+		if name.indexOf('$$TAG$$') > 0
+			name = name.slice(0,-7).replace(/\_/g,'-')
+		elif name.indexOf('_$SYM$_') == 0
+			name = name.split("_$SYM$_").join("#")
+		#imbaName = name
+
 	get internal?
 		escapedName.indexOf("__@") == 0
 
@@ -135,7 +156,11 @@ extend class SymbolObject
 
 			let pars = decl.parameters.map do
 					let out = $1.name.escapedText
-					out += '?' if $1.questionToken
+					# out += '?' if $1.questionToken
+					if $1.dotDotDotToken
+						out = "..." + out
+					if $1.questionToken
+						out += "?"
 					return out
 
 			return '(' + pars.join(', ') + ')'
@@ -149,6 +174,9 @@ extend class Signature
 			let typ = item.type and checker.typeToString(item.type) or ''
 			parts.push(name)
 		return '(' + parts.join(', ') + ')'
+	
+	def parametersToString
+		toImbaTypeString!
 
 extend class TypeObject
 	def parametersToString
@@ -156,6 +184,10 @@ extend class TypeObject
 		# if callSignatures[0]
 		if symbol
 			return symbol.parametersToString!
+			
+		elif callSignatures..length
+			let first = callSignatures[0]
+			return first.parametersToString!
 
 		return ''
 
@@ -616,6 +648,11 @@ export class ProgramSnapshot < Component
 		# console.log 'resolving paths',paths
 		return type(paths)
 		
+	def typeToString val
+		let str = checker.typeToString(val)
+		str = str.replace(/([\w\_]+)\$\$TAG\$\$/g) do $2.replace(/\_/g,'-')
+		return str
+		
 		
 	def resolveAutoImport name, source
 		let tls = file.ils.tls
@@ -623,17 +660,20 @@ export class ProgramSnapshot < Component
 		return tls.getCompletionEntryDetails(file.fileName,loc,name,{},source,UserPrefs.imports)
 		
 	def getSymbolToExportInfoMap
-		let first = !#exportInfoMap
-		let items = #exportInfoMap ||= ts.codefix.getSymbolToExportInfoMap(sourceFile,ils.tlshost,program)
+		let cache = checker.#exportInfoMap ||= {}
+		let key = sourceFile.path
+		let first = !cache[key]
+		let items = cache[key] ||= ts.codefix.getSymbolToExportInfoMap(sourceFile,ils.tlshost,program)
 		
 		if first
 			for [k,v] of items
-				continue if k.match(/\|(constants|console|v8)$/)
+				# continue if k.match(/\|(constants|console|v8)$/)
 
 				let name = k.split('|')[0]
 				if v[0].exportKind == 1 and name.match(/\wImba$/)
 					name = name.slice(0,-4)
-				v[0].symbol.#exportInfoKey = k
+				# v[0].symbol.#exportInfoKey = k
+				v[0].exportKey = k
 				v[0].importName = name
 		return items
 		
@@ -641,13 +681,15 @@ export class ProgramSnapshot < Component
 		let items = getSymbolToExportInfoMap!
 
 		let matches = for [k,v] of items
-			continue if k.match(/\|(constants|console|v8)$/)
+			continue if k.match(/\|(constants|console|v8|node\:\w+)$/)
 
 			if typeof query == 'string'
-				continue unless k.indexOf(query + '|') == 0
+				continue unless k.indexOf(query) == 0
+			# elif query isa RegExp
+			#	continue unless query.test()
 			elif query isa Function
 				continue unless query(v[0].symbol,v,k)
-			v
+			v[0]
 
 		return matches
 	
@@ -658,12 +700,12 @@ export class ProgramSnapshot < Component
 		return findExportSymbols do(item) item.component?
 		
 	def getExportedComponentSymbols source = null
-		getExportedComponents!.map do $1[0].symbol
+		getExportedComponents!.map do $1.symbol
 		
 	def getModuleSpecifierForBestExportInfo symbol
 		if typeof symbol == 'string'
-			let matches = findExportSymbols(symbol)
-			symbol = matches[0]
+			let matches = findExportSymbols(symbol + '|')
+			symbol = [matches[0]]
 			
 		if symbol.#exportInfoKey
 			symbol = getSymbolToExportInfoMap!.get(symbol.#exportInfoKey)
