@@ -1,7 +1,7 @@
 import {Component} from './Component'
 import type {Program,TypeChecker} from 'typescript'
 import * as ts from 'typescript'
-import { tsSymbolFlagsToKindString } from './utils'
+import * as util from './utils'
 import {Sym,Node as ImbaNode, Token as ImbaToken} from 'imba/program'
 
 const UserPrefs = {
@@ -165,13 +165,16 @@ extend class SymbolObject
 
 			return '(' + pars.join(', ') + ')'
 		return ''
+		
+	def resolveType checker = null
+		return #type or self.type
 
 extend class Signature
 	def toImbaTypeString
 		let parts = []
 		for item in parameters
 			let name = item.escapedName
-			let typ = item.type and checker.typeToString(item.type) or ''
+			# let typ = item.resolveType and checker.typeToString(item.type) or ''
 			parts.push(name)
 		return '(' + parts.join(', ') + ')'
 	
@@ -190,6 +193,12 @@ extend class TypeObject
 			return first.parametersToString!
 
 		return ''
+		
+	get objectFlagsInfo
+		util.flagsToString(objectFlags,ts.ObjectFlags)
+		
+	get flagsInfo
+		util.flagsToString(flags,ts.TypeFlags)
 
 
 # wrapper for ts symbol / type with added info
@@ -206,7 +215,7 @@ export class ProgramSnapshot < Component
 		self.file = #file = file
 		#blank = file or program.getSourceFiles()[0]
 		if file
-			self.sourceFile = program.getSourceFileByPath(file.fileName)
+			self.sourceFile = program.getSourceFile(file.fileName)
 		#typeCache = {}
 		
 		self.SF = SF
@@ -304,7 +313,7 @@ export class ProgramSnapshot < Component
 			let typ = local(expr.typeName.escapedText,#file,'Type')
 			if typ
 				return checker.getDeclaredTypeOfSymbol(typ)
-				return type(typ)
+				# return type(typ)
 		elif basetypes[val]
 			return basetypes[val]
 		
@@ -341,7 +350,7 @@ export class ProgramSnapshot < Component
 			value = value.fileName
 
 		if typeof value == 'string'
-			program.getSourceFileByPath(value)
+			program.getSourceFile(value)
 		else
 			value
 			
@@ -353,12 +362,11 @@ export class ProgramSnapshot < Component
 		#location
 
 	def loc item
-		console.l
 		return undefined unless item
 		if typeof item == 'number'
 			return ts.findPrecedingToken(item,loc(#file))
 		if item.fileName
-			return program.getSourceFileByPath(item.fileName)
+			return program.getSourceFile(item.fileName)
 		if item isa SymbolObject
 			return item.valueDeclaration
 		return item
@@ -380,10 +388,13 @@ export class ProgramSnapshot < Component
 		if item isa SymbolObject
 			# console.log 'get the declared type of the symbol',item,item.flags
 			if item.flags & SF.Interface
+				item.#instanceType ||= checker.getDeclaredTypeOfSymbol(item)
 				
-				item.type ||= checker.getDeclaredTypeOfSymbol(item)
-			item.type ||= checker.getTypeOfSymbolAtLocation(item,loc(#file or #blank))
-			return item.type
+				unless item.flags & SF.Value
+					return item.#instanceType
+
+			item.#type ||= checker.getTypeOfSymbolAtLocation(item,loc(#file or #blank))
+			return item.#type
 
 		if item isa TypeObject
 			return item
@@ -419,14 +430,17 @@ export class ProgramSnapshot < Component
 		let typ = type(item)
 		return [] unless typ
 
-		let props = typ.getProperties!
+		let props = typ.getApparentProperties!
 		if withTypes
 			for item in props
 				type(item)
 		return props
+	
+	def statics item, withTypes = no
+		yes
 
 	def propnames item
-		let values = type(item).getProperties!
+		let values = type(item).getApparentProperties!
 		values.map do $1.escapedName
 	
 	def getSelf loc = #location
@@ -452,6 +466,9 @@ export class ProgramSnapshot < Component
 		# console.log 'member',item,name
 		let key = name.replace(/\!$/,'')
 		let typ = type(item)
+		unless typ and typ.getProperty isa Function
+			console.warn 'tried getting type',item,key,typ
+
 		let sym = typ.getProperty(key)
 		
 		if key == '__@iterable'
@@ -688,7 +705,7 @@ export class ProgramSnapshot < Component
 			# elif query isa RegExp
 			#	continue unless query.test()
 			elif query isa Function
-				continue unless query(v[0].symbol,v,k)
+				continue unless query(v[0],k)
 			v[0]
 
 		return matches

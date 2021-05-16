@@ -109,7 +109,8 @@
 				"editor.insertSpaces": false,
 				"editor.tabSize": 4,
 				"editor.autoIndent": "advanced",
-				"editor.suggest.showWords": false
+				"editor.suggest.showWords": false,
+				"files.eol":"\n"
 			}
 		},
 		"languages": [

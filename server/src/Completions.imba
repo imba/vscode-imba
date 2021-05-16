@@ -83,7 +83,7 @@ export class Completion
 		checker.program
 
 	get #type
-		#symbol.type
+		#symbol.type or #symbol.#type
 		
 	get doc
 		#context.doc
@@ -229,7 +229,6 @@ export class SymbolObjectCompletion < Completion
 		let cat = #options.kind
 		let sym = #symbol
 		let par = #symbol.parent
-		name = #symbol.imbaName
 
 		let type = #symbol.type or checker.type(#symbol)
 		let typesym = type..symbol or sym
@@ -268,7 +267,7 @@ export class SymbolObjectCompletion < Completion
 		if #options.startsWith and name.indexOf(#options.startsWith) != 0
 			return self
 		
-		let type = #symbol.type
+		let type = #type
 		let typesym = type..symbol or sym
 		
 		# kind = util.convertSymbolKind(#symbol.semanticKind)
@@ -355,7 +354,7 @@ export class SymbolObjectCompletion < Completion
 		self
 		
 	def serialize
-		return null if #symbol.internal?
+		return null if #symbol.internal? or name == 'globalThis'
 		super
 
 export class ImportCompletion < SymbolObjectCompletion
@@ -474,7 +473,12 @@ export class CompletionsContext < Component
 		if tok.match('identifier')
 			prefix = ctx.before.token
 			
+		if $web$
+			global.u = self
+			
 		devlog 'context',ctx,prefix,options
+		
+		prefixRegex = new RegExp("^{prefix}","i")
 		
 		if trigger == '=' and !tok.match('operator.equals.tagop')
 			return
@@ -556,7 +560,7 @@ export class CompletionsContext < Component
 				textEdit: {range: doc.rangeAt(pos,pos+1), newText: ''}
 				label: {name: ' '}
 			})
-		elif trigger == '.' and tok.match('operator.access')
+		elif trigger == '.' and tok.match('operator.access') and items.length
 			add completionForItem({
 				filterText: ''
 				preselect: yes
@@ -600,7 +604,11 @@ export class CompletionsContext < Component
 		self
 		
 	def autoimports
-		checker.findExportSymbols(prefix or null)
+		
+		checker.findExportSymbols do(v,l)
+			return no unless util.isPascal(v.importName)
+			return no if prefix and !prefixRegex.test(v.importName)
+			return yes
 		# add('keywords',weight: 1000)
 		
 	def keywords o = {}
