@@ -588,7 +588,7 @@ export class ProgramSnapshot < Component
 
 			if value.match('args')
 				
-				let res = type(signature(resolvePath(value.start.prev),[]))
+				let res = type(signature(resolvePath(value.start.prev)))
 				devlog 'token match args!!!',res
 				return res
 
@@ -660,9 +660,8 @@ export class ProgramSnapshot < Component
 			# let lft = tok.prev.prev
 			return [resolvePath(tok.prev,doc),tok.value]
 
-	def resolveType tok, doc
-		let paths = resolvePath(tok,doc)
-		# console.log 'resolving paths',paths
+	def resolveType tok, doc, ctx = null
+		let paths = resolvePath(tok,doc,ctx)
 		return type(paths)
 		
 	def typeToString val

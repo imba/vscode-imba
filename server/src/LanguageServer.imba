@@ -53,7 +53,6 @@ const tsServiceOptions\CompilerOptions = {
 	# maxNodeModuleJsDepth:1
 	incremental: true
 	target: ts.ScriptTarget.ES2020
-	types: ['node']
 	module: ts.ModuleKind.ESNext
 	forceConsistentCasingInFileNames: true
 	moduleResolution: ts.ModuleResolutionKind.NodeJs
@@ -556,12 +555,16 @@ export class LanguageServer < Component
 			# log 'rename request',iloc,tloc,params
 			let t_renames = tls.findRenameLocations(file.fileName,tloc,false,false)
 			# log t_renames
+			let added = {}
 
 			for rename in t_renames
 				let dest = getImbaFile(rename.fileName)
 				let edits = (renames.changes[dest.uri] ||= [])
-				let range = dest.o2d(rename.textSpan)
-				edits.push(range: range, newText: newName)
+				let range = dest.o2d(rename.textSpan, no )
+
+				if range and !added[range[0]]
+					added[range[0]] = range
+					edits.push(range: range, newText: newName)
 		# inspect renames
 		return renames
 

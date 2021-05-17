@@ -26,9 +26,6 @@ export def normalizePath path
 
 export def normalizeImportPath source, referenced
 	if np.isAbsolute(referenced)
-		
-		console.log 'normalize path',source,referenced
-
 		let fdir = np.dirname(source)
 		let sdir = np.dirname(referenced)
 		let paths = np.relative(fdir,referenced).replace(/\.imba$/,'').split(np.sep)

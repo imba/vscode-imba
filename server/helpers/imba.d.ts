@@ -3,6 +3,7 @@
 /// <reference path="./imba.dom.d.ts" />
 /// <reference path="./imba.css.d.ts" />
 /// <reference path="./imba.events.d.ts" />
+/// <reference path="./imba.router.d.ts" />
 
 type Selector = string;
 
@@ -17,6 +18,7 @@ interface Element {
     hotkey__: any;
     route: any;
     route__: any;
+    router: ImbaRouter;
     $key: any;
 
     emit(event:string, params?: any, options?: any): Event;
@@ -83,10 +85,6 @@ interface Object {
 }
 
 declare namespace imba {
-    interface Router {
-        refresh(): void;
-        alias(from:string,to:string): void;
-    }
 
     function setInterval(handler: TimerHandler, timeout?: number, ...arguments: any[]): number;
     function setTimeout(handler: TimerHandler, timeout?: number, ...arguments: any[]): number;
@@ -99,8 +97,7 @@ declare namespace imba {
 
     let styles: ImbaStyles;
     let colors: string[];
-    let router: Router;
-    let tagtypes: HTML;
+    let router: ImbaRouter;
 
     namespace types {
         let events: GlobalEventHandlersEventMap;
@@ -142,5 +139,9 @@ declare module "data:text/asset;*" {
 }
 
 declare module "imba/compiler" {
+    export function compile(fileName:string,options:any): any;
+}
+
+declare module "imba" {
     export function compile(fileName:string,options:any): any;
 }

@@ -50,11 +50,11 @@ export default class Compilation
 		let range = o2iRange(start,end,fuzzy)
 		return doc.rangeAt(i2d(range[0]),i2d(range[1]))
 		
-	def o2i o
+	def o2i o, opts = yes
 		if o.start != undefined
 			let start = Number(o.start)
 			let end = start + Number(o.length)
-			return o2iRange(start,end,yes)
+			return o2iRange(start,end,opts)
 		let val = null
 
 		let spans = locs.spans.filter do(pair)
@@ -77,6 +77,7 @@ export default class Compilation
 		doc.historicalOffset(d,iversion)
 		
 	def i2d i
+		return null if i == null
 		if i and typeof i[0] == 'number'
 			return doc.rangeAt(i2d(i[0]),i2d(i[1]))
 		doc.offsetAtVersion(i,iversion)
@@ -84,10 +85,12 @@ export default class Compilation
 	def d2o d
 		i2o(d2i(d))
 		
-	def o2d o
-		i2d(o2i(o))
+	def o2d o, fuzzy = yes
+		i2d(o2i(o,fuzzy))
 		
 	def i2o i
+		return null if i == null
+
 		let spans = locs.spans.filter do(pair)
 			i >= pair[2] and pair[3] >= i
 

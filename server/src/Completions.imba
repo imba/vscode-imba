@@ -153,10 +153,13 @@ export class Completion
 		
 	get exportInfo
 		null
+	
+	get uniqueName
+		item.insertText or name
 
 	def serialize context, stack
 		let o = #options
-		let key = item.insertText or name
+		let key = uniqueName
 		
 		if stack[key]
 			return null
@@ -403,6 +406,10 @@ export class KeywordCompletion < Completion
 		triggers ' '
 	
 export class StylePropCompletion < StyleCompletion
+	get uniqueName
+		name
+
+		
 	def setup
 		let sym = #symbol
 		name = sym.name
@@ -516,7 +523,7 @@ export class CompletionsContext < Component
 			add(items)
 
 		if flags & T.StyleProp
-			add Object.values(cssProperties).map do new StylePropCompletion($1,self)
+			add Object.values(cssProperties).map do new StylePropCompletion($1,self, triggers: ' @:.')
 		
 		if flags & T.StyleModifier
 			add checker.props('ImbaStyleModifiers',yes)
@@ -555,7 +562,7 @@ export class CompletionsContext < Component
 				filterText: ''
 				preselect: yes
 				sortText: "0000"
-				kind: CompletionItemKind.Snippet
+				kind: CompletionItemKind.Text
 				# textEdit: {range: doc.rangeAt(pos,pos), newText: ''}
 				textEdit: {range: doc.rangeAt(pos,pos+1), newText: ''}
 				label: {name: ' '}
@@ -566,7 +573,7 @@ export class CompletionsContext < Component
 				preselect: yes
 				sortText: "0000"
 				textEdit: {range: doc.rangeAt(pos,pos), newText: ''}
-				kind: CompletionItemKind.Snippet
+				kind: CompletionItemKind.Text
 				label: {name: ' '}
 			})
 		self
@@ -586,7 +593,7 @@ export class CompletionsContext < Component
 		#checker ||= new ProgramSnapshot(file.ils.getProgram!,file)
 
 	def check
-		checker.resolveType(ctx.token,file.idoc,ctx)
+		checker.resolveType(ctx.token,file.idoc)
 
 	def locals
 		self

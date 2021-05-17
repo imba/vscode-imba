@@ -380,8 +380,8 @@ export class ImbaFile < File
 		locs.spans.filter do |pair|
 			jsloc >= pair[0] and pair[1] >= jsloc
 			
-	def o2d o
-		currentCompilation.o2d(o)
+	def o2d o, fuzzy = yes
+		currentCompilation.o2d(o,fuzzy)
 
 	def originalRangeFor {start,length,end = null}
 		if end == null
