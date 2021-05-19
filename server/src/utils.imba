@@ -173,6 +173,7 @@ const COMPLETION_KIND_MAP = {
 	enum: CompletionItemKind.Enum
 	value: CompletionItemKind.Value
 	export: CompletionItemKind.Field
+	snippet: CompletionItemKind.Snippet
 }
 
 export def convertCompletionKind kind, entry

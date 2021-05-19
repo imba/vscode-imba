@@ -1,5 +1,6 @@
 import {Component} from './Component'
 import type {Program,TypeChecker} from 'typescript'
+import type {LanguageServer} from './LanguageServer'
 import * as ts from 'typescript'
 import * as util from './utils'
 import {Sym,Node as ImbaNode, Token as ImbaToken} from 'imba/program'
@@ -222,7 +223,7 @@ export class ProgramSnapshot < Component
 		self.ts = ts
 		
 	get ils
-		self.file.ils
+		self.file.ils\LanguageServer
 		
 	get host
 		ils.tlshost
@@ -524,7 +525,22 @@ export class ProgramSnapshot < Component
 			node = token
 		
 		ts.getThisContainer(node,false)
-		
+	
+	def resolveImportInfo info
+		# exportName: exportName
+		# 	name: node.value
+		# 	isTypeOnly: ctx.isTypeOnly
+		# 	path: ctx.sourcePath
+		let resolved = host.resolveModuleNames([info.path],sourceFile.path)[0]
+		console.log "resolved import info!!",resolved
+		if resolved
+			if let file = program.getSourceFile(resolved.resolvedFileName)
+				try
+					let sym = file.symbol.exports.get(info.exportName)
+					if sym
+						console.log 'found sym!!',sym
+						return sym
+		yes
 
 	def resolvePath tok, doc, loc = null
 		
@@ -549,7 +565,7 @@ export class ProgramSnapshot < Component
 				# if basetypes[val.slice(1)]
 				#	return basetypes[val.slice(1)]
 			
-			if tok.match('value')
+			if tok.match('value') or tok.match('parens')
 				let end = tok.end.prev
 				while end and end.match('br')
 					end = end.prev
@@ -565,9 +581,15 @@ export class ProgramSnapshot < Component
 		
 		let sym = tok.symbol
 		let typ = tok.type
+		
+		# is an imported variable
 
 		if tok isa Sym
 			let typ = tok.datatype
+			
+			if typ and typ.exportName
+				return resolveImportInfo(typ)
+
 			if typ
 				return resolvePath(typ,doc)
 				
@@ -595,6 +617,9 @@ export class ProgramSnapshot < Component
 			if value.match('array')
 				# console.log 'found array!!!',tok.pops
 				return arraytype(basetypes.any)
+				
+			if value.match('parens')
+				return resolvePath(value,doc,tok)
 
 		if tok.match('tag.event.start')
 			return 'ImbaEvents'

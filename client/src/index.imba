@@ -1,9 +1,10 @@
 let path = require 'path'
 
-import {window, commands, languages, IndentAction, workspace,SnippetString, SemanticTokensLegend, SemanticTokens,Range} from 'vscode'
+import { CompletionItemKind,window, commands, languages, IndentAction, workspace,SnippetString, SemanticTokensLegend, SemanticTokens,Range, extensions} from 'vscode'
 import {LanguageClient, TransportKind} from 'vscode-languageclient'
 
 import {SemanticTokenTypes,SemanticTokenModifiers} from 'imba/program'
+import ipc from 'node-ipc'
 
 let debugChannel = null # window.createOutputChannel("Imba Debug")
 
@@ -14,8 +15,9 @@ def log msg,...rest
 			debugChannel.appendLine(JSON.stringify(rest))
 
 # TODO(scanf): handle workspace folder and multiple client connections
+const HAS_TSPLUGIN = no
 
-let client = null
+let client\LanguageClient = null
 let isReady = no
 
 languages.setLanguageConfiguration('imba',{
@@ -98,14 +100,48 @@ def getStyleBlockLines doc
 		i++
 	log 'getStyleBlockLines',lines
 	return lines
+	
+def configure items = {}
+	let cfg = workspace.getConfiguration(undefined,null)
+	for own k,v of items
+		cfg.update(k,v)
+
+let ipcserver = null
 
 		
 export def activate context
 	let serverModule = context.asAbsolutePath(path.join('server','dist','src','index.loader.js'))
 	let debugOptions = { execArgv: ['--nolazy', '--inspect=6005'] }
+	let conf = workspace.getConfiguration('imba')
 	
 	log("activating!")
-	# console.log serverModule, debugOptions # , debugServerModule
+	
+	if HAS_TSPLUGIN
+		let id = String(Math.random!)
+		const tsExtension = extensions.getExtension('vscode.typescript-language-features')
+		try
+			let subs = context.subscriptions
+			let subs2 = context.subscriptions = {}
+			
+			subs2.push = do(item)
+				log("push disposable!!")
+				subs.push(item)
+				
+			const tsapi2 = await tsExtension.activate(context)
+			context.subscriptions = subs
+			
+			ipc.config.id = process.env['IMBA_VSCODE_CLIENT'] = id
+			ipc.serve do(e)
+				log('serving!!')
+				ipc.server.on('message') do(e)
+					log 'message from ipc!!'
+					log e
+			ipc.server.start!
+		
+		try
+			await commands.executeCommand("typescript.restartTsServer")
+
+		const tsapi = try tsExtension.exports.getAPI(0)
 	
 	let serverOptions = {
 		run: {module: serverModule, transport: TransportKind.ipc }
@@ -120,18 +156,29 @@ export def activate context
 		synchronize: { configurationSection: ['imba'] }
 		revealOutputChannelOn: 0
 		outputChannelName: 'Imba Language Client'
-		initializationOptions: {
-			something: 1
-			other: 100
+		initializationOptions: {}
+		middleware: {
+			provideOnTypeFormattingEdits: do
+				log("provideOnTypeFormattingEdits",$0)
+				
+			provideCompletionItem: do(document, position, context, token, next)
+				let t = Date.now!
+				let res = await next(document, position, context, token)
+				log "provideCompletionItem {Date.now! - t}ms"
+				return res
 		}
 	}
 
 	
+	if conf.get('debug')
+		serverOptions.run.options = debugOptions
+		clientOptions.revealOutputChannelOn = 4 # never
+		delete clientOptions.outputChannelName
 	
 	client = new LanguageClient('imba', 'Imba Language Server', serverOptions, clientOptions)
+	
 	let semanticLegend = new SemanticTokensLegend(SemanticTokenTypes,SemanticTokenModifiers)
-	let provider = new SemanticTokensProvider
-	languages.registerDocumentSemanticTokensProvider({language: 'imba'},provider,semanticLegend)
+	languages.registerDocumentSemanticTokensProvider({language: 'imba'},new SemanticTokensProvider,semanticLegend)
 	languages.registerDocumentSemanticTokensProvider({language: 'imba1'},new SemanticTokensProvider,semanticLegend)
 
 	commands.registerCommand('imba.getProgramDiagnostics') do
@@ -140,6 +187,19 @@ export def activate context
 
 	commands.registerCommand('imba.clearProgramProblems') do
 		client.sendNotification('clearProgramProblems')
+
+	commands.registerCommand('imba.debugService') do
+		configure("imba.verbose": false)
+		# client.sendNotification('debugService')
+		
+	commands.registerCommand('imba.setDefaultSettings') do
+		let settings = {
+			"[imba].editor.insertSpaces": false,
+			"[imba].editor.tabSize": 4,
+			"[imba].editor.autoIndent": "advanced",
+			"files.eol": "\n"
+		}
+		configure(settings)
 
 	commands.registerTextEditorCommand('ximba.incrementByOne',adjustmentCommand(1))
 	commands.registerTextEditorCommand('ximba.decrementByOne',adjustmentCommand(-1))
@@ -168,8 +228,11 @@ export def activate context
 	# let disposable = client.start()
 	# context.subscriptions.push(client.start!)
 	client.start!
+	log("client.start!")
 	await client.onReady!
 	isReady = yes
+
+	log("client is ready")
 
 	window.onDidChangeTextEditorSelection do(e)
 		const doc = e.textEditor.document

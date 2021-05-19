@@ -1,15 +1,15 @@
 import {Component} from './Component'
 import {CompletionItemKind,DiagnosticSeverity,SymbolKind,Location,LocationLink} from 'vscode-languageserver-types'
-# import {Location} from 'vscode-languageserver'
+
 
 import * as util from './utils'
 import { FullTextDocument } from './FullTextDocument'
-import { items } from '../../test/data'
 import {Keywords,KeywordTypes,CompletionTypes,Sym,SymbolFlags} from 'imba/program'
 import {Diagnostics, Diagnostic, FileDiagnostic, DiagnosticKind} from './Diagnostics'
 import * as ts from 'typescript'
 import type {TypeNode,TypeFlags} from 'typescript'
 import type {LanguageServer} from './LanguageServer'
+
 import system from './system'
 import { CompletionsContext } from './Completions'
 import { ProgramSnapshot } from './Checker'

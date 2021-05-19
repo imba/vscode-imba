@@ -1,11 +1,10 @@
 import { Component } from './Component'
 import { snippets } from './snippets'
-# import { Location, LocationLink } from 'vscode-languageserver'
 import type {TextDocuments,IConnection,InitializeParams,ReferenceParams,CompletionItem, RenameRequest} from 'vscode-languageserver'
-# import { TextDocument } from 'vscode-languageserver-textdocument'
-import {CompletionItemKind,SymbolKind, Location, LocationLink} from 'vscode-languageserver-types'
 import type { WorkspaceEdit } from 'vscode-languageserver-types'
 import type {CompilerOptions,LanguageService,LanguageServiceHost,UserPreferences,Program} from 'typescript'
+
+import {CompletionItemKind,SymbolKind, Location, LocationLink} from 'vscode-languageserver-types'
 
 import {URI} from 'vscode-uri'
 import {File,ImbaFile} from './File'
@@ -19,15 +18,14 @@ import {TAG_NAMES,TAG_TYPES} from './constants'
 const path = require 'path'
 const fs = require 'fs'
 const ts = require 'typescript'
+
 import * as glob from 'glob'
 import system from './system'
 
-# const glob = require 'glob'
 const imbac = require 'imba/compiler'
 
 import {resolveConfigFile} from 'imba/src/compiler/imbaconfig'
 import ServiceHost from './Host'
-# const imbac = require 'imba/dist/compiler.js'
 
 global.ts = ts
 
@@ -50,7 +48,7 @@ const tsServiceOptions\CompilerOptions = {
 	suppressImplicitAnyIndexErrors: true
 	traceResolution: false
 	resolveJsonModule: true
-	# maxNodeModuleJsDepth:1
+	maxNodeModuleJsDepth:2
 	incremental: true
 	target: ts.ScriptTarget.ES2020
 	module: ts.ModuleKind.ESNext
@@ -81,8 +79,10 @@ export class LanguageServer < Component
 
 	def constructor(connection\IConnection, documents\TextDocuments, params\InitializeParams, o = {})
 		super
-		files\File[] = []
+
+		self.files\File[] = []
 		self.ts = ts
+
 		self.documents = documents
 		self.connection = connection
 		self.rootPath = util.uriToPath(params.rootUri)

@@ -189,7 +189,7 @@ export class Completion
 			
 			if edits.changes.length
 				item.additionalTextEdits = edits.changes
-				ns = "import from '{path}'"
+				ns = "from '{path}'"
 
 			# console.log edits.changes,info,specifier,item,self
 
@@ -370,6 +370,7 @@ export class ImportCompletion < SymbolObjectCompletion
 		let name = #info.moduleSymbol..escapedName
 		name = name.slice(1,-1) if name[0] == '"' or name[0] == "'"
 		sourcePath = name
+		ns = "from '{ns}'"
 		self
 	
 	def resolve
@@ -392,7 +393,7 @@ export class ImportCompletion < SymbolObjectCompletion
 
 		elif edits.changes.length
 			item.additionalTextEdits = edits.changes
-			ns = "import from '{path}'"
+			ns = "from '{path}'"
 		self
 
 export class StyleCompletion < Completion
@@ -562,18 +563,21 @@ export class CompletionsContext < Component
 				filterText: ''
 				preselect: yes
 				sortText: "0000"
-				kind: CompletionItemKind.Text
+				kind: CompletionItemKind.Snippet
 				# textEdit: {range: doc.rangeAt(pos,pos), newText: ''}
 				textEdit: {range: doc.rangeAt(pos,pos+1), newText: ''}
 				label: {name: ' '}
 			})
 		elif trigger == '.' and tok.match('operator.access') and items.length
+			devlog 'adding completionForItem!!!',tok
 			add completionForItem({
 				filterText: ''
+				# insertText: ' '
+				commitCharacters: []
 				preselect: yes
 				sortText: "0000"
 				textEdit: {range: doc.rangeAt(pos,pos), newText: ''}
-				kind: CompletionItemKind.Text
+				kind: CompletionItemKind.Snippet
 				label: {name: ' '}
 			})
 		self
@@ -700,7 +704,7 @@ export class CompletionsContext < Component
 			$1.pascal? or Globals[$1.escapedName]
 		return items
 
-	def completionForItem item, opts
+	def completionForItem item, opts = {}
 		if item isa Completion
 			return item
 		

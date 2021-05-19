@@ -19,6 +19,7 @@ export class Component
 	def $cancel name
 		global.clearTimeout($timeouts[name])
 		delete $timeouts[name]
+		let item = global.window
 
 	def $call name,...params
 		$cancel(name)
@@ -55,7 +56,7 @@ export class Component
 		return
 
 	def devlog ...params
-		if $web$
+		if $web$ or config.get('debug')
 			console.log(...params)
 		return
 	

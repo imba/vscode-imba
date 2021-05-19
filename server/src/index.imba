@@ -1,12 +1,10 @@
 import {createConnection, TextDocuments, Location,TextDocumentSyncKind,InitializeResult} from 'vscode-languageserver'
 import {LanguageServer} from './LanguageServer'
 import {snippets} from './snippets'
-# import { TextDocument } from 'vscode-languageserver-textdocument'
 import { FullTextDocument } from './FullTextDocument'
 
 let connection = process.argv.length <= 2 ? createConnection(process.stdin, process.stdout) : createConnection()
 import np from 'path'
-connection.console.log(`Console test.`)
 
 const helperdir = np.resolve(__realname,'..','..','helpers')
 
@@ -18,8 +16,6 @@ let server\LanguageServer
 documents.onDidOpen do(event)
 	let doc = event.document
 	doc.connection = connection
-	# if doc.tokens
-	#	doc.tokens.connection = connection
 	server.onDidOpen(event) if server
 
 documents.onDidChangeContent do(change)
@@ -32,12 +28,12 @@ documents.onDidSave do(event)
 
 
 connection.onInitialize do(params)
-	console.log 'connection.onInitialize'
-	# Could this start a single instance for multiple workspaces?
-	# connection.console.log("[Server({process.pid}) {params.rootUri}] Started and initialize received")
+	# console.log 'connection.onInitialize'
 	server = new LanguageServer(connection,documents,params,{
 		rootFiles: [np.resolve(helperdir,'imba.d.ts')]
 	})
+	
+	global.ils = server
 
 	let res\InitializeResult = {
 		capabilities: {
@@ -52,10 +48,10 @@ connection.onInitialize do(params)
 			documentHighlightProvider: true,
 			documentSymbolProvider: true,
 			workspaceSymbolProvider: true,
-			documentOnTypeFormattingProvider: {
-				firstTriggerCharacter: '<'
-				moreTriggerCharacter: ['>']
-			}
+			# documentOnTypeFormattingProvider: {
+			# 	firstTriggerCharacter: '<'
+			# 	moreTriggerCharacter: ['>']
+			# }
 			renameProvider: true,
 			semanticTokensProvider: {
 				legend: {
@@ -133,8 +129,6 @@ connection.onDefinition do(event)
 		return res
 	catch e
 		console.log 'error',e
-	
-	
 
 connection.onReferences do(event)
 	let res = server.onReferences(event)
@@ -163,18 +157,15 @@ connection.onDocumentOnTypeFormatting do(event)
 	return null
 
 connection.onHover do(event)
-	# console.log "onhover",event
 	let res = server.getQuickInfoAtPosition(event.textDocument.uri,event.position)
-	# console.log res
 	return res
 
 
 connection.onCompletion do(event)
+	console.log "partial?!? {!!event.partialResultToken}"
 	let res\any = server.getCompletionsAtPosition(event.textDocument.uri,event.position,event.context)
 	if res isa Array
 		res = {isIncomplete: false, items: res}
-	# console.log res && res.items.slice(0,2)
-
 	return res
 
 connection.onCompletionResolve do(item)
@@ -185,6 +176,7 @@ connection.onCompletionResolve do(item)
 		return res
 	catch e
 		console.log 'onCompletionResolve error',e,item
+	return item
 
 connection.onDocumentHighlight do(event)
 	return []

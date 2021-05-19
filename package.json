@@ -34,6 +34,10 @@
 				"title": "Clear Imba problems in Project"
 			},
 			{
+				"command": "imba.debugService",
+				"title": "Log details from Imba tooling"
+			},
+			{
 				"command": "ximba.incrementByOne",
 				"title": "Increment by 1"
 			},
@@ -52,6 +56,10 @@
 			{
 				"command": "imba.toggleStyles",
 				"title": "Toggle Style Blocks folding"
+			},
+			{
+				"command": "imba.setDefaultSettings",
+				"title": "Update Workspace Settings for Imba"
 			}
 		],
 		"keybindings": [
@@ -85,6 +93,11 @@
 					"default": false,
 					"description": "Controls whether the language server should log out details"
 				},
+				"imba.debug": {
+					"type": "boolean",
+					"default": false,
+					"description": "Enable/disable debugging for the Imba Language Server"
+				},
 				"imba.checkImba": {
 					"type": "boolean",
 					"default": true,
@@ -104,13 +117,20 @@
 				}
 			}
 		},
+		"typescriptServerPluginzs": [
+			{
+				"name": "tsplugin-imba",
+				"enableForWorkspaceTypeScriptVersions": true,
+				"languages": ["tsimba"]
+			}
+		],
 		"configurationDefaults": {
 			"[imba]": {
 				"editor.insertSpaces": false,
 				"editor.tabSize": 4,
 				"editor.autoIndent": "advanced",
 				"editor.suggest.showWords": false,
-				"files.eol":"\n"
+				"files.eol": "\n"
 			}
 		},
 		"languages": [
@@ -175,6 +195,7 @@
 	"dependencies": {
 		"@types/typescript": "^2.0.0",
 		"imba": "^2.0.0-alpha.114",
+		"node-ipc": "^9.1.4",
 		"vscode-languageclient": "^6.1.1",
 		"vscode-languageserver": "^6.1.1"
 	},
