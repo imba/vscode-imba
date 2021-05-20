@@ -132,6 +132,8 @@ export class File < Component
 	def didSave
 		yes
 		
+	def pushSemanticTokens
+		self
 
 export class ImbaFile < File
 
@@ -156,6 +158,12 @@ export class ImbaFile < File
 	
 	get shouldEmitDiagnostics
 		fileName.indexOf('node_modules') == -1
+		
+	def pushSemanticTokens
+		let tokens = idoc.getEncodedSemanticTokens!
+		log("pushSemanticTokens {doc.version}")
+		ils.connection.sendNotification('pushSemanticTokens', uri: uri, tokens: tokens, version: doc.version)
+		self
 
 	get doc
 		$doc ||= FullTextDocument.create(uri,'imba',0,system.readFile(fileName))
@@ -184,6 +192,7 @@ export class ImbaFile < File
 		if doc.tokens
 			isLegacy = doc.tokens.isLegacy
 		times.opened = Date.now!
+		pushSemanticTokens!
 		emitFile(true)
 		log 'didOpen',uri,!!tls
 		emitDiagnostics! if tls
@@ -193,12 +202,10 @@ export class ImbaFile < File
 		$doc = doc
 		version = doc.version
 		cache.contexts = {}
-		
-		# diagnostics.sync!
-		# sendDiagnostics!
 		syncDiagnostics!
 		times.edited = Date.now!
 		console.log 'didChange',relName,"v{doc.version}"
+
 		# this should definitely only send the diagnostics
 		# that are currently part of the document?
 		# should definitely not trigger an update
@@ -236,16 +243,17 @@ export class ImbaFile < File
 
 	def emitFile refresh = yes
 		$cancel('emitFile')
-		
 		let emit = scheduleCompilation!
 		emit.compile!
+		log 'emit',relName
 		
 		if emit.js
 			# this may already be emitted bu the program?
 			if emit.#emitted =? yes
 				# shouldnt all files re-emit diagnostics?
 				#checker = null
-				log 'emit',relName
+				# util.sleep(1000) if times.opened
+				log 'emitted',relName
 				# program.$delay('emitChanges',100)
 				program.invalidate!
 				$indexWorkspaceSymbols!
@@ -342,7 +350,7 @@ export class ImbaFile < File
 		let item = #compilationMap[idoc.version] ||= new Compilation(self)
 		#compilations.unshift(item) unless #compilations.indexOf(item) >= 0
 		return item
-		
+
 	get currentCompilation
 		let curr = #compilations.find(do $1.js)
 		curr ||= scheduleCompilation!.compile!
@@ -846,15 +854,38 @@ export class ImbaFile < File
 				item.kind = util.convertSymbolKind(item.kind)
 
 		return outline.children
+		
+	def possiblyScheduleCompilation
+		# look at the last scheduled compilation
+		let prev = #compilations[0] or {iversion: 0}
+		let diff = idoc.editsSinceVersion(prev.iversion)
+		let significant = diff.some(do(item) (item[2] + item[3]).match(/[^\n\t\r]/) )
+		log "diff??",diff,significant
+		
+		if significant
+			let comp = scheduleCompilation!
+			log "schedule new compilation then",prev,comp
+
+		return significant
 
 	def onDidChangeTextEditorSelection event
 		const now = times.selection = Date.now!
+		const sel = event.selections[0] or {}
+		let line = try sel.active.line
+		console.log 'didChangeSeletion',sel,line,(now - times.edited),isTyping
+		let changedLine = cache.lastLine =? line
+		
+		# see if there are any non
+		
 		# console.log 'file selection change',now - times.edited
 		# should only happen if this clearly happens much later than the last change
-		if isTyping and (now - times.edited) > 3
-			console.log 'flushing emitFile',now - times.edited
+		if isTyping and ((now - times.edited) > 3 or changedLine)
 			isTyping = no
-			setTimeout(&,1) do $flush('emitFile')
+			if possiblyScheduleCompilation!
+				console.log 'flushing emitFile',now - times.edited
+				setTimeout(&,1) do
+					pushSemanticTokens!
+					$flush('emitFile')
 		return
 
 export class Imba1File < ImbaFile

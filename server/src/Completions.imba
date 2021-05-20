@@ -5,6 +5,7 @@ export {ProgramSnapshot}
 import {CompletionItemKind,DiagnosticSeverity,SymbolKind,Location,LocationLink} from 'vscode-languageserver-types'
 
 import type {Program,TypeChecker} from 'typescript'
+import type {File} from './File'
 import * as ts from 'typescript'
 import {Sym,CompletionTypes} from 'imba/program'
 import * as util from './utils'
@@ -453,7 +454,7 @@ export class CompletionsContext < Component
 			res = res.items[itemid]
 		return res
 	
-	constructor file, pos, options = {}
+	constructor file\File, pos, options = {}
 		super
 		file = file
 		pos = pos
@@ -521,7 +522,7 @@ export class CompletionsContext < Component
 			
 		if flags & T.StyleValue
 			let items = ils.entities.getCSSValueCompletions(ctx,ctx.suggest)
-			add(items)
+			add(items, triggers: ' ')
 
 		if flags & T.StyleProp
 			add Object.values(cssProperties).map do new StylePropCompletion($1,self, triggers: ' @:.')

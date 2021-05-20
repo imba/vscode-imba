@@ -139,6 +139,12 @@ export def displayPartsToMarkup parts
 		return item
 	return displayPartsToString(parts)
 
+export def sleep duration = 1000
+	let waitTill = Date.now! + duration
+	while waitTill > Date.now!
+		yes
+	return yes
+	
 export def detailsToMarkdown details
 	let sign = displayPartsToString(details.displayParts)
 	let doc = tsDisplayPartsToString(details.documentation)

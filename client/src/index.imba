@@ -14,6 +14,11 @@ def log msg,...rest
 		if rest.length
 			debugChannel.appendLine(JSON.stringify(rest))
 
+let initialStamp = Date.now!
+	
+def stamp
+	(Date.now! - initialStamp) + 'ms'
+
 # TODO(scanf): handle workspace folder and multiple client connections
 const HAS_TSPLUGIN = no
 
@@ -39,18 +44,33 @@ languages.setLanguageConfiguration('imba',{
 
 
 const foldingToggles = {}
+const receivedSemanticTokens = {}
+
 
 
 class SemanticTokensProvider
 	def provideDocumentSemanticTokens(doc, token)
 		# await true
 		let uri = doc.uri.toString!
-		unless isReady
-			await client.onReady!
+		
 		
 		let t = Date.now!
-		let response = await client.sendRequest('semanticTokens',{uri: uri})
-		log("semanticTokens {uri} request? {response.length} - {Date.now! - t}ms")
+		let last = receivedSemanticTokens[uri]
+		let response = null
+		
+		log("provideDocumentSemanticTokens {uri} {doc.version} {stamp!}")
+		if last
+			log("found existing tokens {last.version} {doc.version} {stamp!}")
+		
+		
+
+		if last and last.version == doc.version			
+			response = last.tokens
+		else
+			unless isReady
+				await client.onReady!
+			response = await client.sendRequest('semanticTokens',{uri: uri})
+		log("semanticTokens {uri} {doc.version} request? {response.length} - {Date.now! - t}ms {stamp!}")
 
 		if response
 			let out = new SemanticTokens(response)
@@ -148,6 +168,10 @@ export def activate context
 		debug: {module: serverModule, transport: TransportKind.ipc, options: debugOptions }
 	}
 	
+	
+
+	workspace.getConfiguration(undefined,null)
+	
 	let clientOptions = {
 		documentSelector: [
 			{scheme: 'file', language: 'imba'},
@@ -224,15 +248,28 @@ export def activate context
 		let cmd = bool ? 'unfold' : 'fold'
 		log 'toggle folding',cmd,lines,bool
 		await commands.executeCommand("editor.{cmd}", {selectionLines: lines, direction: 'up'})
-
+	
+	
 	# let disposable = client.start()
 	# context.subscriptions.push(client.start!)
+	
+	
+	
 	client.start!
-	log("client.start!")
-	await client.onReady!
-	isReady = yes
+	log("client.start! {stamp!}")
 
-	log("client is ready")
+	await client.onReady!
+
+	isReady = yes
+	
+	client.onNotification('pushSemanticTokens') do(params)
+		log("got semantic tokens {params.uri} {params.version} {stamp!}")
+		params.now = Date.now!
+		receivedSemanticTokens[params.uri] = params
+		
+	log("client ready! {stamp!}")
+	
+	
 
 	window.onDidChangeTextEditorSelection do(e)
 		const doc = e.textEditor.document
@@ -244,7 +281,6 @@ export def activate context
 			uri: uri.toString!
 		}
 		client.sendNotification('onDidChangeTextEditorSelection',params)
-
 
 	workspace.onDidRenameFiles do(ev)
 		client.sendNotification('onDidRenameFiles',ev)

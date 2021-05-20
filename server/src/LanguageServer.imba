@@ -328,6 +328,7 @@ export class LanguageServer < Component
 	def onDidChangeContent event
 		# @log "server.onDidChangeContent"
 		let doc = event.document
+		
 		if let file = self.getImbaFile(doc.uri)
 			util.time(&,'change') do file.didChange(doc,event)
 

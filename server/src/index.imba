@@ -71,6 +71,7 @@ connection.onInitialized do(params)
 	# console.log 'on initialized',params
 	let conf = await connection.workspace.getConfiguration() # ('imba')
 	# console.log 'config',conf
+	console.log 'onInitialized'
 
 	server.start(conf.imba)
 
