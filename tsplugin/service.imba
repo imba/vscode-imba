@@ -9,7 +9,7 @@ global.libDir = libDir
 	
 
 export default class Service
-
+	setups = []
 	get ts
 		global.ts
 	
@@ -24,6 +24,7 @@ export default class Service
 	
 	def create info
 		util.log('create',info)
+		setups.push(info)
 
 		self.info = info
 		self.project = info.project
@@ -57,6 +58,8 @@ export default class Service
 			util.log('compilerOptions',proj,opts)
 			
 		setup! if ps.#patched =? yes
+			
+		info.ls = info.languageService
 
 		return decorate(info.languageService)
 		
@@ -111,10 +114,12 @@ export default class Service
 		
 		
 	def decorate ls
+		if ls.#proxied
+			return ls
+
 		let intercept = Object.create(null)
-		
+		ls.#proxied = yes
 		# no need to recreate this for every new languageservice?!
-		
 		
 		intercept.getEncodedSemanticClassifications = do(filename,span,format)
 			if util.isImba(filename)
