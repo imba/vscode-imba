@@ -127,22 +127,6 @@ export class Compilation
 			return matches[0][0]
 
 		return null
-
-		let spans = locs.spans.filter do(pair)
-			i >= pair[2] and pair[3] >= i
-
-		if let span = spans[0]
-			let into = (i - span[2]) / (span[3] - span[2])
-			let offset = Math.floor(into * (span[1] - span[0]))
-			# console.log 'found generatedLocFor',loc,spans
-			if i == span[2]
-				return span[0]
-			elif i == span[3]
-				return span[1]
-			else
-				return span[0] + offset
-
-		return null
 		
 	get diagnostics
 		return [] unless result..diagnostics
@@ -169,15 +153,11 @@ export class Compilation
 		#result = res
 		done = yes
 		if res.js
-			obody = res.js.replace(/\$CARET\$/g,'valueOf')
+			self.js = res.js.replace(/\$CARET\$/g,'valueOf')
 			self.locs = res.locs
 		
 		let errors = res.errors or []
-		
-		if errors.length
-			yes
-		elif res.js
-			self.js = res.js
+		yes
 	
 	get result
 		#result

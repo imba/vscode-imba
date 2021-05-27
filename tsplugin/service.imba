@@ -6,6 +6,9 @@ const compilerOptions = {
 	checkJs: true # only check the imba js?!
 }
 
+class LanguageServiceProxy
+	
+
 export default class Service
 
 	get ts
@@ -43,12 +46,17 @@ export default class Service
 			return res
 
 		if util.isImba(filename)
-			if res.textSpan
-				convertSpan(res.textSpan,ls,filename,'text')
-			if res.contextSpan
-				convertSpan(res.contextSpan,ls,filename,'context')
-			if res.triggerSpan
-				convertSpan(res.triggerSpan,ls,filename,'trigger')
+			for key in ['text','context','trigger','applicable']
+				if let span = res[key + 'Span']
+					convertSpan(span,ls,filename,key)
+			# if res.textSpan
+			# 	convertSpan(res.textSpan,ls,filename,'text')
+			# if res.contextSpan
+			# 	convertSpan(res.contextSpan,ls,filename,'context')
+			# if res.triggerSpan
+			# 	convertSpan(res.triggerSpan,ls,filename,'trigger')
+			# if res.applicableSpan
+			# 	convertSpan(res.applicableSpan,ls,filename,'trigger')
 			if res.textChanges
 				for item in res.textChanges
 					convertSpan(item.span,ls,filename,'edit')
@@ -121,6 +129,34 @@ export default class Service
 		intercept.getEditsForFileRename = do(oldPath, newPath, fmt, prefs)
 			let res = ls.getEditsForFileRename(oldPath, newPath, fmt, prefs)
 			res = convertLocationsToImba(res,ls)
+			return res
+		
+		intercept.getSignatureHelpItems = do(file, pos, args)
+			let {script,dpos,opos} = getFileContext(file,pos,ls)
+			let res = ls.getSignatureHelpItems(file,opos,args)
+			res = convertLocationsToImba(res,ls,file)
+			return res
+		
+		intercept.getCompletionsAtPosition = do(file,pos,prefs)
+			let {script,dpos,opos} = getFileContext(file,pos,ls)
+			let res = ls.getCompletionsAtPosition(file,opos,prefs)
+			return res
+		
+		
+		
+		# (
+		#     fileName: string,
+		#     position: number,
+		#     entryName: string,
+		#     formatOptions: FormatCodeOptions | FormatCodeSettings | undefined,
+		#     source: string | undefined,
+		#     preferences: UserPreferences | undefined,
+		#     data: CompletionEntryData | undefined,
+		# )
+		
+		intercept.getCompletionEntryDetails = do(file,pos,name,fmt,source,prefs,data)
+			let {script,dpos,opos} = getFileContext(file,pos,ls)
+			let res = ls.getCompletionEntryDetails(file,opos,name,fmt,source,prefs,data)
 			return res
 
 		if true
