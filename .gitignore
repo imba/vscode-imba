@@ -6,5 +6,7 @@ server/test.js
 server/dist
 client/index.js
 client/dist
+tsplugin/dist
+document/dist
 tmp/
 *.vsix

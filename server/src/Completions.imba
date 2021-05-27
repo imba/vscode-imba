@@ -86,6 +86,24 @@ export class Completion
 	get #type
 		#symbol.type or #symbol.#type
 		
+	get importInfo
+		null
+		
+	def resolveImportInfo
+		let info = importInfo
+		return unless info
+		let alias = info.importName or info.name
+		let name = info.importKind == 1 ? 'default' : alias
+		let edits = doc.createImportEdit(info.source,name,alias)
+		
+		if edits.alias
+			item.insertText = edits.alias
+			ns = edits.alias
+
+		elif edits.changes.length
+			item.additionalTextEdits = edits.changes
+		self
+		
 	get doc
 		#context.doc
 		
@@ -110,6 +128,9 @@ export class Completion
 
 	get completion
 		self
+		
+	get source
+		null
 
 	set kind kind
 		item.kind = util.convertCompletionKind(kind)
@@ -320,6 +341,7 @@ export class SymbolObjectCompletion < Completion
 			triggers '> .[#'
 			kind = 'value'
 			label.type = null
+
 		elif cat == 'tag'
 			triggers ' '
 			kind = 'value'
@@ -361,6 +383,40 @@ export class SymbolObjectCompletion < Completion
 		return null if #symbol.internal? or name == 'globalThis'
 		super
 
+export class WorkspaceSymbolCompletion < Completion
+	
+	get importInfo
+		{
+			source: #symbol.#symbolFile.fileName
+			importKind: 0
+			importName: #symbol.name
+			exportName: #symbol.name
+		}
+		
+	def setup
+		let cat = #options.kind
+
+		name = #symbol.name
+		
+		if cat == 'tagname'
+			triggers '> .[#'
+			kind = 'value'
+			label.type = null
+
+		elif cat == 'tag'
+			triggers ' '
+			kind = 'value'
+			label.type = null
+			item.filterText = name
+			item.insertText = "<{name}>"
+			name = item.insertText
+			
+	def resolve
+		resolveImportInfo!
+		self
+		
+	
+
 export class ImportCompletion < SymbolObjectCompletion
 	def load info, context, options = {}
 		#info = info
@@ -396,6 +452,31 @@ export class ImportCompletion < SymbolObjectCompletion
 			item.additionalTextEdits = edits.changes
 			ns = "from '{path}'"
 		self
+		
+export class AutoImportCompletion < Completion
+	def setup
+		name = #symbol.name
+		ns = "from '{#symbol.source}'"
+		self
+		
+	get importInfo
+		#symbol
+		
+	def resolve
+		resolveImportInfo!
+		# let info = importInfo
+		# let alias = info.importName or info.name
+		# let name = info.importKind == 1 ? 'default' : alias
+		# let edits = doc.createImportEdit(info.source,name,alias)
+		# 
+		# if edits.alias
+		# 	item.insertText = edits.alias
+		# 	ns = edits.alias
+		# 
+		# elif edits.changes.length
+		# 	item.additionalTextEdits = edits.changes
+		self
+	
 
 export class StyleCompletion < Completion
 	
@@ -616,6 +697,19 @@ export class CompletionsContext < Component
 		self
 		
 	def autoimports
+		let items = []
+		let tree = ils.tsscache.autoImports
+		
+		if tree
+			for own pkg,data of tree
+				for own name,info of data.exports
+					if util.isPascal(name)
+						info.source = pkg
+						items.push(info)
+			
+			console.log "found imports",items
+
+		return items
 		
 		checker.findExportSymbols do(v,l)
 			return no unless util.isPascal(v.importName)
@@ -643,11 +737,13 @@ export class CompletionsContext < Component
 		let localTags = checker.getLocalTagsInScope()
 		let importTags = checker.getExportedComponents!
 		
+		let tagsToImport = ils.getWorkspaceSymbols({type: 'tag'}).filter do $1.modifiers.indexOf('export') >= 0
+
 		# check the local items
 		add(html,o)
 		add(localTags,o)
 		add(custom,o)
-		add(importTags,o)
+		add(tagsToImport,o)
 	
 		
 	def tagattrs o = {}
@@ -717,10 +813,12 @@ export class CompletionsContext < Component
 
 		if item isa SymbolObject
 			entry = new SymbolObjectCompletion(item,self,opts)
+		elif item.#symbolFile
+			entry = new WorkspaceSymbolCompletion(item,self,opts)
 		elif item isa Sym
 			entry = new SymCompletion(item,self,opts)
 		elif item.hasOwnProperty('exportKind')
-			entry = new ImportCompletion(item,self,opts)
+			entry = new AutoImportCompletion(item,self,opts)
 
 		elif item.label
 			entry = new ManualCompletion(item,self,opts)

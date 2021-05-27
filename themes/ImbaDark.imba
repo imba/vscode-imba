@@ -311,6 +311,8 @@ export let semanticColors = {
 	# "function.root": {"foreground": colors.pascal}
 	"variable.local": {"foreground": "#e8e6cb"}
 	"variable.global": {"foreground": '#e9e19b'}
+	"variable.defaultLibrary": {"foreground": colors.root_}
+	"namespace": {"foreground": colors.import_} # just for imba(!)
 	# "variable.declaration": {"fontStyle": "bold","foreground": "#00ff00"}
 }
 

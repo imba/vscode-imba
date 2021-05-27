@@ -294,6 +294,17 @@ export class ProgramSnapshot < Component
 		catch e
 			yes
 			# console.log 'parseType error',e,ast
+			
+	def collectLocalExports
+		let exports = {}
+		let files = program.getSourceFiles!
+		for file in files
+			continue if file.path.indexOf('node_modules') >= 0
+			let sym = file.symbol
+			exports[file.path] = {}
+		console.log 'exports!',exports
+		return exports
+			
 	
 	def resolveTypeExpression expr, source, ctx
 		let val = expr.getText(source)

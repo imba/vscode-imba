@@ -1,5 +1,8 @@
 import { Component } from './Component'
 import { snippets } from './snippets'
+# import { Bridge } from './tsbridge'
+
+
 import type {TextDocuments,IConnection,InitializeParams,ReferenceParams,CompletionItem, RenameRequest} from 'vscode-languageserver'
 import type { WorkspaceEdit } from 'vscode-languageserver-types'
 import type {CompilerOptions,LanguageService,LanguageServiceHost,UserPreferences,Program} from 'typescript'
@@ -95,6 +98,8 @@ export class LanguageServer < Component
 		self.version = 0
 		self.debug = !!o.debug
 		self.cache = {}
+		self.tsscache = {}
+
 		self.settings = {}
 		self.counters = {diagnostics: 1}
 		self.sys = ts.sys || system
@@ -130,10 +135,20 @@ export class LanguageServer < Component
 	def start settings = {}
 		self.settings = settings
 		# console.log 'initialized!',settings
-				
+
 		tslOptions = Object.assign({},tsServiceOptions,settings.ts or {})
 		if settings.checkImba !== undefined
 			tslOptions.checkJs = settings.checkImba
+		
+		if false
+			tss = new Bridge(cwd: rootPath)
+			
+			tss.on('projectsUpdatedInBackground') do(data)
+				console.log "projectsUpdatedInBackground!!!",data
+				tsscache = {}
+				let autoImports = await tss.rpc('getAutoImportTree')
+				console.log "found autoImports",JSON.stringify(autoImports).length
+				tsscache.autoImports = autoImports
 
 		createTypeScriptService tslOptions
 		setTimeout(&,0) do indexFiles!

@@ -2,6 +2,7 @@ import {createConnection, TextDocuments, Location,TextDocumentSyncKind,Initializ
 import {LanguageServer} from './LanguageServer'
 import {snippets} from './snippets'
 import { FullTextDocument } from './FullTextDocument'
+# import {Bridge} from './tsbridge'
 
 let connection = process.argv.length <= 2 ? createConnection(process.stdin, process.stdout) : createConnection()
 import np from 'path'
@@ -32,7 +33,7 @@ connection.onInitialize do(params)
 	server = new LanguageServer(connection,documents,params,{
 		rootFiles: [np.resolve(helperdir,'imba.d.ts')]
 	})
-	
+
 	global.ils = server
 
 	let res\InitializeResult = {

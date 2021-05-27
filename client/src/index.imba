@@ -127,16 +127,32 @@ def configure items = {}
 		cfg.update(k,v)
 
 let ipcserver = null
-
+let tlsapi = null
 		
 export def activate context
 	let serverModule = context.asAbsolutePath(path.join('server','dist','src','index.loader.js'))
 	let debugOptions = { execArgv: ['--nolazy', '--inspect=6005'] }
 	let conf = workspace.getConfiguration('imba')
 	
-	log("activating!")
-	
-	if HAS_TSPLUGIN
+	log("activating! {process.env.TSS_DEBUG}")
+
+	try
+		const tls = extensions.getExtension('vscode.typescript-language-features')
+		log("gettingtls extension")
+		await tls.activate(context)
+		log("activated tls")
+		const tlsapi = try tls.exports.getAPI(0)
+		
+		if conf.get('debugPort')
+			unless process.env.TSS_DEBUG
+				process.env['TSS_DEBUG'] = String(conf.get('debugPort'))
+				try await commands.executeCommand("typescript.restartTsServer")
+			# else
+			#	await tlf.activate(context)
+		
+		
+		
+	if conf.get('tsplugin') and false
 		let id = String(Math.random!)
 		const tsExtension = extensions.getExtension('vscode.typescript-language-features')
 		try
@@ -150,7 +166,9 @@ export def activate context
 			const tsapi2 = await tsExtension.activate(context)
 			context.subscriptions = subs
 			
-			ipc.config.id = process.env['IMBA_VSCODE_CLIENT'] = id
+			# ipc.config.id = process.env['IMBA_VSCODE_CLIENT'] = id
+			# process.env['TSS_DEBUG'] = '9561'
+
 			ipc.serve do(e)
 				log('serving!!')
 				ipc.server.on('message') do(e)
@@ -160,6 +178,8 @@ export def activate context
 		
 		try
 			await commands.executeCommand("typescript.restartTsServer")
+		catch e
+			log('failed to restart ts?!')
 
 		const tsapi = try tsExtension.exports.getAPI(0)
 	

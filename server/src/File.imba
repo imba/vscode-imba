@@ -202,6 +202,7 @@ export class ImbaFile < File
 		$doc = doc
 		version = doc.version
 		cache.contexts = {}
+		
 		syncDiagnostics!
 		times.edited = Date.now!
 		console.log 'didChange',relName,"v{doc.version}"
@@ -256,6 +257,7 @@ export class ImbaFile < File
 				log 'emitted',relName
 				# program.$delay('emitChanges',100)
 				program.invalidate!
+				cache.symbols = cache.workspaceSymbols = null
 				$indexWorkspaceSymbols!
 				$delay('emitDiagnostics',20)
 		else
@@ -375,7 +377,7 @@ export class ImbaFile < File
 		cache.symbols ||= util.fastExtractSymbols(doc.getText!,fileName)
 		cache.workspaceSymbols ||= cache.symbols.map do(sym)
 			sym.location = Location.create(uri,sym.span)
-			sym.#file = self
+			sym.#symbolFile = self
 			sym
 
 		return self

@@ -122,6 +122,7 @@ export default class Host < Component
 
 		# let cached = #cache[containingFile]
 		let dir = np.dirname(containingFile)
+		let imports = #ils.tsscache.autoImports or {}
 
 		# if cached
 		# 	return cached
@@ -131,6 +132,9 @@ export default class Host < Component
 
 			if name == 'imba/index' and $web$
 				continue undefined
+				
+			if imports[name] and imports[name].resolved
+				continue {resolvedFileName: imports[name].resolved}
 			
 			if name.indexOf('data:text/asset') == 0
 				continue undefined

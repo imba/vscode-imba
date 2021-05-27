@@ -21,6 +21,7 @@
 	"activationEvents": [
 		"onLanguage:imba",
 		"onLanguage:imba1",
+		"workspaceContains:**/*.imba",
 		"workspaceContains:**/imbaconfig.json"
 	],
 	"contributes": {
@@ -93,6 +94,11 @@
 					"default": false,
 					"description": "Controls whether the language server should log out details"
 				},
+				"imba.tsplugin": {
+					"type": "boolean",
+					"default": false,
+					"description": "Enable/disable experimental typescript-language-features plugin"
+				},
 				"imba.debug": {
 					"type": "boolean",
 					"default": false,
@@ -102,6 +108,11 @@
 					"type": "boolean",
 					"default": true,
 					"description": "Enable/disable semantic checking of Imba files. Existing imbaconfig.json overrides this setting."
+				},
+				"imba.debugPort": {
+					"type": "number",
+					"default": 0,
+					"description": "Port for debugging"
 				},
 				"imba.suggest.shorthandStyleProperties": {
 					"type": "boolean",
@@ -117,11 +128,13 @@
 				}
 			}
 		},
-		"typescriptServerPluginzs": [
+		"typescriptServerPlugins": [
 			{
 				"name": "tsplugin-imba",
 				"enableForWorkspaceTypeScriptVersions": true,
-				"languages": ["tsimba"]
+				"languages": [
+					"tsimba"
+				]
 			}
 		],
 		"configurationDefaults": {
@@ -157,11 +170,27 @@
 				],
 				"configuration": "./language-configuration.json",
 				"firstLine": "^#!/.*\\bimba[2-9.-]*\\b"
+			},
+			{
+				"id": "tsimba",
+				"aliases": [
+					"tsimba"
+				],
+				"extensions": [
+					".tsimba"
+				],
+				"configuration": "./language-configuration.json",
+				"firstLine": "^#!/.*\\bimba[2-9.-]*\\b"
 			}
 		],
 		"grammars": [
 			{
 				"language": "imba",
+				"scopeName": "source.imba",
+				"path": "./syntaxes/imba.tmLanguage"
+			},
+			{
+				"language": "tsimba",
 				"scopeName": "source.imba",
 				"path": "./syntaxes/imba.tmLanguage"
 			},
@@ -196,6 +225,8 @@
 		"@types/typescript": "^2.0.0",
 		"imba": "^2.0.0-alpha.114",
 		"node-ipc": "^9.1.4",
+		"tsplugin-imba": "file:tsplugin",
+		"typescript": "^4.2.4",
 		"vscode-languageclient": "^6.1.1",
 		"vscode-languageserver": "^6.1.1"
 	},
