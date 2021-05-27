@@ -49,6 +49,9 @@ export default class Service
 				convertSpan(res.contextSpan,ls,filename,'context')
 			if res.triggerSpan
 				convertSpan(res.triggerSpan,ls,filename,'trigger')
+			if res.textChanges
+				for item in res.textChanges
+					convertSpan(item.span,ls,filename,'edit')
 
 		if res.definitions
 			for item in res.definitions
@@ -64,6 +67,9 @@ export default class Service
 		
 	def decorate ls
 		let intercept = Object.create(null)
+		
+		# no need to recreate this for every new languageservice?!
+		
 		
 		intercept.getEncodedSemanticClassifications = do(filename,span,format)
 			if util.isImba(filename)
@@ -112,6 +118,11 @@ export default class Service
 			return res
 			# (location.fileName, location.pos, findInStrings, findInComments, hostPreferences.providePrefixAndSuffixTextForRename)
 		
+		intercept.getEditsForFileRename = do(oldPath, newPath, fmt, prefs)
+			let res = ls.getEditsForFileRename(oldPath, newPath, fmt, prefs)
+			res = convertLocationsToImba(res,ls)
+			return res
+
 		if true
 			for own k,v of intercept
 				let orig = v
