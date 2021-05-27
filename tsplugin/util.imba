@@ -52,6 +52,7 @@ export def log ...params
 	global.logger.log(...params)
 	
 export def isImba src
+	return false unless src
 	src.substr(src.lastIndexOf(".")) == '.tsimba'
 
 export def delay target, name, timeout = 500, params = []

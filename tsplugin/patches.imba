@@ -47,6 +47,30 @@ export class Session
 		util.log('receive',res)
 		return res
 		
+	def toFileSpan file, span, project
+		
+		let res = null
+		if util.isImba(file)
+			let script = project.getScriptInfo(file)
+			let start = script.positionToLineOffset(span.start)
+			let end =  script.positionToLineOffset(span.start + span.length)
+			res = {
+				file: file
+				start: start
+				end: end
+			}
+		else
+			res = #toFileSpan(file,span,project)
+			
+		util.log('toFileSpan',file,span,res)
+		
+		# return {
+		#         file: fileName,
+		#         start: { line: start.line + 1, offset: start.character + 1 },
+		#         end: { line: end.line + 1, offset: end.character + 1 }
+		#     };
+		return res
+		
 	def executeCommand request
 		let res = stack(request) do #executeCommand(request)
 		return res

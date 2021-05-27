@@ -23,12 +23,32 @@ export default class Service
 
 		return decorate(info.languageService)
 		
-	def convertLocationsToImba res, ls, script
+	def convertSpan span, ls, filename, kind = null
+		if util.isImba(filename) and span.#ostart == undefined
+			span.#ostart = span.start
+			span.#olength = span.length
+			let mapper = ls.getProgram!.getSourceFile(filename)
+			let [start,end] = mapper.o2d(span)
+			span.start = start
+			span.length = end - start
+		return span
+		
+		
+	def convertLocationsToImba res, ls, filename
 		if res isa Array
 			for item in res
-				convertLocationsToImba(item,ls,script)
-		elif res and script
+				convertLocationsToImba(item,ls,filename)
+		
+		if !res
+			return res
+
+		if util.isImba(filename)
 			if res.textSpan
+				convertSpan(res.textSpan,ls,filename,'text')
+			if res.contextSpan
+				convertSpan(res.contextSpan,ls,filename,'context')
+
+			if false
 				try
 					if res.textSpan.#ostart == undefined
 						res.textSpan.#ostart = res.textSpan.start
@@ -39,7 +59,12 @@ export default class Service
 						util.log('converted',res.textSpan,start,end)
 				catch e
 					util.log('error',e,res,res.textSpan,script)
-					
+						
+						
+			
+		if res.definitions
+			for item in res.definitions
+				convertLocationsToImba(item,ls,item.fileName or item.file)
 
 		return res
 		
@@ -71,19 +96,28 @@ export default class Service
 				pos = convpos
 
 			let res = ls.getQuickInfoAtPosition(filename,pos)
-			return convertLocationsToImba(res,ls,script)
+			return convertLocationsToImba(res,ls,filename)
 			
 		intercept.getDefinitionAndBoundSpan = do(filename,pos)
 			let {script,dpos,opos} = getFileContext(ls,filename,pos)
 			let res = ls.getDefinitionAndBoundSpan(filename,opos)
-			res = convertLocationsToImba(res,ls,script)
+			res = convertLocationsToImba(res,ls,filename)
 			util.log('getDefinitionAndBoundSpan',script,dpos,opos,filename,res)
 			return res
 			
 		intercept.getDocumentHighlights = do(filename,pos,filesToSearch)
 			return if util.isImba(filename)
 			return ls.getDocumentHighlights(filename,pos,filesToSearch)
+		
+		for own k,v of intercept
+			let orig = v
+			intercept[k] = do
+				try
+					v.apply(intercept,arguments)
+				catch e
+					util.log('error',k,e)
 
+		
 		return new Proxy(ls, {get: do(target,key) return intercept[key] || target[key]})
 	
 	def rewriteInboundMessage msg
