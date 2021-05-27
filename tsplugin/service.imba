@@ -37,7 +37,7 @@ export default class Service
 	def convertLocationsToImba res, ls, filename
 		if res isa Array
 			for item in res
-				convertLocationsToImba(item,ls,filename)
+				convertLocationsToImba(item,ls,item.fileName)
 		
 		if !res
 			return res
@@ -47,28 +47,16 @@ export default class Service
 				convertSpan(res.textSpan,ls,filename,'text')
 			if res.contextSpan
 				convertSpan(res.contextSpan,ls,filename,'context')
+			if res.triggerSpan
+				convertSpan(res.triggerSpan,ls,filename,'trigger')
 
-			if false
-				try
-					if res.textSpan.#ostart == undefined
-						res.textSpan.#ostart = res.textSpan.start
-						res.textSpan.#olength = res.textSpan.length
-						let [start,end] = script.o2d(res.textSpan,ls.getProgram!)
-						res.textSpan.start = start
-						res.textSpan.length = end - start
-						util.log('converted',res.textSpan,start,end)
-				catch e
-					util.log('error',e,res,res.textSpan,script)
-						
-						
-			
 		if res.definitions
 			for item in res.definitions
 				convertLocationsToImba(item,ls,item.fileName or item.file)
 
 		return res
 		
-	def getFileContext ls, filename, pos
+	def getFileContext filename, pos, ls
 		let script = getImbaScript(filename)
 		let opos = script ? script.d2o(pos,ls.getProgram!) : pos
 		return {script: script, filename: filename, dpos: pos, opos: opos}
@@ -99,7 +87,7 @@ export default class Service
 			return convertLocationsToImba(res,ls,filename)
 			
 		intercept.getDefinitionAndBoundSpan = do(filename,pos)
-			let {script,dpos,opos} = getFileContext(ls,filename,pos)
+			let {script,dpos,opos} = getFileContext(filename,pos,ls)
 			let res = ls.getDefinitionAndBoundSpan(filename,opos)
 			res = convertLocationsToImba(res,ls,filename)
 			util.log('getDefinitionAndBoundSpan',script,dpos,opos,filename,res)
@@ -108,14 +96,32 @@ export default class Service
 		intercept.getDocumentHighlights = do(filename,pos,filesToSearch)
 			return if util.isImba(filename)
 			return ls.getDocumentHighlights(filename,pos,filesToSearch)
+			
+			
+		intercept.getRenameInfo = do(file, pos, o = {})
+			# { allowRenameOfImportPath: this.getPreferences(file).allowRenameOfImportPath }
+			let {script,dpos,opos} = getFileContext(file,pos,ls)
+			let res = convertLocationsToImba(ls.getRenameInfo(file,opos,o),ls,file)
+			
+			return res
+			
+		intercept.findRenameLocations = do(file,pos,findInStrings,findInComments,prefs)
+			let {script,dpos,opos} = getFileContext(file,pos,ls)
+			let res = ls.findRenameLocations(file,opos,findInStrings,findInComments,prefs)
+			res = convertLocationsToImba(res,ls)
+			return res
+			# (location.fileName, location.pos, findInStrings, findInComments, hostPreferences.providePrefixAndSuffixTextForRename)
 		
-		for own k,v of intercept
-			let orig = v
-			intercept[k] = do
-				try
-					v.apply(intercept,arguments)
-				catch e
-					util.log('error',k,e)
+		if true
+			for own k,v of intercept
+				let orig = v
+				intercept[k] = do
+					try
+						let res = v.apply(intercept,arguments)
+						util.log(k,arguments,res)
+						return res
+					catch e
+						util.log('error',k,e)
 
 		
 		return new Proxy(ls, {get: do(target,key) return intercept[key] || target[key]})

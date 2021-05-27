@@ -63,12 +63,6 @@ export class Session
 			res = #toFileSpan(file,span,project)
 			
 		util.log('toFileSpan',file,span,res)
-		
-		# return {
-		#         file: fileName,
-		#         start: { line: start.line + 1, offset: start.character + 1 },
-		#         end: { line: end.line + 1, offset: end.character + 1 }
-		#     };
 		return res
 		
 	def executeCommand request
