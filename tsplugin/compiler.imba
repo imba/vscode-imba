@@ -92,8 +92,10 @@ export class Compilation
 		
 	def i2d i
 		return null if i == null
-		if i and typeof i[0] == 'number'
+		if typeof i[0] == 'number'
 			return [i2d(i[0]),i2d(i[1])]
+		elif i isa Array
+			return []
 
 		input.cache.forwardOffset(i,input.version)
 

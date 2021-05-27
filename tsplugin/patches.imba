@@ -84,14 +84,21 @@ export class Session
 					let mapper = item.file..scriptSnapshot..mapper
 					item.#opos = [item.start,item.start + item.length]
 					item.#mapper = [item.file,mapper]
-					let start = mapper.o2d(item.start)
-					let end = mapper.o2d(item.start + item.length)
-					item.start = start
-					item.length = end - start
+					let range = mapper.o2dRange(item.start,item.start + item.length,no)
+					# let start = mapper.o2d(item.start)
+					# let end = mapper.o2d(item.start + item.length)
+					if range.length
+						item.start = range[0] or 0
+						item.length = range[1] - range[0]
+					else
+						# hide the diagnostic if it doesnt map perfectly
+						item.start = item.length = 0
+						item.#suppress = yes
+				
 			catch e
 				util.log('error',e)
 
-		return diagnostics
+		return diagnostics.filter do !$1.#suppress
 			
 	def sendDiagnosticsEvent(file, project, diags, kind)
 		diags = filterDiagnostics(file,project,diags,kind)
@@ -209,6 +216,13 @@ export class System
 
 		return body
 		
+export class Project
+	def setCompilerOptions value
+		let res = #setCompilerOptions(value)
+		util.log('setCompilerOptions',this,value)
+		return
+
+		
 export class ProjectService
 	def getOrCreateOpenScriptInfo(fileName, fileContent, scriptKind, hasMixedContent, projectRootPath)
 		let origFileContent = fileContent
@@ -321,6 +335,7 @@ export default def patcher ts
 	util.extend(ts.server.TextStorage.prototype,TextStorage)
 	util.extend(ts.server.ScriptVersionCache.prototype,ScriptVersionCache)
 	util.extend(ts.server.ProjectService.prototype,ProjectService)
+	util.extend(ts.server.Project.prototype,Project)
 	util.extend(ts.sys,System)
 	util.extend(ts,TS)
 	

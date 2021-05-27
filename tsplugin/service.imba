@@ -2,11 +2,10 @@ import np from 'path'
 import Compiler from './compiler'
 import * as util from './util'
 
-const compilerOptions = {
-	checkJs: true # only check the imba js?!
-}
+let libDir = np.resolve(__realname,'..','..','..','lib')
 
-class LanguageServiceProxy
+global.dirPaths = [__dirname,__filename,__realname]
+global.libDir = libDir
 	
 
 export default class Service
@@ -14,14 +13,49 @@ export default class Service
 	get ts
 		global.ts
 	
+	get configuredProjects
+		Array.from(ps.configuredProjects.values())
+		
+	get cp
+		configuredProjects[0]
+		
+	get ip
+		ps.inferredProjects[0]
+	
 	def create info
+		util.log('create',info)
+
 		self.info = info
 		self.project = info.project
 		self.ps = project.projectService
-
-		let opts = project.getCompilerOptions!
-		self.project.setCompilerOptions {...opts, ...compilerOptions}
 		
+		let proj = info.project
+		
+		let inferred = proj isa ts.server.InferredProject
+		# intercept options for inferred project
+	
+		if proj
+			let opts = proj.getCompilerOptions!
+			let libs = opts.lib or ["esnext","dom","dom.iterable"]
+
+			# opts = {
+			# 	...opts,
+			# 	lib: libs.concat([np.resolve(libDir,'imba.d.ts')])
+			# }
+			
+			opts.lib =  libs.concat([np.resolve(libDir,'imba.d.ts')])
+			
+			if inferred
+				opts.checkJs = true
+
+			for lib,i in opts.lib
+				let mapped = ts.libMap.get(lib)
+				if mapped
+					opts.lib[i] = mapped
+
+			proj.setCompilerOptions(opts)
+			util.log('compilerOptions',proj,opts)
+			
 		setup! if ps.#patched =? yes
 
 		return decorate(info.languageService)
