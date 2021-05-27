@@ -60,7 +60,10 @@ export default class Service
 			if res.textChanges
 				for item in res.textChanges
 					convertSpan(item.span,ls,filename,'edit')
-
+		
+		if res.changes
+			convertLocationsToImba(res.changes, ls,filename)
+			
 		if res.definitions
 			for item in res.definitions
 				convertLocationsToImba(item,ls,item.fileName or item.file)
@@ -142,7 +145,13 @@ export default class Service
 			let res = ls.getCompletionsAtPosition(file,opos,prefs)
 			return res
 		
-		
+		intercept.getCodeFixesAtPosition = do(file,start,end,code,fmt,prefs)
+			let {script,dpos,opos} = getFileContext(file,start,ls)
+			let {opos: endopos} = getFileContext(file,end,ls)
+
+			let res = ls.getCodeFixesAtPosition(file,opos,endopos,code,fmt,prefs)
+			res = convertLocationsToImba(res,ls,file)
+			return res
 		
 		# (
 		#     fileName: string,
