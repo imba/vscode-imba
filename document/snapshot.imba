@@ -207,19 +207,21 @@ export default class ImbaScriptInfo
 
 		let lineInfo = index.positionToColumnAndLineText(offset)
 		let lineText = lineInfo.lineText
+		let col = lineInfo.zeroBasedColumn
 
 		let ctx = tok.context
+		let content = index.getText(0,index.getLength!)		
 
 		const before = {
-			character: content[offset - 1]
-			line: lineText.slice(0,lineInfo.zeroBasedColumn)
+			character: lineText[col - 1]
+			line: lineText.slice(0,col)
 			token: tok.value.slice(0,tokPos)
 		}
 
 		const after = {
-			character: content[offset]
+			character: lineText[col]
 			token: tok.value.slice(tokPos)
-			line: lineText.slice(lineInfo.zeroBasedColumn).replace(/[\r\n]+/,'')
+			line: lineText.slice(col).replace(/[\r\n]+/,'')
 		}
 
 		# if the token pushes a new scope and we are at the end of the token

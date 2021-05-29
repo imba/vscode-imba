@@ -1,3 +1,120 @@
+type ImbaStyleGlobal = 'inherit' | 'auto'
+
+type BorderWidth = number | 'none'
+
+
+
+
+interface CSSDisplayProp {
+    block: this
+    inline: this
+    "inline-flex": this
+    none: this
+}
+
+
+
+declare module "css" {
+    type LengthUnit = '%' | 'px' | 'rem' | 'em';
+    type Length = `${number}${LengthUnit}` | number;
+    type Time = `${number}ms` | `${number}s` | number;
+    
+    interface border_style {
+        solid: border_style;
+        dotted: border_style;
+        dashed: border_style;
+        outset: border_style;
+        inset: border_style;
+        none: border_style;
+    }
+    
+    type border_width = 'medium' | Length;
+    type bstyle = 'solid' | 'dotted' | 'dashed' | 'outset' | 'inset';
+    
+    interface globals {
+        inherit: globals
+        initial: globals
+        unset: globals
+    }
+    
+    interface image {
+        
+    }
+    interface list_style_type {
+        /** list style something */
+        space_counter: this
+        disc: this
+        circle: this
+    }
+    
+    interface list_style_position {
+        inside: this
+        outside: this
+    }
+
+    interface display {
+        /** this is a comment about block */
+        block: this
+        /** The element generates an inline-level box. */
+        inline: this
+        /** The element itself does not generate any boxes, but its children and pseudo-elements still generate boxes as normal. */
+        contents: this
+        /** The element generates a principal flex container box and establishes a flex formatting context. */
+        flex: this
+        /** Inline-level flex container. */
+        inline_flex: this
+        
+        /** The element and its descendants generates no boxes. */
+        none: this
+    }
+    
+    interface Color {
+        red1: Color;
+        red2: Color;
+        red3: Color;
+        red4: Color;
+        red5: Color;
+    }
+    
+    interface Types {
+        display: display;
+        list_style: list_style_type & list_style_position;
+        list_style_type: list_style_type
+        url: image;
+        color: Color;
+        border: border_style & globals & Color;
+    }
+    
+    interface Border {
+       set(a: Length, b: border_style): void
+       set(a: border_style, b: Color): void
+       set(a: border_width, b: border_style, c: Color): void
+       set(a: border_style): void
+       set(a: globals): void
+    }
+    
+    interface Props {
+        display: [display];
+        list_style:
+        [list_style_type | list_style_position | image] |
+        [list_style_type, list_style_position] |
+        [list_style_type, image, list_style_position]
+        
+        border(a: Length, b: border_style): void
+        border(a: border_style, b: Color): void
+        border(a: border_width, b:border_style,c:Color): void
+        border(a: border_style): void
+        border(a: globals): void
+        _border: Border
+        // border(a: border_width): void
+    }
+    
+    
+
+    export const s: Props;
+    export const t: Types;
+}
+
 interface ImbaStyleModifiers {
     /** Represents elements whose numeric position in a series of siblings is odd 1, 3, 5, etc 
      * @detail :nth-child(odd)

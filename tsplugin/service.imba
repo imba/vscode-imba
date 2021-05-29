@@ -1,15 +1,21 @@
 import np from 'path'
 import Compiler from './compiler'
 import * as util from './util'
+import Bridge from './bridge'
+import ipc from 'node-ipc'
 
 let libDir = np.resolve(__realname,'..','..','..','lib')
 
 global.dirPaths = [__dirname,__filename,__realname]
 global.libDir = libDir
-	
+
+
 
 export default class Service
 	setups = []
+	bridge = null
+	ipcid
+	
 	get ts
 		global.ts
 	
@@ -21,7 +27,32 @@ export default class Service
 		
 	get ip
 		ps.inferredProjects[0]
+		
+	def getCompletions file,pos,ctx
+		let script = getImbaScript(file)
+		util.log('ipc_getCompletions',file,pos,ctx,script)
+		let res = script.getCompletions(pos,ctx)
+		return res.serialize!
+		
+	def handleRequest {id,data}
+		util.log('handleRequest',data)
+		bridge ||= new Bridge(id)
+		bridge.handle(data)
+		# 	ipcid = id
+
+		# if data.type == 'event'
+		# 	util.log('event_' + data.event,data.body)
+		# 	if data.event == 'ready'
+		# 		connectToBridge!
+		# 		yes
+		# 		# ipc.connectTo
 	
+	# def connectToBridge
+	# 	ipc.connectTo(ipcid) do
+	# 		util.log('ipc','connected!')
+	# 		ipc.of[ipcid].on('hello') do
+	# 			util.log('ipc','hello!!',arguments)
+
 	def create info
 		util.log('create',info)
 		setups.push(info)
@@ -181,15 +212,12 @@ export default class Service
 		
 		intercept.getCompletionsAtPosition = do(file,pos,prefs)
 			let {script,dpos,opos} = getFileContext(file,pos,ls)
-			let res = ls.getCompletionsAtPosition(file,opos,prefs)
-			return res
-		
-		intercept.getCodeFixesAtPosition = do(file,start,end,code,fmt,prefs)
-			let {script,dpos,opos} = getFileContext(file,start,ls)
-			let {opos: endopos} = getFileContext(file,end,ls)
+			
+			if script
+				let res = script.getCompletionsAtPosition(ls,[dpos,opos],prefs)
+				return res
 
-			let res = ls.getCodeFixesAtPosition(file,opos,endopos,code,fmt,prefs)
-			res = convertLocationsToImba(res,ls,file)
+			let res = ls.getCompletionsAtPosition(file,opos,prefs)
 			return res
 		
 		# (
@@ -204,7 +232,18 @@ export default class Service
 		
 		intercept.getCompletionEntryDetails = do(file,pos,name,fmt,source,prefs,data)
 			let {script,dpos,opos} = getFileContext(file,pos,ls)
+			
+			
 			let res = ls.getCompletionEntryDetails(file,opos,name,fmt,source,prefs,data)
+			return res
+
+
+		intercept.getCodeFixesAtPosition = do(file,start,end,code,fmt,prefs)
+			let {script,dpos,opos} = getFileContext(file,start,ls)
+			let {opos: endopos} = getFileContext(file,end,ls)
+
+			let res = ls.getCodeFixesAtPosition(file,opos,endopos,code,fmt,prefs)
+			res = convertLocationsToImba(res,ls,file)
 			return res
 
 		if true
@@ -233,7 +272,7 @@ export default class Service
 		ps.getScriptInfo(resolvePath(src))
 		
 	def getImbaScript src
-		getScriptInfo(src).#imba
+		getScriptInfo(src)..im
 	
 	def getSourceFile src
 		let info = getScriptInfo(src)

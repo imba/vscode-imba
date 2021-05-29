@@ -175,7 +175,7 @@ export class ScriptInfo
 			#editContent(start,end,newText)
 			
 	def getSnapshot
-		util.log('getSnapshot',self.path)
+		# util.log('getSnapshot',self.path)
 		#imba
 		return #getSnapshot!
 		
@@ -186,7 +186,7 @@ export class TextStorage
 	
 	def getFileTextAndSize tempName
 		if util.isImba(info.path)
-			util.log('getFileTextAndSize',info.path,tempName,info.##imba)
+			# util.log('getFileTextAndSize',info.path,tempName,info.##imba)
 			if #text != undefined
 				return {text: #text}
 			# info.im
@@ -221,6 +221,14 @@ export class Project
 		let res = #setCompilerOptions(value)
 		util.log('setCompilerOptions',this,value)
 		return
+		
+	def onPluginConfigurationChanged name, data
+		util.log('configChanged',name,data)
+		if name == 'imba' and global.ils
+			if data.#handled =? yes
+				global.ils.handleRequest(data)
+		else
+			#onPluginConfigurationChanged(name,data)
 
 		
 export class ProjectService
@@ -349,6 +357,7 @@ export default def patcher ts
 	const NodeObject   = global.NodeObject = ts.objectAllocator.getNodeConstructor!
 	const SourceFile   = global.SourceFile = ts.objectAllocator.getSourceFileConstructor!
 	const Signature    = global.Signature = ts.objectAllocator.getSignatureConstructor!
+	
 
 	extend class SourceFile
 			
@@ -363,7 +372,29 @@ export default def patcher ts
 			
 		def o2d i
 			scriptSnapshot.mapper.o2d(i)
+	
+	
+	extend class SymbolObject
+		
+		get imbaName
+			return #imbaName if #imbaName
+			let name = escapedName
+			if name.indexOf('$$TAG$$') > 0
+				name = name.slice(0,-7).replace(/\_/g,'-')
+			elif name.indexOf('_$SYM$_') == 0
+				name = name.split("_$SYM$_").join("#")
+			#imbaName = name
 			
+		def doctag name
+			let tags = getJsDocTags!
+			for item in tags
+				if item.name == name
+					let res = item.text or true
+					if res isa Array and res[0] and res[0].kind == 'text'
+						return res[0].text
+					return res
+			return null
+	
 
 	return ts
 	

@@ -35,6 +35,14 @@ export const state = {
 	
 }
 
+let fillCache = {}
+
+export def zerofill num, digits = 4
+	return fillCache[num] if fillCache[num]
+	let str = String(num)
+	str = "0000000000".slice(0,9 - str.length) + str
+	return fillCache[num] = str.slice(-digits)
+	
 export def extend target, klass
 	let descriptors = Object.getOwnPropertyDescriptors(klass.prototype)
 	for own k,v of descriptors
@@ -74,3 +82,66 @@ export def call target,name,params
 export def flush target, name,...params
 	let meta = target.#timeouts ||= {}
 	call(target,name,params) if meta[name]
+
+
+export class Component
+	def constructor(...params)
+		$timeouts = {}
+		self
+
+	get config
+		config
+
+	def $delay name, timeout = 500
+		global.clearTimeout($timeouts[name])
+		$timeouts[name] = global.setTimeout(&,timeout) do $call(name)
+
+	def $cancel name
+		global.clearTimeout($timeouts[name])
+		delete $timeouts[name]
+		let item = global.window
+
+	def $call name,...params
+		$cancel(name)
+		self[name](...params)
+
+	def $flush name,...params
+		$call(name,...params) if $timeouts[name]
+		
+	def $stamp label = 'time'
+		#prev ||= Date.now!
+		let now = Date.now!
+		console.log "{label}: {now - #prev}"
+		#prev = now
+		self
+		
+	def lookupKey key
+		return null
+		
+	def lookupRef ids,index = 0
+		if typeof ids == 'string'
+			ids = ids.split('|')
+
+		let key = ids[index]
+		return self if key === null
+
+		let item = lookupKey(key)
+		if item
+			return item if ids.length == (index + 1)
+			return item.lookupRef(ids,index + 1)
+
+	def log ...params
+		if config.get('verbose')
+			console.log(...params)
+		return
+
+	def devlog ...params
+		if $web$ or config.get('debug')
+			console.log(...params)
+		return
+	
+	def inspect object
+		if config.get('verbose')
+			console.dir(object, depth: 10)
+		return
+		

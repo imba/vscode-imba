@@ -302,7 +302,7 @@ class Plugin
 		project.onPluginConfigurationChanged = do(name, data)
 			if name == 'imba'
 				console.info "plugin update / communicate!",data
-				if data.#handled =? yes				
+				if data.#handled =? yes
 					handleRequest(data)
 			else
 				onPluginConfigurationChanged.apply(project,arguments)

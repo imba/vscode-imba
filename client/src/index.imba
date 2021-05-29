@@ -3,18 +3,26 @@ let path = require 'path'
 import { CompletionItemKind,window, commands, languages, IndentAction, workspace,SnippetString, SemanticTokensLegend, SemanticTokens,Range, extensions} from 'vscode'
 import {LanguageClient, TransportKind} from 'vscode-languageclient'
 
+import * as util from './util'
+
 import {SemanticTokenTypes,SemanticTokenModifiers} from 'imba/program'
 import ipc from 'node-ipc'
 
-let debugChannel = null # window.createOutputChannel("Imba Debug")
+import CompletionsProvider from './completions' 
+import Bridge from './bridge'
 
-def log msg,...rest
-	if debugChannel
-		debugChannel.appendLine(msg)
-		if rest.length
-			debugChannel.appendLine(JSON.stringify(rest))
+# let debugChannel = window.createOutputChannel("Imba Debug")
 
+let log = util.log
 let initialStamp = Date.now!
+
+# def log msg,...rest
+# 	if debugChannel
+# 		debugChannel.appendLine(msg)
+# 		if rest.length
+# 			debugChannel.appendLine(JSON.stringify(rest))
+
+
 	
 def stamp
 	(Date.now! - initialStamp) + 'ms'
@@ -126,13 +134,14 @@ def configure items = {}
 	for own k,v of items
 		cfg.update(k,v)
 
-let ipcserver = null
 let tlsapi = null
-		
+let bridge = null
+
 export def activate context
 	let serverModule = context.asAbsolutePath(path.join('server','dist','src','index.loader.js'))
 	let debugOptions = { execArgv: ['--nolazy', '--inspect=6005'] }
 	let conf = workspace.getConfiguration('imba')
+	let id = "imba-ipc-{String(Math.random!)}"
 	
 	log("activating! {process.env.TSS_DEBUG}")
 
@@ -142,53 +151,28 @@ export def activate context
 		await tls.activate(context)
 		log("activated tls")
 		const tlsapi = try tls.exports.getAPI(0)
-		
+		bridge = new Bridge(tlsapi)	
+		# tlsapi._pluginManager._onDidUpdateConfig.fire({ pluginId: 'imba', config: {id: id}})
+		bridge.ping!
+
+		setTimeout(&,5000) do bridge.ping!
+		# tlsapi.onCompletionAccepted do(item)
+		# 	log("completion accepted!!!")
+		# 	log(JSON.stringify(item))
+		# 	item.insertText = "hello"
+
 		if conf.get('debugPort')
 			unless process.env.TSS_DEBUG
 				process.env['TSS_DEBUG'] = String(conf.get('debugPort'))
 				try await commands.executeCommand("typescript.restartTsServer")
-			# else
-			#	await tlf.activate(context)
-		
-		
-		
-	if conf.get('tsplugin') and false
-		let id = String(Math.random!)
-		const tsExtension = extensions.getExtension('vscode.typescript-language-features')
-		try
-			let subs = context.subscriptions
-			let subs2 = context.subscriptions = {}
-			
-			subs2.push = do(item)
-				log("push disposable!!")
-				subs.push(item)
-				
-			const tsapi2 = await tsExtension.activate(context)
-			context.subscriptions = subs
-			
-			# ipc.config.id = process.env['IMBA_VSCODE_CLIENT'] = id
-			# process.env['TSS_DEBUG'] = '9561'
 
-			ipc.serve do(e)
-				log('serving!!')
-				ipc.server.on('message') do(e)
-					log 'message from ipc!!'
-					log e
-			ipc.server.start!
-		
-		try
-			await commands.executeCommand("typescript.restartTsServer")
-		catch e
-			log('failed to restart ts?!')
-
-		const tsapi = try tsExtension.exports.getAPI(0)
+	languages.registerCompletionItemProvider({language: 'tsimba'},new CompletionsProvider(bridge),
+		'.', ':', '"', '@','%','\\',"'",'=','<')
 	
 	let serverOptions = {
 		run: {module: serverModule, transport: TransportKind.ipc }
 		debug: {module: serverModule, transport: TransportKind.ipc, options: debugOptions }
 	}
-	
-	
 
 	workspace.getConfiguration(undefined,null)
 	
@@ -212,7 +196,6 @@ export def activate context
 				return res
 		}
 	}
-
 	
 	if conf.get('debug')
 		serverOptions.run.options = debugOptions

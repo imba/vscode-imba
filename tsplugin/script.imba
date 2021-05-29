@@ -7,6 +7,9 @@ import Compiler from './compiler'
 
 import { ImbaDocument } from '../document'
 import ImbaScriptInfo from '../document/snapshot'
+import Completions from './completions'
+import ImbaScriptContext from './context'
+import ImbaTypeChecker from './checker'
 
 export default class ImbaScript
 	constructor info
@@ -95,18 +98,22 @@ export default class ImbaScript
 		let snap = svc.getSnapshot!
 		return snap.getText(0,snap.getLength!)
 			
-	# get doc
-	# 	#doc ||= new ImbaDocument(info.path,'imba',0,contentOnDisk)
-	
 	get fileName
 		info.path
+		
+	get ls
+		info.containingProjects[0].languageService
 		
 	def wake
 		yes
 		
-	def jsToImbaPosition pos, compiledVersion
-		# need to know the version for this?
-		self
+	def getTypeChecker sync = no
+		try
+			let project = info.containingProjects[0]
+			let program = project.program
+			let checker = program.getTypeChecker!
+			return new ImbaTypeChecker(program,checker,self)
+
 
 	def getSemanticTokens
 		let result\number[] = []
@@ -133,4 +140,20 @@ export default class ImbaScript
 			result.push(tok.offset, tok.endOffset - tok.offset, ((typ + 1) << typeOffset) + mod)
 		
 		# util.log("semantic!",result)
-		return result		
+		return result
+		
+	def getCompletions pos, options
+		util.log('getCompletionsScript',pos,options)
+		let ctx = new Completions(self,pos,options)
+		return ctx
+		
+	
+	def getCompletionsAtPosition ls, [dpos,opos], prefs
+		return null
+		util.log('imba_getCompletionsAtPosition',[dpos,opos],prefs)
+		let ctx = new Completions(self,[dpos,opos],prefs,ls)
+		return ctx.getResults!
+	
+	def getContextAt pos
+		# retain context?
+		new ImbaScriptContext(self,pos)

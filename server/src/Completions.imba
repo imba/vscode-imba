@@ -464,17 +464,6 @@ export class AutoImportCompletion < Completion
 		
 	def resolve
 		resolveImportInfo!
-		# let info = importInfo
-		# let alias = info.importName or info.name
-		# let name = info.importKind == 1 ? 'default' : alias
-		# let edits = doc.createImportEdit(info.source,name,alias)
-		# 
-		# if edits.alias
-		# 	item.insertText = edits.alias
-		# 	ns = edits.alias
-		# 
-		# elif edits.changes.length
-		# 	item.additionalTextEdits = edits.changes
 		self
 	
 
