@@ -1,9 +1,13 @@
 export default class ImbaTypeChecker
 	
-	constructor program, checker, script
+	constructor project, program, checker, script
+		project = project
 		program = program
 		checker = checker
 		script = script
+	
+	get sourceFile
+		#sourceFile ||= program.getSourceFile(script.fileName)
 	
 	get ts
 		global.ts
@@ -25,7 +29,40 @@ export default class ImbaTypeChecker
 		# #cssrule ||= checker.getTypeOfSymbolAtLocation(cssmodule.exports.get('s'),cssmodule.valueDeclaration)
 	
 	get csstypes
-		#csstypes ||= checker.getTypeOfSymbolAtLocation(cssmodule.exports.get('css$types'),cssmodule.valueDeclaration)
+		#csstypes ||= checker.getDeclaredTypeOfSymbol(cssmodule.exports.get('css$types'))
+	
+	get cssmodifiers
+		props(type('$cssmodule$.css$modifiers'))
+	
+	def getSymbolDetails symbol
+		ts.Completions.createCompletionDetailsForSymbol(sym(symbol),checker,sourceFile,sourceFile)
+		
+	def getStyleValueTypes propName, index = 0
+		let target = type([cssrule,propName,'set'])
+
+		# if let alias = target.doctag('proxy')
+		# 	target = member(cssrule,alias)
+			
+		let signatures = checker.getSignaturesOfType(type(target),0)
+		
+		let types = []
+		for entry in signatures
+			let params = entry.getParameters()
+			let param = params[index]
+			types.push(type(param))
+
+		return types
+		
+	def getStyleValues propName, index = 0
+		let symbols = []
+		let types = getStyleValueTypes(propName,index)
+		for typ in types
+			let props = allprops(typ).filter do
+				$1.parent and $1.parent.escapedName.indexOf('css$') == 0
+			symbols.push(...props)
+
+		return symbols.filter do(item,i,arr) arr.indexOf(item) == i
+		
 		
 	def getStyleProps
 		props(cssrule)
@@ -62,15 +99,29 @@ export default class ImbaTypeChecker
 	def arraytype inner
 		checker.createArrayType(inner or basetypes.any)
 
-	def resolve name,types = ts.SymbolFlags.All
+	def resolve name,types = ts.SymbolFlags.All, location = null
 		if (/^\$\w+\$$/).test(name)
 			return self[name.slice(1,-1)]
 
-		let sym = checker.resolveName(name,#location or loc(#file),symbolFlags(types),false)
+		let sym = checker.resolveName(name,location or sourceFile,symbolFlags(types),false)
 		return sym
 		
-	def parseType string, token, returnAst = no
+	def symToPath sym
+		let pre = ''
+		if sym.parent
+			pre = symToPath(sym.parent) + '.'
+		return pre + checker.symbolToString(sym,undefined,0,0)
+	
+	def pathToSym path
+		if path[0] == '"'
+			let end = path.indexOf('"',1)
+			let src = path.slice(1,end)
+			let abs = ts.pathIsAbsolute(src)
+			let mod = abs ? program.getSourceFile(src).symbol : checker.tryFindAmbientModule(src)
+			return sym([mod].concat(path.slice(end + 2).split('.')))
+		return sym(path)
 		
+	def parseType string, token, returnAst = no
 		string = string.slice(1) if string[0] == '\\'
 		if let cached = #typeCache[string]
 			return cached
@@ -163,14 +214,14 @@ export default class ImbaTypeChecker
 	get location
 		#location
 
-	def loc item
+	def loc item, backup
 		return undefined unless item
 		if typeof item == 'number'
-			return ts.findPrecedingToken(item,loc(#file))
+			return ts.findPrecedingToken(item,sourceFile)
 		if item.fileName
 			return program.getSourceFile(item.fileName)
 		if item isa SymbolObject
-			return item.valueDeclaration
+			return item.valueDeclaration or loc(backup)
 		return item
 
 
@@ -190,13 +241,13 @@ export default class ImbaTypeChecker
 		if item isa SymbolObject
 			# console.log 'get the declared type of the symbol',item,item.flags
 			if item.flags & ts.SymbolFlags.Interface
-				item.#instanceType ||= checker.getDeclaredTypeOfSymbol(item)
+				item.instanceType_ ||= checker.getDeclaredTypeOfSymbol(item)
 				
 				unless item.flags & ts.SymbolFlags.Value
-					return item.#instanceType
-
-			item.#type ||= checker.getTypeOfSymbolAtLocation(item,item.valueDeclaration or loc(#file or #blank))
-			return item.#type
+					return item.instanceType_
+			
+			item.type_ ||= checker.getTypeOfSymbolAtLocation(item,loc(item) or loc(script))
+			return item.type_
 
 		if item isa TypeObject
 			return item
@@ -216,6 +267,9 @@ export default class ImbaTypeChecker
 			for entry,i in item when i > 0
 				base = sym(member(base,entry))
 			item = base
+		
+		if item isa SourceFile
+			item.symbol
 
 		if item isa SymbolObject
 			return item
@@ -233,6 +287,17 @@ export default class ImbaTypeChecker
 		return [] unless typ
 
 		let props = typ.getApparentProperties!
+		if withTypes
+			for item in props
+				type(item)
+		return props
+		
+	def allprops item, withTypes = no
+		let typ = type(item)
+		return [] unless typ
+
+		let props = typ.types ? checker.getAllPossiblePropertiesOfTypes(typ.types) : typ.getApparentProperties!
+
 		if withTypes
 			for item in props
 				type(item)

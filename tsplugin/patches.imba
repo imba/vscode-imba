@@ -385,6 +385,16 @@ export default def patcher ts
 				name = name.split("_$SYM$_").join("#")
 			#imbaName = name
 			
+		get imbaTags
+			return #imbaTags if #imbaTags
+			let tags = #imbaTags = {}
+			for item in getJsDocTags!
+				let res = item.text or true
+				if res isa Array and res[0] and res[0].kind == 'text'
+					res = res[0].text
+				tags[item.name] = res
+			tags
+			
 		def doctag name
 			let tags = getJsDocTags!
 			for item in tags

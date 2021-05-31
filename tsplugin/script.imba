@@ -18,7 +18,7 @@ export default class ImbaScript
 		if info.scriptKind == 0
 			info.scriptKind = 1
 			util.log("had to wake script {fileName}")
-			
+
 			
 	def getMapper target
 		let snap = target ? target.getSourceFile(fileName).scriptSnapshot : info.getSnapshot!
@@ -112,7 +112,7 @@ export default class ImbaScript
 			let project = info.containingProjects[0]
 			let program = project.program
 			let checker = program.getTypeChecker!
-			return new ImbaTypeChecker(program,checker,self)
+			return new ImbaTypeChecker(project,program,checker,self)
 
 
 	def getSemanticTokens

@@ -33,14 +33,17 @@ export default class Client
 		if e.type == 'request'
 			util.log('call',e.command,e.arguments)
 			if let meth = ils[e.command]
-				let res = await meth.apply(ils,e.arguments)
-				util.log('respond',e.command,res)
-				host.emit('message',{
-					type: 'response'
-					responseRef: e.requestRef
-					body: res
-					ts: Date.now!
-				})
+				try
+					let res = await meth.apply(ils,e.arguments)
+					util.log('respond',e.command,res)
+					host.emit('message',{
+						type: 'response'
+						responseRef: e.requestRef
+						body: res
+						ts: Date.now!
+					})
+				catch err
+					util.log('error','responding',e.command,e.arguments,err)
 				
 				
 			

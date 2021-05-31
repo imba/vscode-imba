@@ -2,7 +2,10 @@
 /// <reference path="./imba.types.d.ts" />
 /// <reference path="./imba.dom.d.ts" />
 /// <reference path="./imba.css.d.ts" />
+/// <reference path="./imba.css.types.d.ts" />
+/// <reference path="./imba.css.theme.d.ts" />
 /// <reference path="./css.d.ts" />
+/// <reference path="./imba.css.custom.d.ts" />
 /// <reference path="./imba.events.d.ts" />
 /// <reference path="./imba.router.d.ts" />
 

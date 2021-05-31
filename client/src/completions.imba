@@ -1,6 +1,6 @@
 import * as util from './util'
 
-import { CompletionItem, Range, TextEdit } from 'vscode'
+import { CompletionItem, Range, TextEdit, MarkdownString } from 'vscode'
 
 class ImbaCompletionItem < CompletionItem
 	
@@ -14,6 +14,20 @@ class ImbaCompletionItem < CompletionItem
 export default class CompletionsProvider
 	constructor bridge
 		#bridge = bridge
+	
+	def formatDocumentation doc, item
+		return unless doc
+		let str = new MarkdownString('')
+		
+		if doc isa Array
+			for item in doc
+				if item.kind == 'text'
+					str.appendText(item.text)
+				elif item.kind == 'markdown'
+					str.appendMarkdown(item.text)
+				else
+					str.appendText(item.text)
+			return str			
 
 
 	def provideCompletionItems(doc, pos, token, context)
@@ -31,8 +45,11 @@ export default class CompletionsProvider
 				
 			elif raw.insertText == undefined
 				raw.insertText = raw.label.name
-				
+			
+			# if raw.data
+			# 	util.log("has data {JSON.stringify(raw.data)}")
 			let item = new ImbaCompletionItem(raw)
+			# item.#data = raw.data
 
 			# if let te = raw.textEdit
 			#	te.range = new Range(doc.positionAt(te.start),doc.positionAt(te.start + te.length))
@@ -41,5 +58,11 @@ export default class CompletionsProvider
 		return items
 	
 	def resolveCompletionItem item, token
-		util.log("resolving item {JSON.stringify(item)}")
+		
+		let res = await #bridge.call('resolveCompletionItem',item,item.data)
+		util.log("resolving item {JSON.stringify(item)} {JSON.stringify(item.data)} {JSON.stringify(res)}")
+		item.documentation ||= formatDocumentation(res.documentation,item)
+		item.detail ||= res.detail
+		# item.label.parameters = "hello there"
+		# also add code actions if needed(!)
 		return item

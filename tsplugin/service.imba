@@ -31,8 +31,17 @@ export default class Service
 	def getCompletions file,pos,ctx
 		let script = getImbaScript(file)
 		util.log('ipc_getCompletions',file,pos,ctx,script)
-		let res = script.getCompletions(pos,ctx)
+		let res = #lastCompletions = script.getCompletions(pos,ctx)
 		return res.serialize!
+		
+	def resolveCompletionItem item, data
+		util.log('resolveCompletionItem',item,data)
+		if let ctx = #lastCompletions
+			if let item = ctx.items[data.nr]
+				item.resolve!
+				return item.serialize!
+		return 
+		
 		
 	def handleRequest {id,data}
 		util.log('handleRequest',data)

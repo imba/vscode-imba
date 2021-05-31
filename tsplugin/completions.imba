@@ -9,6 +9,35 @@ const Globals = "global imba module window document exports console process pars
 
 const Keywords = "and await begin break by case catch class const continue css debugger def get set delete do elif else export extends false finally for if import in instanceof is isa isnt let loop module nil no not null of or require return self static super switch tag then this throw true try typeof undefined unless until var when while yes".split(' ')
 
+###
+CompletionItemKind {
+		Text = 0,
+		Method = 1,
+		Function = 2,
+		Constructor = 3,
+		Field = 4,
+		Variable = 5,
+		Class = 6,
+		Interface = 7,
+		Module = 8,
+		Property = 9,
+		Unit = 10,
+		Value = 11,
+		Enum = 12,
+		Keyword = 13,
+		Snippet = 14,
+		Color = 15,
+		Reference = 17,
+		File = 16,
+		Folder = 18,
+		EnumMember = 19,
+		Constant = 20,
+		Struct = 21,
+		Event = 22,
+		Operator = 23,
+		TypeParameter = 24
+	}
+###
 
 export class Completion
 	
@@ -47,10 +76,16 @@ export class Completion
 		checker.program
 
 	get #type
-		#symbol.type or #symbol.#type
+		#symbol.type or #symbol.type_
 		
 	get importInfo
 		null
+		
+	get weight
+		#weight or #options.weight
+	
+	set weight val
+		#weight = val
 		
 	def resolveImportInfo
 		let info = importInfo
@@ -137,7 +172,7 @@ export class Completion
 	get uniqueName
 		#uniqueName or item.insertText or name
 
-	def serialize context, stack
+	def serialize stack = {}
 		let o = #options
 		let key = uniqueName
 		
@@ -151,8 +186,9 @@ export class Completion
 		
 		if o..commitCharacters
 			item.commitCharacters = o.commitCharacters
-		if o.weight != undefined
-			item.sortText = util.zerofill(o.weight)
+		if #weight != undefined
+			item.sortText = util.zerofill(#weight)
+			data.nr = id
 		# item.data.id ||= "{#context.file.id}|{#context.id}|{id}"
 		return item
 		
@@ -179,19 +215,50 @@ export class SymbolCompletion < Completion
 	def setup sym
 		let cat = #options.kind
 		let par = sym.parent
+		let tags = sym.imbaTags or {}
 		let o = #options
 		let f = sym.flags
 		name = sym.imbaName
+		data.kind = cat
+		
 		# let pname = sym.parent..escapedName
 		if cat == 'styleprop'
 			#uniqueName = name
-			if let alias = sym.doctag('alias')
-				ns = alias
-				# check if we've enabled shorthand css completions in settings
-				if alias.length < name.length
-					item.insertText = alias
-			triggers ':@.'	
+			if tags.alias
+				item.insertText = ns = tags.alias
+			elif tags.proxy
+				ns = tags.proxy
+			triggers ':@.'
+
+		elif cat == 'styleval'
+			weight = name[0] == '-' ? 2000 : 1000
+			triggers ' '
+			let type = sym.parent.escapedName.slice(4)
+			let desc = sym.getDocumentationComment! or []
+			if desc[0] and desc[0].text
+				ns = desc[0].text
 			
+			if type == 'color'
+				kind = 15
+				detail = tags.color
+				
+		elif cat == 'stylemod'
+			ns = tags.detail
+			triggers ': '
+			
+	
+	def resolve
+		let details = checker.getSymbolDetails(sym)
+			
+		if let docs = details.documentation
+			item.documentation = global.session.mapDisplayParts(docs,checker.project)
+		if let dp = details.displayParts
+			item.detail = global.ts.displayPartsToString(dp)
+		# documentation: this.mapDisplayParts(details.documentation, project),
+		# tags: this.mapJSDocTagInfo(details.tags, project, useDisplayParts),
+		# item.documentation = details.documentation
+		# item.documentation = details.documentation
+		self
 
 export default class Completions
 	
@@ -231,13 +298,17 @@ export default class Completions
 			add('tagnames',kind: 'tagname')
 			
 		if flags & CT.StyleModifier
-			add checker.props('ImbaStyleModifiers',yes), kind: 'stylemod'
+			add checker.cssmodifiers, kind: 'stylemod'
 			
 		if flags & CT.StyleSelector
 			add checker.props('ImbaHTMLTags',yes), kind: 'stylesel'
 		
 		if flags & CT.StyleProp
 			add checker.props('$cssrule$'), kind: 'styleprop'
+			
+		if flags & CT.StyleValue
+			add 'stylevalue', kind: 'styleval'
+
 		
 		if triggerCharacter == '<' and ctx.after.character == '>'
 			add completionForItem({
@@ -249,6 +320,19 @@ export default class Completions
 				textEdit: {start: pos, length: 1, newText: ''}
 				label: {name: ' '}
 			})
+		self
+		
+	def stylevalue o = {}
+		let node = ctx.group.closest('styleprop')
+		let name = node..propertyName
+		let before = ctx..before..group
+		let nr = before ? (before.split(' ').length - 1) : 0
+		let symbols = checker.getStyleValues(name,nr)
+		add symbols,o
+		util.log('stylevalue',ctx.before,nr,symbols)
+		# only if first argument
+		if nr == 0
+			add checker.props('$cssmodule$.css$globals'),o
 		self
 		
 	def tagnames o = {}
@@ -312,7 +396,7 @@ export default class Completions
 		let stack = {}
 		# util.time(&,'serializing') do
 		for item in items
-			let entry = item.serialize(self,stack)
+			let entry = item.serialize(stack)
 			entries.push(entry) if entry
 
 		# devlog 'serialized',entries,items
