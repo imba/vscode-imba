@@ -424,23 +424,25 @@ export default class Completions
 		let symbols = []
 		
 		
-		# find our location
-		let loc = checker.getLocation(pos,opos)
+		# find our location - want to walk to find a decent alternative
+		# walk backwards to find the closest location known by typescript
+		# let loc = checker.getLocation(pos,opos)
 	
 		for item in vars
-			let found = checker.local(item.name,loc)
-			
+			# what 
+			let found = checker.findExactSymbolForToken(item.node)
+			# let found = checker.local(item.name,loc)
 			symbols.push(found or item)
-			yes
-		util.log('resolveVariables',opos,loc,symbols)
+		# util.log('resolveVariables',opos,loc,symbols)
+
 		add(symbols,kind: 'var')
 		
 		# keywords
-		
-			
-		
+
 		try
-			let selfprops = checker.props(loc.thisType)
+			let selfpath = ctx.selfPath
+			let selfprops = checker.props(selfpath)
+			# || checker.props(loc.thisType)
 			add(selfprops,kind: 'implicitSelf')
 		
 		# add('variables',weight: 70)

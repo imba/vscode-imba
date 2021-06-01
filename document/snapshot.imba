@@ -246,6 +246,8 @@ export default class ImbaScriptInfo
 		let mstate = tok.stack.state or ''
 		let t = CompletionTypes
 		let g = null
+		let contextTokens = [tok]
+
 
 		if group
 			if group.start
@@ -265,7 +267,9 @@ export default class ImbaScriptInfo
 			while scope.indent > indent
 				scope = scope.parent
 		
-
+		try
+			meta.selfScope = tok.context.selfScope
+			meta.selfPath = meta.selfScope.selfPath
 		if group.type == 'tag'
 			# let name = group.findChildren('tag.name')
 			# group.name = name.join('')
@@ -277,6 +281,7 @@ export default class ImbaScriptInfo
 		# if we are in an accessor
 		if g = group.closest('tag')
 			meta.tagName = g.tagName
+			contextTokens.push(g.nameNode)
 		
 		if g = group.closest('listener')
 			meta.eventName = g.name

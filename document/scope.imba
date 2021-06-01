@@ -373,6 +373,9 @@ export class TagNode < Group
 	get name
 		let name = findChildren('tag.name').join('')
 		name == 'self' ? closest('component').name : name
+		
+	get nameNode
+		findChildren('tag.name')[0]
 
 	get local?
 		name[0] == name[0].toUpperCase!

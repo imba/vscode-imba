@@ -31,16 +31,17 @@ class ImbaMappedLocation
 		opos = opos
 		context = context
 		otoken = global.ts.findPrecedingToken(opos,context.sourceFile)
-		oscope = global.ts.getThisContainer(otoken)
+		
+		# 
 	
 	get thisType
 		return #thisType if #thisType
 		let node = global.ts.getThisContainer(otoken)
 		while node and node.symbol.escapedName == '__function'
 			node = global.ts.getThisContainer(node)
-			
-		if node.body
+		if node and node.body
 			return #thisType = context.checker.tryGetThisTypeAt(node.body)
+
 		return null
 		
 		while !#thisType and node and !(node isa global.SourceFile)
@@ -572,6 +573,7 @@ export default class ImbaTypeChecker
 			return inferType(tok.prev,doc)
 
 		if tok.type == 'self'
+			# what if the selfPath doesnt work?
 			return tok.context.selfScope.selfPath
 		
 		if tok.match('identifier.special')
@@ -636,14 +638,17 @@ export default class ImbaTypeChecker
 			let otok = ts.findPrecedingToken(opos,sourceFile)
 
 			if ipos == dpos and otok
-				util.log 'location has not changed',dpos,ipos,opos,otok
+				# util.log 'location has not changed',dpos,ipos,opos,otok
 				return otok
 				# see if it is the same type as well
 			return null
 					
-			
-		
-
+	def findExactSymbolForToken dtok
+		let otok = findExactLocationForToken(dtok)
+		if otok
+			return checker.getSymbolAtLocation(otok)
+		return null
+	
 	# type at imba location	
 	def typeAtLocation offset
 		let tok = script.doc.tokenAtOffset(offset)
