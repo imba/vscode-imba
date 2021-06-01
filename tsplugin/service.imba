@@ -28,6 +28,17 @@ export default class Service
 	get ip
 		ps.inferredProjects[0]
 		
+	def i i
+		let d = m.im.doc
+		let t = m.im.getTypeChecker!
+		return {
+			i: i
+			d: d
+			t: t
+			c: d.getContextAtOffset(i)
+			x: t.getMappedLocation(i)
+		}
+		
 	def getCompletions file,pos,ctx
 		let script = getImbaScript(file)
 		util.log('ipc_getCompletions',file,pos,ctx,script)
@@ -100,6 +111,8 @@ export default class Service
 		setup! if ps.#patched =? yes
 			
 		info.ls = info.languageService
+		# for debugging
+		global.m = self.m
 
 		return decorate(info.languageService)
 		
@@ -173,13 +186,17 @@ export default class Service
 			return ls.getEncodedSyntacticClassifications(filename,span)
 			
 		intercept.getQuickInfoAtPosition = do(filename,pos)
-			let script = getImbaScript(filename)
-			if util.isImba(filename)
-				let convpos = script.d2o(pos,ls.getProgram!)
-				util.log('getQuickInfo',filename,pos,convpos)
-				pos = convpos
+			let {script,dpos,opos} = getFileContext(filename,pos,ls)
+			if script
+				# let convpos = script.d2o(pos,ls.getProgram!)
+				let out = script.getQuickInfo(dpos,ls)
+				util.log('getQuickInfo',filename,dpos,opos,out)
+				if out
+					return out
+				
+				# pos = convpos
 
-			let res = ls.getQuickInfoAtPosition(filename,pos)
+			let res = ls.getQuickInfoAtPosition(filename,opos)
 			return convertLocationsToImba(res,ls,filename)
 			
 		intercept.getDefinitionAndBoundSpan = do(filename,pos)

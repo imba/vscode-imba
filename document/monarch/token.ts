@@ -38,7 +38,7 @@ export class Token {
 	}
 
 	public get span(): object {
-		return {offset: this.offset, length: (this.value ? this.value.length : 0)}
+		return { offset: this.offset, start: this.offset, length: (this.value ? this.value.length : 0), source: 'imba'}
 	}
 
 	public get indent(): number {

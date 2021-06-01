@@ -8059,14 +8059,10 @@ In this specification, a direction (or rotation) of 0 degrees is equivalent to t
 		@alias scale
 		*/
 		scale:css$prop$scale;
-		/** @proxy scale */
-		scale:css$prop$scale;
 		/**
 		The rotate CSS property allows you to specify rotation transforms individually and independently of the transform property. This maps better to typical user interface usage, and saves having to remember the exact order of transform functions to specify in the transform value.
 		@alias rotate
 		*/
-		rotate:css$prop$rotate;
-		/** @proxy rotate */
 		rotate:css$prop$rotate;
 		/**
 		The translate CSS property allows you to specify translation transforms individually and independently of the transform property. This maps better to typical user interface usage, and saves having to remember the exact order of transform functions to specify in the transform value.

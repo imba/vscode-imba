@@ -554,6 +554,9 @@ export class ImbaDocument
 			flags |= CompletionTypes.TagFlag
 		elif tok.match('tag.event.modifier')
 			flags |= CompletionTypes.TagEventModifier
+			# add event name
+			suggest.eventName = ''
+		
 		elif tok.match('tag.event')
 			flags |= CompletionTypes.TagEvent
 		

@@ -1,6 +1,7 @@
 import * as util from './util'
 
 import { CompletionItem, Range, TextEdit, MarkdownString } from 'vscode'
+import * as Converters from './converters'
 
 class ImbaCompletionItem < CompletionItem
 	
@@ -49,6 +50,7 @@ export default class CompletionsProvider
 			# if raw.data
 			# 	util.log("has data {JSON.stringify(raw.data)}")
 			let item = new ImbaCompletionItem(raw)
+			item.kind = Converters.convertKind(raw.kind)
 			# item.#data = raw.data
 
 			# if let te = raw.textEdit
@@ -60,7 +62,7 @@ export default class CompletionsProvider
 	def resolveCompletionItem item, token
 		
 		let res = await #bridge.call('resolveCompletionItem',item,item.data)
-		util.log("resolving item {JSON.stringify(item)} {JSON.stringify(item.data)} {JSON.stringify(res)}")
+		util.log("resolving item {JSON.stringify(item)} {JSON.stringify(item.#raw)} {JSON.stringify(item.data)} {JSON.stringify(res)}")
 		item.documentation ||= formatDocumentation(res.documentation,item)
 		item.detail ||= res.detail
 		# item.label.parameters = "hello there"

@@ -34,6 +34,9 @@ export default class ImbaScriptInfo
 		
 	get index
 		snapshot.index
+		
+	get content
+		#lexed.content ||= getText!
 	
 	def getText start = 0, end = snapshot.getLength!
 		snapshot.getText(start,end)
@@ -198,7 +201,7 @@ export default class ImbaScriptInfo
 			num += amount
 			return [start + pre.length,word.length - pre.length - post.length,String(num)]
 		return null
-
+	
 	def contextAtOffset offset
 		ensureParsed!
 
@@ -242,6 +245,7 @@ export default class ImbaScriptInfo
 		let target = tok
 		let mstate = tok.stack.state or ''
 		let t = CompletionTypes
+		let g = null
 
 		if group
 			if group.start
@@ -260,6 +264,7 @@ export default class ImbaScriptInfo
 		if tok.match('br white.tabs')
 			while scope.indent > indent
 				scope = scope.parent
+		
 
 		if group.type == 'tag'
 			# let name = group.findChildren('tag.name')
@@ -270,6 +275,11 @@ export default class ImbaScriptInfo
 			flags = 0
 		
 		# if we are in an accessor
+		if g = group.closest('tag')
+			meta.tagName = g.tagName
+		
+		if g = group.closest('listener')
+			meta.eventName = g.name
 
 		if tok.match('tag.event.name tag.event-modifier.name')
 			target = tok.prev
@@ -299,7 +309,7 @@ export default class ImbaScriptInfo
 			
 		elif tok.match('tag.flag')
 			flags |= CompletionTypes.TagFlag
-		elif tok.match('tag.event.modifier')
+		elif tok.match('tag.event-modifier')
 			flags |= CompletionTypes.TagEventModifier
 		elif tok.match('tag.event')
 			flags |= CompletionTypes.TagEvent
@@ -363,10 +373,9 @@ export default class ImbaScriptInfo
 				suggest[k] ||= yes
 
 		let out = {
+			...meta,
 			token: tok
 			offset: offset
-			position: pos
-			linePos: linePos
 			scope: scope
 			indent: indent
 			group: ctx

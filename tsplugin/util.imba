@@ -1,5 +1,5 @@
 const DEBUGGING = process.env.TSS_DEBUG
-
+let TRACING = null
 class Logger
 	constructor
 		nr = 0
@@ -17,6 +17,12 @@ class Logger
 		let id = ++nr
 		state[ns] ||= []
 		state[ns].unshift([id].concat(params.slice(1)))
+		
+		if console.context isa Function
+			console.context!.log(...params)
+		
+		if TRACING
+			TRACING.push(params)
 
 		if ns == 'send'
 			if data.type == 'event'
@@ -36,6 +42,13 @@ export const state = {
 }
 
 let fillCache = {}
+
+export def trace cb
+	let t = TRACING = []
+	let res = cb()
+	TRACING = null
+	return {result: res, logs: t}
+	
 
 export def zerofill num, digits = 4
 	return fillCache[num] if fillCache[num]
@@ -83,6 +96,9 @@ export def flush target, name,...params
 	let meta = target.#timeouts ||= {}
 	call(target,name,params) if meta[name]
 
+export def isPascal str
+	let chr = str.charCodeAt(0)
+	return chr >= 65 && 90 >= chr
 
 export class Component
 	def constructor(...params)

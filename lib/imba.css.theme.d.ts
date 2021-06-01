@@ -452,7 +452,7 @@ declare module "imba_css" {
 		cooler9: 'hsla(222,47%,11%,1)';
 	}
 
-	interface css$font_size {
+	interface css$enum$font_size {
 		/** 10px */
 		'xxs': '10px';
 		/** 12px */

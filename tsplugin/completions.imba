@@ -2,7 +2,7 @@
 import * as util from './util'
 import Context from './context'
 
-import {Sym,CompletionTypes as CT} from '../document'
+import {Sym as ImbaSymbol,CompletionTypes as CT} from '../document'
 
 
 const Globals = "global imba module window document exports console process parseInt parseFloat setTimeout setInterval setImmediate clearTimeout clearInterval clearImmediate globalThis isNaN isFinite __dirname __filename".split(' ')
@@ -135,6 +135,9 @@ export class Completion
 
 	set name val do label.name = val
 	get name do label.name
+		
+	set type val do label.type = val
+	get type do label.type
 
 	set detail val
 		item.detail = val
@@ -175,6 +178,9 @@ export class Completion
 	def serialize stack = {}
 		let o = #options
 		let key = uniqueName
+		
+		if sym.isInternal
+			return null
 		
 		if stack[key]
 			return null
@@ -221,6 +227,9 @@ export class SymbolCompletion < Completion
 		name = sym.imbaName
 		data.kind = cat
 		
+		try
+			Object.assign(item,checker.getSymbolKind(sym))
+		
 		# let pname = sym.parent..escapedName
 		if cat == 'styleprop'
 			#uniqueName = name
@@ -245,7 +254,23 @@ export class SymbolCompletion < Completion
 		elif cat == 'stylemod'
 			ns = tags.detail
 			triggers ': '
+		
+		elif cat == 'tagevent'
+			triggers '.='
+		
+		elif cat == 'tageventmod'
+			triggers '.='
+		elif cat == 'tagname'
+			triggers '> .[#'
+			kind = 'value'
+
+		else
+			type = item.kind
+			triggers '!(,. ['
 			
+		if cat == 'implicitSelf'
+			item.insertText = item.filterText = name
+			name = "self.{name}"
 	
 	def resolve
 		let details = checker.getSymbolDetails(sym)
@@ -259,6 +284,17 @@ export class SymbolCompletion < Completion
 		# item.documentation = details.documentation
 		# item.documentation = details.documentation
 		self
+		
+export class ImbaSymbolCompletion < Completion
+	
+	def setup
+		name = sym.name
+		
+export class KeywordCompletion < Completion
+	def setup
+		name = sym.name
+		triggers ' '
+		
 
 export default class Completions
 	
@@ -268,12 +304,17 @@ export default class Completions
 		self.prefs = prefs
 		self.ls = ls or script.ls
 		
+		
+		
 		#prefix = ''
 		#added = {}
 		#uniques = new Map
 		
 		items = []
 		resolve!
+		
+	get opos
+		#opos ??= script.d2o(pos)
 		
 	get checker
 		# should we choose configured project or?
@@ -308,7 +349,29 @@ export default class Completions
 			
 		if flags & CT.StyleValue
 			add 'stylevalue', kind: 'styleval'
+			
+		if flags & CT.TagEvent
+			add checker.props("ImbaEvents"), kind: 'tagevent'
+			
+		if flags & CT.TagEventModifier
+			add checker.props("ImbaEvents.{ctx.eventName}.MODIFIERS"), kind: 'tageventmod'
+			
+		if flags & CT.TagProp
+			add('tagattrs',name: ctx.tagName)
+			
+		if flags & CT.Access
+			let typ = checker.inferType(ctx.target,script.doc)
+			util.log('inferred type??',typ)
+			if typ
+				add checker.props(typ), kind: 'access'
+		
+		if flags & CT.Value
+			# variables, self-properties etc in context
+			if ctx.group.closest('tagcontent') and !ctx.tag
+				yes
+				# add('tagnames',kind: 'tag',weight: 300)
 
+			add('values')
 		
 		if triggerCharacter == '<' and ctx.after.character == '>'
 			add completionForItem({
@@ -329,15 +392,67 @@ export default class Completions
 		let nr = before ? (before.split(' ').length - 1) : 0
 		let symbols = checker.getStyleValues(name,nr)
 		add symbols,o
-		util.log('stylevalue',ctx.before,nr,symbols)
-		# only if first argument
-		if nr == 0
-			add checker.props('$cssmodule$.css$globals'),o
 		self
 		
 	def tagnames o = {}
 		let html = checker.props('HTMLElementTagNameMap')
 		add(html,o)
+		
+	def tagattrs o = {}
+		# console.log 'check',"ImbaHTMLTags.{o.name}"
+		let sym = checker.sym("HTMLElementTagNameMap.{o.name}")
+		# let attrs = checker.props("ImbaHTMLTags.{o.name}")
+		let pascal = o.name[0] == o.name[0].toUpperCase!
+		let globalPath = pascal ? o.name : o.name.replace(/\-/g,'_') + '$$TAG$$'
+
+		unless sym
+			sym = try checker.sym("{globalPath}.prototype")
+
+		if sym
+			# this is a native tag
+			let attrs = checker.props(sym).filter do(item)
+				let par = item.parent..escapedName
+				return no if par == "GlobalEventHandlers"
+				return no if item.escapedName.match(/className|(__$)/)
+				return item.isTagAttr
+			
+			add(attrs,{...o, commitCharacters: ['=']})
+		yes
+		
+	def values
+		let vars = script.doc.varsAtOffset(pos)
+		let symbols = []
+		
+		
+		# find our location
+		let loc = checker.getLocation(pos,opos)
+	
+		for item in vars
+			let found = checker.local(item.name,loc)
+			
+			symbols.push(found or item)
+			yes
+		util.log('resolveVariables',opos,loc,symbols)
+		add(symbols,kind: 'var')
+		
+		# keywords
+		
+			
+		
+		try
+			let selfprops = checker.props(loc.thisType)
+			add(selfprops,kind: 'implicitSelf')
+		
+		# add('variables',weight: 70)
+		# could also go from the old shared checker?
+		add(checker.globals,weight: 500,startsWith: prefix, implicitGlobal: yes)
+		# variables should have higher weight - but not the global variables?
+		# add('properties',value: yes, weight: 100, implicitSelf: yes)
+		# add('keywords',weight: 650,startsWith: prefix)
+		# add('autoimports',weight: 700,startsWith: prefix, autoImport: yes)
+		
+		add(Keywords.map(do new KeywordCompletion({name: $1},self,kind: 'keyword')))
+		self
 		
 	def completionForItem item, opts = {}
 		if item isa Completion
@@ -353,8 +468,8 @@ export default class Completions
 			entry = new SymbolCompletion(item,self,opts)
 		elif item.#symbolFile
 			entry = new WorkspaceSymbolCompletion(item,self,opts)
-		elif item isa Sym
-			entry = new SymCompletion(item,self,opts)
+		elif item isa ImbaSymbol
+			entry = new ImbaSymbolCompletion(item,self,opts)
 		elif item.hasOwnProperty('exportKind')
 			entry = new AutoImportCompletion(item,self,opts)
 		elif item.label

@@ -24,13 +24,10 @@ export class Session
 		#onMessage(msg)
 		
 	def toEvent name, body
-		if global.state.formatEvent
-			util.log('intercepting with formatEvent')
-			body = global.state.formatEvent(name,body)
 		#toEvent(name,body)
 	
 	def send msg
-		util.log('send',msg)
+		util.log("send {msg.type} {msg.event or msg.command}",msg)
 		#send(msg)
 		
 	def refreshDiagnostics
@@ -41,11 +38,22 @@ export class Session
 		handler.call(this,req)
 	
 	def parseMessage msg
-		let res = #parseMessage(msg)
+		let prev = #lastReceived
+		let data = #parseMessage(msg)
 		if global.ils
-			res = global.ils.rewriteInboundMessage(res)
-		util.log('receive',res)
-		return res
+			data = global.ils.rewriteInboundMessage(data)
+		util.log("receive {data.type} {data.command}",data)
+		
+		if prev and prev.command == 'encodedSemanticClassifications-full'
+			if util.isImba(prev.arguments.file)
+				if data.command == 'geterr'
+					util.log('suppress geterr message!',data)
+					# there will still be the same errors?
+					data.arguments.files = [prev.arguments.file]
+					# data.skip = yes
+		
+		#lastReceived = data
+		return data
 		
 	def toFileSpan file, span, project
 		
@@ -66,6 +74,9 @@ export class Session
 		return res
 		
 	def executeCommand request
+		if request.skip
+			return { responseRequired: false }
+
 		let res = stack(request) do #executeCommand(request)
 		return res
 		
@@ -77,27 +88,37 @@ export class Session
 		
 		for item in diagnostics
 			try
-				let mapper = item.file..scriptSnapshot..mapper
+				let mapper = item.#mapper ||= item.file..scriptSnapshot..mapper
 				continue unless mapper
 				
 				if item.#converted =? yes
 					let mapper = item.file..scriptSnapshot..mapper
 					item.#opos = [item.start,item.start + item.length]
-					item.#mapper = [item.file,mapper]
-					let range = mapper.o2dRange(item.start,item.start + item.length,no)
+					item.#mapper = mapper
+					let range = mapper.o2iRange(item.start,item.start + item.length,no)
 					# let start = mapper.o2d(item.start)
 					# let end = mapper.o2d(item.start + item.length)
 					if range.length
-						item.start = range[0] or 0
-						item.length = range[1] - range[0]
+						item.#ipos = range
+						item.#length = range[1] - range[0]
+						item.#text = mapper.itext(range[0],range[1])
 					else
 						# hide the diagnostic if it doesnt map perfectly
 						item.start = item.length = 0
 						item.#suppress = yes
 				
+				if item.#ipos
+					item.start = mapper.i2d(item.#ipos[0])
+					item.length = mapper.i2d(item.#ipos[1]) - item.start
+					let text = mapper.dtext(item.start,item.start + item.length)
+					if text != item.#text
+						# util.log('suppress item',item,item.#text,text)
+						item.#suppress = yes
+				
 			catch e
 				util.log('error',e)
-
+		
+		# util.log('filterDiagnostics',file,diagnostics)
 		return diagnostics.filter do !$1.#suppress
 			
 	def sendDiagnosticsEvent(file, project, diags, kind)
@@ -120,7 +141,9 @@ export class ScriptInfo
 	# to current imba coordinates before calling this
 	def positionToLineOffset pos
 		if #imba
-			return #imba.positionToLineOffset(pos)
+			let out = #imba.positionToLineOffset(pos)
+			# util.log('positionToLineOffset',path,pos,out)
+			return out
 
 		let res = #positionToLineOffset(pos)
 		return res
@@ -164,9 +187,6 @@ export class ScriptInfo
 		return opos
 		# let converted = snap.c.i2o(pos)
 
-	
-	
-		
 	def editContent start, end, newText
 		util.log('editContent',start,end,newText)
 		if #imba
@@ -279,8 +299,21 @@ export class ScriptVersionCache
 		let minVersion = Math.min(from,to)
 		let maxVersion = Math.max(from,to)
 		
+		if minVersion == maxVersion
+			return fromOffset
+		
 		let edits = getRawChangesBetweenVersions(minVersion,maxVersion)
 		# console.log 'edits!!',edits,from,to
+		
+		if edits.length == 0
+			return fromOffset
+			
+		# this is a range
+		if fromOffset.start != undefined
+			return {
+				start: getAdjustedOffset(fromOffset.start,from,to,stickyStart)
+				length: getAdjustedOffset(fromOffset.start + fromOffset.length,from,to,stickyStart)
+			}
 
 		let offset = fromOffset
 		let modified = no
@@ -353,10 +386,12 @@ export default def patcher ts
 		ts[k] = v
 	
 	const SymbolObject = global.SymbolObject = ts.objectAllocator.getSymbolConstructor!
+	const Token = global.Token = ts.objectAllocator.getTokenConstructor!
 	const TypeObject   = global.TypeObject = ts.objectAllocator.getTypeConstructor!
 	const NodeObject   = global.NodeObject = ts.objectAllocator.getNodeConstructor!
 	const SourceFile   = global.SourceFile = ts.objectAllocator.getSourceFileConstructor!
 	const Signature    = global.Signature = ts.objectAllocator.getSignatureConstructor!
+	const Identifier = global.Identifier = ts.objectAllocator.getIdentifierConstructor!
 	
 
 	extend class SourceFile
@@ -375,6 +410,9 @@ export default def patcher ts
 	
 	
 	extend class SymbolObject
+	
+		get pascal?
+			util.isPascal(escapedName)
 		
 		get imbaName
 			return #imbaName if #imbaName
@@ -404,7 +442,19 @@ export default def patcher ts
 						return res[0].text
 					return res
 			return null
-	
+			
+		get isInternal
+			(/^__@|$\d+$|\$\$\w+\$\$/).test(escapedName)
+			
+		get isReadonly
+			valueDeclaration.modifierFlagsCache & ts.ModifierFlags.Readonly
+
+		get isDeprecated
+			valueDeclaration.modifierFlagsCache & ts.ModifierFlags.Deprecated
+
+		get isTagAttr
+			return no if isDeprecated
+			flags & ts.SymbolFlags.Property && (flags & ts.SymbolFlags.Function) == 0 && !isReadonly && !escapedName.match(/^on\w/)
 
 	return ts
 	

@@ -27,6 +27,15 @@ export class Compilation
 		
 		options = {...ImbaOptions, fileName: src, sourcePath: src}
 		
+	def dtext start, end
+		script.im.getText(start,end)
+		
+	def itext start, end
+		body.slice(start,end)
+	
+	def otext start, end
+		js.slice(start,end)
+		
 	def o2iRange start, end, fuzzy = yes
 		# the whole body of the file
 		if start == 0 and end == js.length
@@ -48,6 +57,7 @@ export class Compilation
 	def o2dRange start, end, fuzzy = yes
 		let range = o2iRange(start,end,fuzzy)
 		return i2d(range)
+	
 		
 	def o2i o, opts = yes
 		if o.start != undefined
@@ -90,6 +100,8 @@ export class Compilation
 	def d2i d
 		input.cache.rewindOffset(d,input.version)
 		
+	
+		
 	def i2d i
 		return null if i == null
 		if typeof i[0] == 'number'
@@ -106,30 +118,86 @@ export class Compilation
 	def o2d o, fuzzy = yes
 		i2d(o2i(o,fuzzy))
 		
-	def i2o i
+	def i2oRange start, end, fuzzy = yes
+		# the whole body of the file
+		if start == 0 and end == body.length
+			return [0,js.length]
+		
+		for [ts0,ts1,imba0,imba1] in locs.spans
+			if start == imba0 and end == imba1
+				return [ts0,ts1]
+	
+		if fuzzy
+			let o0 = i2o(start)
+			let o1 = i2o(end)
+			return [o0,o1]
+
+		return []
+		
+	def i2o i, opts = yes
 		return null if i == null
+		
+		if i.start != undefined
+			let start = Number(i.start)
+			let end = start + Number(i.length)
+			return i2oRange(start,end,opts)
 		
 		let matches = []
 		let bestMatch = null
+
+	
 		
 		for [ts0,ts1,imba0,imba1],idx in locs.spans
 			if i == imba0
 				return ts0
 			if i == imba1
 				return ts1
+
 			if imba1 > i > imba0
 				let tsl = ts1 - ts0
 				let isl = imba1 - imba0
 				let o = i - imba0
 				
+				matches.push([tsl,isl,locs.spans[idx]])
+				
 				if isl == tsl
 					matches.push([ts0 + o,tsl])
-				
+		
+		
 		if matches.length
-			return matches[0][0]
+			# sort and prioritize the shortest matches first
+			matches = matches.sort do $1[0] - $2[0]
+			
+			let chr = body[i - 1]
+			
+			for [tsl,isl,[ts0,ts1,imba0,imba1]] in matches
+				let tstr = js.slice(ts0,ts1)
+				let istr = body.slice(imba0,imba1)
+				let ipre = istr.slice(0,i - imba0)
+				
+				if isl == tsl
+					return ts0 + (i - imba0)
+				
+				let idx = tstr.indexOf(ipre)
+				if idx >= 0
+					return ts0 + idx + ipre.length
+				# if chr == '\t' or chr == '\n' and ipre.match(/[\n\t]/)
 
 		return null
 		
+	def inspectLocs i = null
+		let out = []
+		for [ts0,ts1,imba0,imba1],idx in locs.spans
+			continue if ts0 == undefined
+			if i != null and imba0 > i or i > imba1
+				continue
+
+			let tstr = js.slice(ts0,ts1)
+			let istr = body.slice(imba0,imba1)
+			let ipre = i != null ? istr.slice(0,i - imba0) : ''
+			out.push([ts0,ts1,imba0,imba1,tstr,istr,ipre])
+		return out
+
 	get diagnostics
 		return [] unless result..diagnostics
 

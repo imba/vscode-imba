@@ -23,12 +23,19 @@ export default class ImbaScript
 	def getMapper target
 		let snap = target ? target.getSourceFile(fileName).scriptSnapshot : info.getSnapshot!
 		return snap.mapper
-	
+		
+	def getText start = 0, end = null
+		snapshot.getText(start,end)
+		
 	def o2d pos, source
 		getMapper(source).o2d(pos)
 			
 	def d2o pos, source
 		getMapper(source).d2o(pos)
+			
+	def typeAt pos
+		let tc = getTypeChecker!
+		tc.typeAtLocation(pos)
 
 	def setup
 		util.log("setup {fileName}",info.textStorage.text)	
@@ -65,7 +72,7 @@ export default class ImbaScript
 		let body = snap.getText(0,snap.getLength!)
 		let output = Compiler.compile(info,body)
 		output.input = snap
-		sa
+
 		if output.js
 			applyOutput(output)
 	
@@ -82,7 +89,8 @@ export default class ImbaScript
 
 	def editContent start, end, newText
 		svc.edit(start,end - start,newText)
-		util.delay(self,'asyncCompile',200)
+		# this should just start asynchronously instead
+		util.delay(self,'asyncCompile',5000)
 
 	def compile
 		let snap = svc.getSnapshot!
@@ -114,7 +122,7 @@ export default class ImbaScript
 			let checker = program.getTypeChecker!
 			return new ImbaTypeChecker(project,program,checker,self)
 
-
+		
 	def getSemanticTokens
 		let result\number[] = []
 		let typeOffset = 8
@@ -142,6 +150,8 @@ export default class ImbaScript
 		# util.log("semantic!",result)
 		return result
 		
+	
+		
 	def getCompletions pos, options
 		util.log('getCompletionsScript',pos,options)
 		let ctx = new Completions(self,pos,options)
@@ -157,3 +167,62 @@ export default class ImbaScript
 	def getContextAt pos
 		# retain context?
 		new ImbaScriptContext(self,pos)
+		
+	def getInfoAt pos, ls
+		let ctx = doc.getContextAtOffset(pos)
+		let out = {}
+
+		if ctx.after.token == '' and !ctx.before.character.match(/\w/)
+			if ctx.after.character.match(/[\w\$\@\#\-]/)
+				ctx = doc.getContextAtOffset(pos + 1)
+		
+		let g = null
+		let grp = ctx.group
+		let tok = ctx.token or {match: (do no)}
+		let checker = getTypeChecker!
+		
+		let hit = do(sym,typ)
+			if typ
+				out[typ] = sym
+			out.sym ||= sym 
+
+		if tok.match("style.property.modifier style.selector.modifier")
+			let [m,pre,post] = tok.value.match(/^(@|\.+)([\w\-\d]*)$/)
+
+			if pre == '@' or pre == ''
+				out.sym ||= checker.sym([checker.cssmodifiers,post])
+				
+		if g = grp.closest('stylevalue')
+			let idx = (ctx..before..group or '').split(' ').length - 1
+			let alternatives = checker.getStyleValues(g.propertyName,idx)
+			let match = alternatives.find do $1.escapedName == tok.value
+			if match
+				hit(match,'value')
+		
+		if g = grp.closest('styleprop')
+			out.sym ||= checker.sym([checker.cssrule,g.propertyName])
+			
+		if tok.match('tag.event.name')
+			let name = tok.value.replace('@','')
+			# out.sym ||= 
+				
+		
+		if tok.match('white keyword')
+			return {}
+			
+		if out.sym
+			out.info = checker.getSymbolInfo(out.sym)
+		
+		if out.info
+			out.info.textSpan ||= tok.span
+
+		return out
+			
+		
+	def getQuickInfo pos, ls
+		let out = getInfoAt(pos,ls)
+		
+		if out.info
+			return out.info
+
+		return null

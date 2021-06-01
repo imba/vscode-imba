@@ -4,9 +4,21 @@ import {aliases,StyleTheme} from 'imba/src/compiler/styler'
 
 export const properties = {}
 
+export class CSSProperty
+	
+	static def get key
+		properties[key]
+
+	name\string
+	values\any[]
+
 for entry in data.properties
 	entry.fullName = entry.name
+	properties[entry.name] = new CSSProperty(entry)
 	properties[entry.name] = entry
+	
+	
+	
 	
 for own k,v of aliases
 	let defn = {

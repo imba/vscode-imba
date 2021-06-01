@@ -334,5 +334,5 @@ interface ImbaEvents {
     volumechange: Event;
     waiting: Event;
     wheel: WheelEvent;
-    [event: string]: CustomEvent;
+    [event: string]: Event;
 }

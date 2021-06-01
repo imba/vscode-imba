@@ -19,14 +19,6 @@ declare module "imba_css" {
         'repeat-x': css$repeat
     }
     
-    interface cssprop$any {
-        set(value: any): void;
-    }
-    
-    interface css$rule {
-        [key: string]: cssprop$any
-    }
-    
     interface css$modifiers {
         /** Represents elements whose numeric position in a series of siblings is odd 1, 3, 5, etc 
          * @detail :nth-child(odd)

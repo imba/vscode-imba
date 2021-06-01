@@ -17,6 +17,7 @@ declare module "imba_css" {
     
     type css$padding = number;
     type css$margin = number;
+    type css$side = number;
 
     type css$url = 'url';
     type css$image = 'url';
@@ -28,7 +29,18 @@ declare module "imba_css" {
     }
     
     interface css$prop {
+    }
+    
+    interface css$prop$any {
         set(val: css$globals): void;
+    }
+    
+    interface css$rule {
+        [key: string]: css$prop$any
+    }
+    
+    interface css$unicode_range {
+        
     }
     
     interface css$position {
@@ -102,5 +114,22 @@ declare module "imba_css" {
     }
     interface css$prop$overflow_y extends css$prop {
         set(val: css$enum$overflow): void
+    }
+    
+    interface css$enum$all {
+        /** Specifies behavior that depends on the stylesheet origin to which the declaration belongs */
+        revert: 'revert'
+    }
+
+    interface css$enum$grid {
+
+    }
+    
+    interface css$enum$alt {
+        
+    }
+    
+    interface css$enum$mask_origin {
+        
     }
 }

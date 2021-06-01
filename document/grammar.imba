@@ -514,6 +514,7 @@ export const states = {
 	
 	flow_: [
 		# [/(else)(?=\s|$)/, ['keyword.$1','@flow_start.$S2.flow.$S4']]
+		[/(else)(?=\s|$)/, ['keyword.$1','@>_flow&$1']]
 		[/(if|else|elif|unless)(?=\s|$)/, ['keyword.$1','@flow_start=$1']]
 	]
 
