@@ -1,6 +1,6 @@
 import * as util from './util'
 
-import { CompletionItem, Range, TextEdit, MarkdownString } from 'vscode'
+import { CompletionItem, Range, TextEdit, MarkdownString, SnippetString } from 'vscode'
 import * as Converters from './converters'
 
 class ImbaCompletionItem < CompletionItem
@@ -46,6 +46,9 @@ export default class CompletionsProvider
 				
 			elif raw.insertText == undefined
 				raw.insertText = raw.label.name
+				
+			if raw.insertSnippet
+				raw.insertText = new SnippetString(raw.insertSnippet)
 			
 			# if raw.data
 			# 	util.log("has data {JSON.stringify(raw.data)}")

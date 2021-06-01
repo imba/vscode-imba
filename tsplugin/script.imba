@@ -90,7 +90,7 @@ export default class ImbaScript
 	def editContent start, end, newText
 		svc.edit(start,end - start,newText)
 		# this should just start asynchronously instead
-		util.delay(self,'asyncCompile',5000)
+		util.delay(self,'asyncCompile',250)
 
 	def compile
 		let snap = svc.getSnapshot!

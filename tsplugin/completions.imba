@@ -264,6 +264,11 @@ export class SymbolCompletion < Completion
 			triggers '> .[#'
 			kind = 'value'
 
+		elif cat == 'tag'
+			triggers ' '
+			kind = 'value'
+			item.filterText = name
+			name = item.insertText = "<{name}>"
 		else
 			type = item.kind
 			triggers '!(,. ['
@@ -271,6 +276,13 @@ export class SymbolCompletion < Completion
 		if cat == 'implicitSelf'
 			item.insertText = item.filterText = name
 			name = "self.{name}"
+			
+		if tags.snippet
+			let snip = tags.snippet
+			if cat == 'tag'
+				snip = "<{snip}>"
+			item.insertSnippet = snip
+			type = 'snippet'
 	
 	def resolve
 		let details = checker.getSymbolDetails(sym)
@@ -397,6 +409,7 @@ export default class Completions
 	def tagnames o = {}
 		let html = checker.props('HTMLElementTagNameMap')
 		add(html,o)
+		add(checker.props('$snippets$.tags'),o)
 		
 	def tagattrs o = {}
 		# console.log 'check',"ImbaHTMLTags.{o.name}"
@@ -431,19 +444,20 @@ export default class Completions
 		for item in vars
 			# what 
 			let found = checker.findExactSymbolForToken(item.node)
-			# let found = checker.local(item.name,loc)
 			symbols.push(found or item)
-		# util.log('resolveVariables',opos,loc,symbols)
 
-		add(symbols,kind: 'var')
+		add(symbols,kind: 'var', weight: 200)
 		
 		# keywords
+		
+		if ctx.group.closest('tagcontent') and !ctx.group.closest('tag')
+			add('tagnames',kind: 'tag',weight: 300)
 
 		try
 			let selfpath = ctx.selfPath
 			let selfprops = checker.props(selfpath)
 			# || checker.props(loc.thisType)
-			add(selfprops,kind: 'implicitSelf')
+			add(selfprops,kind: 'implicitSelf', weight: 300)
 		
 		# add('variables',weight: 70)
 		# could also go from the old shared checker?
@@ -453,7 +467,7 @@ export default class Completions
 		# add('keywords',weight: 650,startsWith: prefix)
 		# add('autoimports',weight: 700,startsWith: prefix, autoImport: yes)
 		
-		add(Keywords.map(do new KeywordCompletion({name: $1},self,kind: 'keyword')))
+		add(Keywords.map(do new KeywordCompletion({name: $1},self,kind: 'keyword', weight: 800)))
 		self
 		
 	def completionForItem item, opts = {}

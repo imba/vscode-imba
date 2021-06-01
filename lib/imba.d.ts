@@ -8,6 +8,7 @@
 /// <reference path="./imba.css.custom.d.ts" />
 /// <reference path="./imba.events.d.ts" />
 /// <reference path="./imba.router.d.ts" />
+/// <reference path="./imba.snippets.d.ts" />
 
 type Selector = string;
 

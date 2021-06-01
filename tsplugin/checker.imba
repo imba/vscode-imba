@@ -84,6 +84,9 @@ export default class ImbaTypeChecker
 	get cssmodule
 		checker.tryFindAmbientModule('imba_css')
 		
+	get snippets
+		checker.tryFindAmbientModule('imba_snippets')
+		
 	get cssrule
 		#cssrule ||= checker.getDeclaredTypeOfSymbol(cssmodule.exports.get('css$rule'))
 		# #cssrule ||= checker.getTypeOfSymbolAtLocation(cssmodule.exports.get('s'),cssmodule.valueDeclaration)
