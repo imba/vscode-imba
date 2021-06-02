@@ -1,6 +1,6 @@
 import * as util from './util'
 import {Sym as ImbaSymbol,Node as ImbaNode, Token as ImbaToken, SymbolFlags as ImbaSymbolFlags} from '../document'
-
+import AutoImportContext from './importer'
 const Globals = "global imba module window document exports console process parseInt parseFloat setTimeout setInterval setImmediate clearTimeout clearInterval clearImmediate globalThis isNaN isFinite __dirname __filename".split(' ')
 
 const Keywords = "and await begin break by case catch class const continue css debugger def get set delete do elif else export extends false finally for if import in instanceof is isa isnt let loop module nil no not null of or require return self static super switch tag then this throw true try typeof undefined unless until var when while yes".split(' ')
@@ -660,3 +660,8 @@ export default class ImbaTypeChecker
 		# let loc = getLocation(offset)
 		let inferred = inferType(tok,script.doc,tok)
 		return inferred
+		
+	get autoImports
+		#autoImports ||= new AutoImportContext(self)
+	
+	

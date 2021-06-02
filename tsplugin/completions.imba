@@ -346,6 +346,13 @@ export default class Completions
 
 		prefixRegex = new RegExp("^{prefix}","i")
 		
+		if triggerCharacter == '=' and !tok.match('operator.equals.tagop')
+			return
+		
+		# only show completions directly after : in styles	
+		if triggerCharacter == ':' and !tok.match('style.property.operator')
+			return
+		
 		if flags & CT.TagName
 			util.log('resolveTagNames',ctx)
 			add('tagnames',kind: 'tagname')

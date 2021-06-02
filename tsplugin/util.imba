@@ -68,6 +68,11 @@ export def extend target, klass
 		# target[k] = v.value # v.bind(target)
 	return target
 
+export def unquote str
+	if str[0] == '"' and str[str.length - 1] == '"'
+		return str.slice(1,-1)
+	return str
+	
 export def log ...params
 	return unless DEBUGGING
 	global.logger.log(...params)

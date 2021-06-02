@@ -223,7 +223,7 @@ export class Compilation
 		#result = res
 		done = yes
 		if res.js
-			self.js = res.js.replace(/\$CARET\$/g,'valueOf')
+			self.js = res.js.replace(/\$CARET\$/g,'       ') # 'valueOf'
 			self.locs = res.locs
 		
 		let errors = res.errors or []

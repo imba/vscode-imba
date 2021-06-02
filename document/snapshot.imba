@@ -210,6 +210,10 @@ export default class ImbaScriptInfo
 
 		let lineInfo = index.positionToColumnAndLineText(offset)
 		let lineText = lineInfo.lineText
+		
+		if lineText == undefined
+			lineText = index.lineNumberToInfo(lineInfo.oneBasedLine).lineText
+			
 		let col = lineInfo.zeroBasedColumn
 
 		let ctx = tok.context

@@ -41,9 +41,16 @@ export default class Service
 		
 	def getCompletions file,pos,ctx
 		let script = getImbaScript(file)
-		util.log('ipc_getCompletions',file,pos,ctx,script)
+		util.log('getCompletions',file,pos,ctx,script)
 		let res = #lastCompletions = script.getCompletions(pos,ctx)
 		return res.serialize!
+		
+	def onDidChangeTextEditorSelection file,opts = {}
+		util.log('onDidChangeTextEditorSelection',file,opts)
+		return null
+		
+	def onDidSaveTextDocument file
+		util.log('onDidSaveTextDocument',file)
 		
 	def resolveCompletionItem item, data
 		util.log('resolveCompletionItem',item,data)
@@ -55,23 +62,9 @@ export default class Service
 		
 		
 	def handleRequest {id,data}
-		util.log('handleRequest',data)
+		# util.log('handleRequest',data)
 		bridge ||= new Bridge(id)
 		bridge.handle(data)
-		# 	ipcid = id
-
-		# if data.type == 'event'
-		# 	util.log('event_' + data.event,data.body)
-		# 	if data.event == 'ready'
-		# 		connectToBridge!
-		# 		yes
-		# 		# ipc.connectTo
-	
-	# def connectToBridge
-	# 	ipc.connectTo(ipcid) do
-	# 		util.log('ipc','connected!')
-	# 		ipc.of[ipcid].on('hello') do
-	# 			util.log('ipc','hello!!',arguments)
 
 	def create info
 		util.log('create',info)

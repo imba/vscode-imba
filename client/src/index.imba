@@ -272,7 +272,11 @@ export def activate context
 		
 	log("client ready! {stamp!}")
 	
-	
+	workspace.onDidSaveTextDocument do(e)
+		let path = util.toPath(e.uri)
+		log("ondidsavedoc? {path}")
+		if util.isImba(path)
+			bridge.call('onDidSaveTextDocument',util.toPath(e.uri))
 
 	window.onDidChangeTextEditorSelection do(e)
 		const doc = e.textEditor.document
@@ -281,9 +285,12 @@ export def activate context
 		let params = {
 			kind: e.kind
 			selections: e.selections
+			file: util.toPath(uri)
 			uri: uri.toString!
 		}
-		client.sendNotification('onDidChangeTextEditorSelection',params)
+		if util.isImba(params.file)
+			bridge.call('onDidChangeTextEditorSelection',params.file,params)
+			client.sendNotification('onDidChangeTextEditorSelection',params)
 
 	workspace.onDidRenameFiles do(ev)
 		client.sendNotification('onDidRenameFiles',ev)

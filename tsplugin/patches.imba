@@ -42,7 +42,9 @@ export class Session
 		let data = #parseMessage(msg)
 		if global.ils
 			data = global.ils.rewriteInboundMessage(data)
-		util.log("receive {data.type} {data.command}",data)
+			
+		unless data.command == 'configurePlugin'
+			util.log("receive {data.type} {data.command}",data)
 		
 		if prev and prev.command == 'encodedSemanticClassifications-full'
 			if util.isImba(prev.arguments.file)
@@ -73,7 +75,14 @@ export class Session
 		util.log('toFileSpan',file,span,res)
 		return res
 		
-	def executeCommand request
+	def executeCommand request		
+		if request.command == 'configurePlugin' and request.arguments.pluginName == 'imba'
+			let data = request.arguments.configuration
+			if global.ils
+				if data.#handled =? yes
+					global.ils.handleRequest(data)
+			return { responseRequired: false }
+
 		if request.skip
 			return { responseRequired: false }
 

@@ -31,11 +31,13 @@ export default class Client
 	def handle e, sock = null
 		util.log('ipc_handle',e)
 		if e.type == 'request'
-			util.log('call',e.command,e.arguments)
+			# util.log('call',e.command,e.arguments)
 			if let meth = ils[e.command]
 				try
 					let res = await meth.apply(ils,e.arguments)
-					util.log('respond',e.command,res)
+					if res
+						util.log('respond',e.command,res)
+
 					host.emit('message',{
 						type: 'response'
 						responseRef: e.requestRef
