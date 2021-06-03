@@ -4,7 +4,7 @@
 	"description": "Language support for Imba 2",
 	"version": "2.5.4",
 	"publisher": "scrimba",
-	"main": "./client/dist/src/index.js",
+	"main": "./dist/src/index.js",
 	"icon": "assets/imba.png",
 	"license": "MIT",
 	"author": "Sindre Aarsaether",
@@ -130,10 +130,11 @@
 		},
 		"typescriptServerPlugins": [
 			{
-				"name": "tsplugin-imba",
+				"name": "typescript-imba-plugin",
 				"enableForWorkspaceTypeScriptVersions": true,
+				"configNamespace": "typescript-imba",
 				"languages": [
-					"tsimba"
+					"imba"
 				]
 			}
 		],
@@ -223,21 +224,24 @@
 	},
 	"dependencies": {
 		"@types/typescript": "^2.0.0",
+		"@types/vscode": "^1.56.0",
 		"imba": "^2.0.0-alpha.114",
 		"node-ipc": "^9.1.4",
 		"tsplugin-imba": "file:tsplugin",
 		"typescript": "^4.2.4",
+		"typescript-imba-plugin": "^1.0.0",
 		"vscode-languageclient": "^6.1.1",
 		"vscode-languageserver": "^6.1.1"
 	},
 	"devDependencies": {
 		"chroma-js": "^2.1.0",
 		"js-yaml": "^3.14.0",
-		"plist": "^3.0.1"
+		"plist": "^3.0.1",
+		"vscode": "^1.1.37"
 	},
 	"scripts": {
 		"dev:bootstrap": "lerna bootstrap",
-		"watch": "imba watch",
+		"watch": "imba build -wMS --node.external +vscode src/index.imba",
 		"build": "imba build",
 		"prod:version": "lerna version",
 		"build-theme": "imba scripts/compile-theme.imba",
