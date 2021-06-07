@@ -1,5 +1,0 @@
-{
-    "node": {
-        "external": ["dependencies","vscode"]
-    }
-}

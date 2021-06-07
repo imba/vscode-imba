@@ -1,10 +1,10 @@
 {
 	"name": "vsimba",
 	"displayName": "Imba",
-	"description": "Language support for Imba 2",
-	"version": "2.5.4",
+	"description": "Language support for Imba",
+	"version": "3.0.0",
 	"publisher": "scrimba",
-	"main": "./client/dist/src/index.js",
+	"main": "./dist/src/index.js",
 	"icon": "assets/imba.png",
 	"license": "MIT",
 	"author": "Sindre Aarsaether",
@@ -21,6 +21,7 @@
 	"activationEvents": [
 		"onLanguage:imba",
 		"onLanguage:imba1",
+		"workspaceContains:**/*.imba",
 		"workspaceContains:**/imbaconfig.json"
 	],
 	"contributes": {
@@ -32,6 +33,10 @@
 			{
 				"command": "imba.clearProgramProblems",
 				"title": "Clear Imba problems in Project"
+			},
+			{
+				"command": "imba.debugService",
+				"title": "Log details from Imba tooling"
 			},
 			{
 				"command": "ximba.incrementByOne",
@@ -52,6 +57,10 @@
 			{
 				"command": "imba.toggleStyles",
 				"title": "Toggle Style Blocks folding"
+			},
+			{
+				"command": "imba.setDefaultSettings",
+				"title": "Update Workspace Settings for Imba"
 			}
 		],
 		"keybindings": [
@@ -75,41 +84,52 @@
 			"type": "object",
 			"title": "Imba",
 			"properties": {
-				"imba.maxNumberOfProblems": {
-					"type": "number",
-					"default": 100,
-					"description": "Controls the maximum number of problems produced by the server."
-				},
 				"imba.verbose": {
 					"type": "boolean",
 					"default": false,
 					"description": "Controls whether the language server should log out details"
+				},
+				"imba.debug": {
+					"type": "boolean",
+					"default": false,
+					"description": "Enable/disable debugging for the Imba Language Server"
 				},
 				"imba.checkImba": {
 					"type": "boolean",
 					"default": true,
 					"description": "Enable/disable semantic checking of Imba files. Existing imbaconfig.json overrides this setting."
 				},
+				"imba.debugPort": {
+					"type": "number",
+					"default": 0,
+					"description": "Port for debugging"
+				},
 				"imba.suggest.shorthandStyleProperties": {
 					"type": "boolean",
 					"default": true,
 					"description": "Insert shorthand when completing style properties",
 					"scope": "resource"
-				},
-				"imba.suggest.completeFunctionCalls": {
-					"type": "boolean",
-					"default": false,
-					"description": "%configuration.suggest.completeFunctionCalls%",
-					"scope": "resource"
 				}
 			}
 		},
+		"typescriptServerPlugins": [
+			{
+				"name": "typescript-imba-plugin",
+				"enableForWorkspaceTypeScriptVersions": true,
+				"configNamespace": "typescript-imba",
+				"languages": [
+					"imba"
+				]
+			}
+		],
 		"configurationDefaults": {
 			"[imba]": {
 				"editor.insertSpaces": false,
 				"editor.tabSize": 4,
 				"editor.autoIndent": "advanced",
-				"editor.suggest.showWords": false
+				"editor.suggest.showWords": false,
+				"editor.foldingStrategy": "indentation",
+				"files.eol": "\n"
 			}
 		},
 		"languages": [
@@ -172,19 +192,22 @@
 		]
 	},
 	"dependencies": {
-		"imba": "^2.0.0-alpha.114",
-		"vscode-languageclient": "^6.1.1",
-		"vscode-languageserver": "^6.1.1"
+		"@types/typescript": "^2.0.0",
+		"@types/vscode": "^1.56.0",
+		"node-ipc": "^9.1.4",
+		"typescript-imba-plugin": "^1.0.2"
 	},
 	"devDependencies": {
+		"imba": "^2.0.0-alpha.136",
 		"chroma-js": "^2.1.0",
 		"js-yaml": "^3.14.0",
-		"plist": "^3.0.1"
+		"plist": "^3.0.1",
+		"vscode": "^1.1.37"
 	},
 	"scripts": {
 		"dev:bootstrap": "lerna bootstrap",
-		"watch": "imba watch",
-		"build": "imba build",
+		"watch": "imba build -wMS --node.external +vscode src/index.imba",
+		"build": "imba build -S --node.external +vscode src/index.imba",
 		"prod:version": "lerna version",
 		"build-theme": "imba scripts/compile-theme.imba",
 		"test": "node server/test.js"

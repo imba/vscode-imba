@@ -1,1 +1,0 @@
-tag ${1:app-component}$0

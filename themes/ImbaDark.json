@@ -22,6 +22,12 @@
     },
     "variable.global": {
       "foreground": "#e9e19b"
+    },
+    "variable.defaultLibrary": {
+      "foreground": "#c5badc"
+    },
+    "namespace": {
+      "foreground": "#c5badc"
     }
   },
   "tokenColors": [

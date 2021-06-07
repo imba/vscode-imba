@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.0.0
+
+The tooling has been re-implemented as a typescript server plugin, which makes it a lot more powerful.
+
+* Much better type inference and completions
+* Completions for event-handlers and event-modifiers
+* Completions for type annotations (ie `let item\RequestOptions`)
+* Highlight unnused variables and imports
+* Import imba files from js & ts with full IDE support
+* Renaming & refactoring across imba/js/ts files
+
 ## 2.5.3
 * Improved markdown highlighting in ImbaDark
 * Added highlighting for markdown imba codeblocks
