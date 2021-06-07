@@ -2,24 +2,17 @@ import {window, commands, languages, IndentAction, workspace,Range, extensions} 
 
 import path from 'path'
 import * as util from './util'
-import ipc from 'node-ipc'
 
 import CompletionsProvider from './completions' 
 import Bridge from './bridge'
 
+let bridge = null
 let log = util.log
-let initialStamp = Date.now!
-	
-def stamp
-	(Date.now! - initialStamp) + 'ms'
-
-let client\LanguageClient = null
-let isReady = no
 
 languages.setLanguageConfiguration('imba',{
 	wordPattern: /(-?\d*\.\d\w*)|([^\`\~\!\@\#%\^\&\*\(\)\=\+\[\{\]\}\\\|\;\:\'\"\,\.\<\>\/\?\s]+)|(#+[\w\-]+)/g,
 	onEnterRules: [{
-		beforeText: /^\s*(?:export def|constructor|def|(export (default )?)?(static )?(def|get|set)|(export (default )?)?(class|tag)|for\s|if\s|elif|else|while\s|try|with|finally|except).*?$/,
+		beforeText: /^\s*(?:export def|constructor|def |(export (default )?)?(static )?(def |get |set )|(export (default )?)?(class|tag)|for\s|if\s|elif\s|else|while\s|try|with|finally|except).*?$/,
 		action: { indentAction: IndentAction.Indent }
 	},{
 		beforeText: /\s*(?:do)\s*(\|.*\|\s*)?$/,
@@ -33,18 +26,14 @@ languages.setLanguageConfiguration('imba',{
 	}]
 })
 
-
 const foldingToggles = {}
-const receivedSemanticTokens = {}
 
 def adjustmentCommand amount = 1
 	return do(editor,edit)
-		# log("increment!!! {JSON.stringify(editor.selection)} {editor.document.uri}")
 		let doc = editor.document
-		let edits = await client.sendRequest('increment',{
+		let edits = await bridge.call('increment',util.toPath(doc.uri),{
 			by: amount
 			selections: editor.selections
-			uri: doc.uri.toString!
 		})
 
 		if edits
@@ -86,8 +75,7 @@ def configure items = {}
 	for own k,v of items
 		cfg.update(k,v)
 
-let tlsapi = null
-let bridge = null
+
 
 export def activate context
 	let conf = workspace.getConfiguration('imba')
@@ -111,17 +99,6 @@ export def activate context
 
 	languages.registerCompletionItemProvider({language: 'imba'},new CompletionsProvider(bridge),'.',':', '"', '@','%','\\',"'",'=','<')
 	
-	
-	let symProvider = {
-		provideDocumentSymbols: do(document, token)
-			return []
-			#  ProviderResult<SymbolInformation[] | DocumentSymbol[]>
-	}
-	
-	
-	
-	# context.subscriptions.push languages.registerDocumentSymbolProvider({language: 'imba', scheme: 'file'},symProvider,{label: 'TypeScript'})
-
 	workspace.getConfiguration(undefined,null)
 	
 	commands.registerCommand('imba.getProgramDiagnostics') do
@@ -165,10 +142,6 @@ export def activate context
 		let cmd = bool ? 'unfold' : 'fold'
 		log 'toggle folding',cmd,lines,bool
 		await commands.executeCommand("editor.{cmd}", {selectionLines: lines, direction: 'up'})
-	
-	isReady = yes
-	
-	log("client ready! {stamp!}")
 	
 	workspace.onDidSaveTextDocument do(e)
 		let path = util.toPath(e.uri)

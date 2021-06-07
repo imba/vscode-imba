@@ -1,7 +1,7 @@
 import { window } from 'vscode'
 import np from 'path'
 
-let debugChannel = window.createOutputChannel("Imba Debug")
+let debugChannel = null # window.createOutputChannel("Imba Debug")
 
 export def log msg,...rest
 	if debugChannel
@@ -16,4 +16,4 @@ export def toPath doc
 	
 export def isImba src
 	return false unless src
-	src.substr(src.lastIndexOf(".")) == '.tsimba'
+	src.substr(src.lastIndexOf(".")) == '.imba'

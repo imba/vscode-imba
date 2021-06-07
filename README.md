@@ -1,7 +1,9 @@
 # Visual Studio Code Language Support for Imba
 
 Imba is programming language for building amazing full-stack webapps. You can
-use it on the server and client.  To learn more about Imba visit [https://imba.io](https://imba.io)
+use it on the server and client. To learn more about Imba visit [https://imba.io](https://imba.io)
+
+For the best experience, install the [typescript nightly](https://marketplace.visualstudio.com/items?itemName=ms-vscode.vscode-typescript-next) extension for vscode. The imba languageserver utilizes functionality from the latest version of typescript for auto imports++
 
 This extension provides you with
 
@@ -19,3 +21,14 @@ To make the extension play nice with legacy code you can add project-specific vs
     }
 }
 ```
+
+## Known issues
+
+- Slow startup
+- Occasional slowdowns
+- Missing import completions
+- Missing completions for import paths
+- Missing previews for style completions
+- Many refactoring actions are broken
+- Completions broken for dashed variables names (ie. `my-var-name`)
+- Needs a jsconfig/tsconfig in your project folder

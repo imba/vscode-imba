@@ -1,8 +1,8 @@
 {
 	"name": "vsimba",
 	"displayName": "Imba",
-	"description": "Language support for Imba 2",
-	"version": "2.5.4",
+	"description": "Language support for Imba",
+	"version": "3.0.0",
 	"publisher": "scrimba",
 	"main": "./dist/src/index.js",
 	"icon": "assets/imba.png",
@@ -84,20 +84,10 @@
 			"type": "object",
 			"title": "Imba",
 			"properties": {
-				"imba.maxNumberOfProblems": {
-					"type": "number",
-					"default": 100,
-					"description": "Controls the maximum number of problems produced by the server."
-				},
 				"imba.verbose": {
 					"type": "boolean",
 					"default": false,
 					"description": "Controls whether the language server should log out details"
-				},
-				"imba.tsplugin": {
-					"type": "boolean",
-					"default": false,
-					"description": "Enable/disable experimental typescript-language-features plugin"
 				},
 				"imba.debug": {
 					"type": "boolean",
@@ -119,12 +109,6 @@
 					"default": true,
 					"description": "Insert shorthand when completing style properties",
 					"scope": "resource"
-				},
-				"imba.suggest.completeFunctionCalls": {
-					"type": "boolean",
-					"default": false,
-					"description": "%configuration.suggest.completeFunctionCalls%",
-					"scope": "resource"
 				}
 			}
 		},
@@ -144,6 +128,7 @@
 				"editor.tabSize": 4,
 				"editor.autoIndent": "advanced",
 				"editor.suggest.showWords": false,
+				"editor.foldingStrategy": "indentation",
 				"files.eol": "\n"
 			}
 		},
@@ -171,27 +156,11 @@
 				],
 				"configuration": "./language-configuration.json",
 				"firstLine": "^#!/.*\\bimba[2-9.-]*\\b"
-			},
-			{
-				"id": "tsimba",
-				"aliases": [
-					"tsimba"
-				],
-				"extensions": [
-					".tsimba"
-				],
-				"configuration": "./language-configuration.json",
-				"firstLine": "^#!/.*\\bimba[2-9.-]*\\b"
 			}
 		],
 		"grammars": [
 			{
 				"language": "imba",
-				"scopeName": "source.imba",
-				"path": "./syntaxes/imba.tmLanguage"
-			},
-			{
-				"language": "tsimba",
 				"scopeName": "source.imba",
 				"path": "./syntaxes/imba.tmLanguage"
 			},
@@ -225,15 +194,11 @@
 	"dependencies": {
 		"@types/typescript": "^2.0.0",
 		"@types/vscode": "^1.56.0",
-		"imba": "^2.0.0-alpha.114",
 		"node-ipc": "^9.1.4",
-		"tsplugin-imba": "file:tsplugin",
-		"typescript": "^4.2.4",
-		"typescript-imba-plugin": "^1.0.0",
-		"vscode-languageclient": "^6.1.1",
-		"vscode-languageserver": "^6.1.1"
+		"typescript-imba-plugin": "^1.0.2"
 	},
 	"devDependencies": {
+		"imba": "^2.0.0-alpha.136",
 		"chroma-js": "^2.1.0",
 		"js-yaml": "^3.14.0",
 		"plist": "^3.0.1",
@@ -242,7 +207,7 @@
 	"scripts": {
 		"dev:bootstrap": "lerna bootstrap",
 		"watch": "imba build -wMS --node.external +vscode src/index.imba",
-		"build": "imba build",
+		"build": "imba build -S --node.external +vscode src/index.imba",
 		"prod:version": "lerna version",
 		"build-theme": "imba scripts/compile-theme.imba",
 		"test": "node server/test.js"
