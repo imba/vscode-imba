@@ -65,7 +65,14 @@ export default class CompletionsProvider
 			let item = new ImbaCompletionItem(raw)
 			item.kind = Converters.convertKind(raw.kind)
 			# item.#data = raw.data
-
+		
+			# color
+			if raw.kind == 15
+				item.kind = 15
+				item.detail = raw.detail or raw.data.color
+				# item.label.type ||= color
+				
+				# util.log("color item {item.label.type} {item.detail} {color}")
 			# if let te = raw.textEdit
 			#	te.range = new Range(doc.positionAt(te.start),doc.positionAt(te.start + te.length))
 			#	util.log("creste range!! {JSON.stringify(te)}")
