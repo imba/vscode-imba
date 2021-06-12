@@ -95,6 +95,7 @@ export def activate context
 		if conf.get('debugPort')
 			unless process.env.TSS_DEBUG
 				process.env['TSS_DEBUG'] = String(conf.get('debugPort'))
+				log("restarting ts server in debug mode {process.env['TSS_DEBUG']}")
 				try await commands.executeCommand("typescript.restartTsServer")
 
 	languages.registerCompletionItemProvider({language: 'imba'},new CompletionsProvider(bridge),'.',':', '"', '@','%','\\',"'",'=','<')

@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.0.1
+
+* Added css property completions for transform aliases (x,y,z,scale-x,scale-y,skew-x,skew-y)
+* Improved css background value completions
+* Improved css justify/align value completions
+* Fixed completions for methods/properties starting with two or more underscores
+* Hide global tags from `global.` completions
+* Add completion for `new` keyword
+* Disable space (` `) as a completion trigger
+* Filter global completions based on first character
+* Updated to imba@2.0.0-alpha.141
+
 ## 3.0.0
 
 The tooling has been re-implemented as a typescript server plugin, which makes it a lot more powerful.
