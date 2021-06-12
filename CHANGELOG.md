@@ -11,6 +11,8 @@
 * Disable space (` `) as a completion trigger
 * Filter global completions based on first character
 * Updated to imba@2.0.0-alpha.141
+* Fixed block comment highlighting for imba1 files
+* Fixed continue/break highlighting
 
 ## 3.0.0
 
