@@ -22,7 +22,7 @@ variables:
   symbolIdentifier: '\:{{identifier}}'
   instanceIdentifier: '\@{{identifier}}'
   metaIdentifier: '\@\@+{{identifier}}'
-  privateIdentifier: '\#{{identifier}}'
+  privateIdentifier: '\#+{{identifier}}'
   tagTypeIdentifier: '\w+(?:\-\w+)*(?:\:\w+(?:\-\w+)*)*'
   tagAttrIdentifier: '[\w$_]+(?:\-[\w$_]+)*'
   constantIdentifier: '[[:upper:]][_$[:digit:][:upper:]]*'

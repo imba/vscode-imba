@@ -2492,7 +2492,7 @@
             <key>name</key>
             <string>variable.other.private.imba</string>
             <key>match</key>
-            <string>\#[_$[:alpha:]][_$[:alnum:]]*(?:\-[_$[:alnum:]]+)*[\?\!]?</string>
+            <string>\#+[_$[:alpha:]][_$[:alnum:]]*(?:\-[_$[:alnum:]]+)*[\?\!]?</string>
           </dict>
           <dict>
             <key>name</key>
