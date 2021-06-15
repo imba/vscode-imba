@@ -299,6 +299,13 @@
       }
     },
     {
+      "name": "entity.name.tag.special",
+      "scope": "entity.name.tag.special",
+      "settings": {
+        "foreground": "#ffc799"
+      }
+    },
+    {
       "name": "entity.other.event-name.imba",
       "scope": "entity.other.event-name.imba",
       "settings": {

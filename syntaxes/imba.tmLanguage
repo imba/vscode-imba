@@ -1677,6 +1677,10 @@
         <array>
           <dict>
             <key>include</key>
+            <string>#tag-name</string>
+          </dict>
+          <dict>
+            <key>include</key>
             <string>#tag-expr-name</string>
           </dict>
           <dict>
@@ -1710,6 +1714,18 @@
           <dict>
             <key>include</key>
             <string>#tag-attr-name</string>
+          </dict>
+        </array>
+      </dict>
+      <key>tag-name</key>
+      <dict>
+        <key>patterns</key>
+        <array>
+          <dict>
+            <key>name</key>
+            <string>entity.name.tag.special.imba</string>
+            <key>match</key>
+            <string>(?&lt;=&lt;)(self|global|slot)(?=[\.\[\&gt;\s\(])</string>
           </dict>
         </array>
       </dict>
