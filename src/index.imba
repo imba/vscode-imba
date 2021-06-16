@@ -4,6 +4,7 @@ import path from 'path'
 import * as util from './util'
 
 import CompletionsProvider from './completions' 
+import DocumentSymbolProvider from './providers/symbols'
 import Bridge from './bridge'
 
 let bridge = null
@@ -99,7 +100,9 @@ export def activate context
 				try await commands.executeCommand("typescript.restartTsServer")
 
 	languages.registerCompletionItemProvider({language: 'imba'},new CompletionsProvider(bridge),'.',':', '"', '@','%','\\',"'",'=','<')
-	
+	util.log('setting up symbol provider')
+	languages.registerDocumentSymbolProvider({language: 'imba1'},new DocumentSymbolProvider)
+
 	workspace.getConfiguration(undefined,null)
 	
 	commands.registerCommand('imba.getProgramDiagnostics') do
