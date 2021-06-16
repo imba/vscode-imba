@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.2
+
+* Fixed autocompletions for imported identifiers
+* Improved auto-import behaviour
+* Various minor fixes
+
 ## 3.0.1
 
 * Added css property completions for transform aliases (x,y,z,scale-x,scale-y,skew-x,skew-y)
