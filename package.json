@@ -130,6 +130,14 @@
 				"editor.suggest.showWords": false,
 				"editor.foldingStrategy": "indentation",
 				"files.eol": "\n"
+			},
+			"[imba1]": {
+				"editor.insertSpaces": false,
+				"editor.tabSize": 4,
+				"editor.autoIndent": "advanced",
+				"editor.suggest.showWords": false,
+				"editor.foldingStrategy": "indentation",
+				"files.eol": "\n"
 			}
 		},
 		"languages": [
