@@ -1,14 +1,17 @@
-import { window, SymbolKind } from 'vscode'
+import { window, SymbolKind, workspace } from 'vscode'
 import np from 'path'
 
-let debugChannel = null # window.createOutputChannel("Imba Debug")
+let debugChannel = window.createOutputChannel("Imba")
 
-export def log msg,...rest
-	if debugChannel
+export def log msg, ...rest
+	let conf = workspace.getConfiguration('imba').get("verbose")
+	# debugChannel.appendLine("check logging?")
+	# let conf = true
+	if conf
 		debugChannel.appendLine(msg)
 		if rest.length
 			debugChannel.appendLine(JSON.stringify(rest))
-			
+
 
 export def toPath doc
 	let path = np.normalize(doc.fileName or doc.fsPath or doc.uri..fsPath)

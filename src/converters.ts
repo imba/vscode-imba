@@ -3,6 +3,8 @@ import * as PConst from './protocol.const'
 
 export function convertKind(kind: string): vscode.CompletionItemKind {
     switch (kind) {
+        case 'event':
+            return vscode.CompletionItemKind.Event;
         case PConst.Kind.primitiveType:
         case PConst.Kind.keyword:
             return vscode.CompletionItemKind.Keyword;

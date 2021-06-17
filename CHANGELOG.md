@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.0.3
+
+* Made completions less trigger-happy. Completions are now only committed with special characters after typing at least one character to filter the list. Fixes (#92)
+* Fixed auto-completion of css properties in selector (#93)
+* Don't show errors from imba compiler until document is saved
+* Show event-icon for tag event completions
+* Show warning whenever an auto-import is triggered (#94)
+
 ## 3.0.2
 
 * Fixed autocompletions for imported identifiers

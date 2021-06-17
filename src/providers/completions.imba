@@ -1,7 +1,8 @@
-import * as util from './util'
+import { log } from 'node-ipc'
+import * as util from '../util'
 
-import { CompletionItem, Range, TextEdit, MarkdownString, SnippetString } from 'vscode'
-import * as Converters from './converters'
+import { CompletionList, CompletionItem, Range, TextEdit, MarkdownString, SnippetString, Command } from 'vscode'
+import * as Converters from '../converters'
 
 class ImbaCompletionItem < CompletionItem
 	
@@ -15,6 +16,7 @@ class ImbaCompletionItem < CompletionItem
 export default class CompletionsProvider
 	constructor bridge
 		#bridge = bridge
+		#cache = {}
 	
 	def formatDocumentation doc, item
 		return unless doc
@@ -42,10 +44,24 @@ export default class CompletionsProvider
 
 	def provideCompletionItems(doc, pos, token, context)
 		let file = util.toPath(doc)
-		util.log("provideCompletionItems!! {doc} {doc.fsPath} {doc.offsetAt(pos)} {file}")
+		util.log("provideCompletionItems!! {doc} {doc.fsPath} {doc.offsetAt(pos)} {file} {JSON.stringify(context)}")
+		
+		if context.triggerKind != 2
+			#cache = {}
+		
+		if let cache = #cache[file]
+			util.log("found old completions? {cache.items.length}")
+			# could also decide to show additional ones
+			
+			for item in cache.items
+				item.commitCharacters = item.#raw.commitCharacters
+			return cache.items
+		else
+			#cache = {}
+
 		let res = await #bridge.call('getCompletions',file,doc.offsetAt(pos),context)
+		
 		#doc = doc
-		# res.then do util.log("returned from getCompletions {JSON.stringify($1)}")
 
 		let items = []
 		
@@ -59,34 +75,44 @@ export default class CompletionsProvider
 				
 			if raw.insertSnippet
 				raw.insertText = new SnippetString(raw.insertSnippet)
-			
-			# if raw.data
-			# 	util.log("has data {JSON.stringify(raw.data)}")
+
 			let item = new ImbaCompletionItem(raw)
 			item.kind = Converters.convertKind(raw.kind)
-			# item.#data = raw.data
-		
+			
+			# Dont allow fancy triggers before typing any additional characters
+			if context.triggerKind == 1 and !raw.action
+				item.commitCharacters = []
+
 			# color
 			if raw.kind == 15
 				item.kind = 15
 				item.detail = raw.detail or raw.data.color
-				# item.label.type ||= color
-				
-				# util.log("color item {item.label.type} {item.detail} {color}")
-			# if let te = raw.textEdit
-			#	te.range = new Range(doc.positionAt(te.start),doc.positionAt(te.start + te.length))
-			#	util.log("creste range!! {JSON.stringify(te)}")
+
 			items.push(item)
-		return items
+		# return items
+		if context.triggerKind == 1	
+			#cache[file] = {items: items}
+
+		let list = new CompletionList(items,true)
+		return list
 	
 	def resolveCompletionItem item, token
-		
+		if item.#resolved
+			return item
+
 		let res = await #bridge.call('resolveCompletionItem',item,item.data)
 		util.log("resolving item {JSON.stringify(item)} {JSON.stringify(item.#raw)} {JSON.stringify(item.data)} {JSON.stringify(res)}")
 		item.documentation ||= formatDocumentation(res.documentation,item)
 		item.detail ||= res.detail
 		
+		
+		item.#resolved = yes
+		
 		syncItem(#doc,item,res)
+		
+		if item.source
+			item.command = {command: 'imba.autoImportAlert', arguments: [#doc,item]}
+		
 		# item.label.parameters = "hello there"
 		# also add code actions if needed(!)
 		return item

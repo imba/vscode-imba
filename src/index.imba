@@ -3,7 +3,7 @@ import {window, commands, languages, IndentAction, workspace,Range, extensions} 
 import path from 'path'
 import * as util from './util'
 
-import CompletionsProvider from './completions' 
+import CompletionsProvider from './providers/completions'
 import DocumentSymbolProvider from './providers/symbols'
 import Bridge from './bridge'
 
@@ -83,6 +83,15 @@ export def activate context
 	let id = "imba-ipc-{String(Math.random!)}"
 	
 	log("activating imba?! {process.env.TSS_DEBUG}")
+	
+	commands.registerCommand('imba.autoImportAlert') do(doc,item)
+		let message = "Added auto-import for {item.source}"
+		try
+			let edit = item.additionalTextEdits[0]
+			let line = doc.lineAt(edit.range.start.line).text
+			message = "ADDED {line}"
+		
+		window.showWarningMessage(message)
 
 	try
 		const tls = extensions.getExtension('vscode.typescript-language-features')
@@ -110,9 +119,6 @@ export def activate context
 
 	commands.registerCommand('imba.clearProgramProblems') do
 		yes
-
-	commands.registerCommand('imba.debugService') do
-		configure("imba.verbose": false)
 		
 	commands.registerCommand('imba.setDefaultSettings') do
 		let settings = {
@@ -151,6 +157,7 @@ export def activate context
 		let path = util.toPath(e.uri)
 		log("ondidsavedoc? {path}")
 		if util.isImba(path)
+			
 			bridge.call('onDidSaveTextDocument',util.toPath(e.uri))
 
 	window.onDidChangeTextEditorSelection do(e)
