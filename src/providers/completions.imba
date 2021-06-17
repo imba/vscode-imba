@@ -105,6 +105,10 @@ export default class CompletionsProvider
 
 		let res = await #bridge.call('resolveCompletionItem',item,item.data)
 		util.log("resolving item {JSON.stringify(item)} {JSON.stringify(item.#raw)} {JSON.stringify(item.data)} {JSON.stringify(res)}")
+		
+		if res.markdown
+			item.documentation ||= new MarkdownString(res.markdown)
+			
 		item.documentation ||= formatDocumentation(res.documentation,item)
 		item.detail ||= res.detail
 		
