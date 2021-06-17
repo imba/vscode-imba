@@ -1,5 +1,10 @@
 # Changelog
 
+## unreleased
+
+* Change icon for tag completions
+* Fixed formatting of completion documentation 
+
 ## 3.0.3
 
 * Made completions less trigger-happy. Completions are now only committed with special characters after typing at least one character to filter the list. Fixes (#92)

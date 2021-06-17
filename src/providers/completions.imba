@@ -1,7 +1,7 @@
 import { log } from 'node-ipc'
 import * as util from '../util'
 
-import { CompletionList, CompletionItem, Range, TextEdit, MarkdownString, SnippetString, Command } from 'vscode'
+import { CompletionItemKind, CompletionList, CompletionItem, Range, TextEdit, MarkdownString, SnippetString, Command } from 'vscode'
 import * as Converters from '../converters'
 
 class ImbaCompletionItem < CompletionItem
@@ -25,11 +25,11 @@ export default class CompletionsProvider
 		if doc isa Array
 			for item in doc
 				if item.kind == 'text'
-					str.appendText(item.text)
+					str.appendMarkdown(item.text)
 				elif item.kind == 'markdown'
 					str.appendMarkdown(item.text)
 				else
-					str.appendText(item.text)
+					str.appendMarkdown(item.text)
 			return str			
 	
 	def syncItem doc, item, raw
@@ -87,6 +87,9 @@ export default class CompletionsProvider
 			if raw.kind == 15
 				item.kind = 15
 				item.detail = raw.detail or raw.data.color
+				
+			if raw.cat == 'tag' or raw.cat == 'tagname'
+				item.kind = CompletionItemKind.Class
 
 			items.push(item)
 		# return items
