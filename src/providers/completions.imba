@@ -93,7 +93,7 @@ export default class CompletionsProvider
 
 			items.push(item)
 		# return items
-		if context.triggerKind == 1	
+		if context.triggerKind == 1	or true
 			#cache[file] = {items: items}
 
 		let list = new CompletionList(items,true)
