@@ -719,6 +719,7 @@ repository:
     - include: '#tag-ref'
     - include: '#tag-attr-value'
     - include: '#tag-attr-name'
+    - include: '#comment'
   
   tag-name:
     patterns:
