@@ -43,7 +43,7 @@ variables:
       (?:\b[0-9][0-9_]*(\.)[0-9][0-9_]*(n)?\b)|                      # 1.1
       (?:\b[0-9][0-9_]*(\.)(n)?\B)|                                  # 1.
       (?:\B(\.)[0-9][0-9_]*(n)?\b)|                                  # .1
-      (?:\b[0-9][0-9_]*(n)?\b(?!\.))                                 # 1
+      (?:\b[0-9][0-9_]*(n)?\b)                                 # 1
     )(?!\$)
   anyNumber: ({{hexNumber}})|({{binaryNumber}})|({{octalNumber}})|({{decimalNumber}})
   # any use of property name needs to ignore line breaks in regular expression because of decimal number regex (maintained for readability)
@@ -114,6 +114,7 @@ repository:
   #literals
   literal:
     patterns:
+    - include: '#number-with-unit-literal'
     - include: '#numeric-literal'
     - include: '#boolean-literal'
     - include: '#null-literal'
@@ -939,6 +940,17 @@ repository:
         '12': {name: meta.delimiter.decimal.period.imba}
         '13': { name: storage.type.numeric.bigint.imba }
         '14': { name: storage.type.numeric.bigint.imba }
+    
+  number-with-unit-literal:
+    patterns:
+    - match: '([0-9]+)([a-z]+|\%)'
+      captures:
+        '1': { name: constant.numeric.imba }
+        '2': { name: keyword.other.unit.imba }
+    - match: ([0-9]*\.[0-9]+(?:[eE][\-+]?[0-9]+)?)([a-z]+|\%)
+      captures:
+        '1': { name: constant.numeric.decimal.imba }
+        '2': { name: keyword.other.unit.imba }
 
   boolean-literal:
     patterns:
