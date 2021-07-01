@@ -1,9 +1,13 @@
 # Changelog
 
-## unreleased
+## 3.0.4
 
 * Change icon for tag completions
-* Fixed formatting of completion documentation 
+* Automatic typings and intellisense for class/tag augmentations
+* Improved completions and hover-info for event modifiers
+* Fixed formatting of completion documentation
+* Only complete auto-imports with enter (or tab - if enabled)
+* Fixed highlighting for commented line inside tag literal
 
 ## 3.0.3
 
