@@ -75,6 +75,15 @@ export default class CompletionsProvider
 				
 			if raw.insertSnippet
 				raw.insertText = new SnippetString(raw.insertSnippet)
+			
+			let lbl = raw.label
+			if lbl and lbl.name
+				lbl.label = lbl.name
+				lbl.detail = lbl.qualifier
+				lbl.description = lbl.type
+				
+				if lbl.detail
+					lbl.detail = " " + lbl.detail
 
 			let item = new ImbaCompletionItem(raw)
 			item.kind = Converters.convertKind(raw.kind)
