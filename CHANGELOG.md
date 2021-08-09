@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.5
+* Make completions work with latest vscode (1.59.0)
+* Make auto-imports work with latest TypeScript nightlies
+
 ## 3.0.4
 
 * Change icon for tag completions
