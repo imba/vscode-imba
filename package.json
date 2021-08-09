@@ -13,7 +13,7 @@
 		"url": "git://github.com/imba/vscode-imba.git"
 	},
 	"engines": {
-		"vscode": "^1.56.0"
+		"vscode": "^1.59.0"
 	},
 	"categories": [
 		"Programming Languages"
@@ -202,7 +202,7 @@
 	"dependencies": {
 		"@types/vscode": "^1.56.0",
 		"node-ipc": "^9.1.4",
-		"typescript-imba-plugin": "^1.0.10"
+		"typescript-imba-plugin": "^1.0.11"
 	},
 	"devDependencies": {
 		"chroma-js": "^2.1.0",
