@@ -11,7 +11,7 @@ let bridge = null
 let log = util.log
 
 languages.setLanguageConfiguration('imba',{
-	wordPattern: /(-?\d*\.\d\w*)|([^\`\~\!\@\#%\^\&\*\(\)\=\+\[\{\]\}\\\|\;\:\'\"\,\.\<\>\/\?\s]+)|(#+[\w\-]+)/g,
+	wordPattern: /(-?\d*\.\d\w*)|([^\`\~\!%\^\&\*\(\)\=\+\[\{\]\}\\\|\;\:\'\"\,\.\<\>\/\?\s]+)|(#+[\w\-]*)|(@+[\w\-]*)/g,
 	onEnterRules: [{
 		beforeText: /^\s*(?:export def|constructor|def |(export (default )?)?(static )?(def |get |set )|(export (default )?)?(class|tag)|for\s|if\s|elif\s|else|while\s|try|with|finally|except).*?$/,
 		action: { indentAction: IndentAction.Indent }
@@ -108,7 +108,7 @@ export def activate context
 				log("restarting ts server in debug mode {process.env['TSS_DEBUG']}")
 				try await commands.executeCommand("typescript.restartTsServer")
 
-	languages.registerCompletionItemProvider({language: 'imba'},new CompletionsProvider(bridge),'.',':', '"', '@','%','\\',"'",'=','<')
+	languages.registerCompletionItemProvider({language: 'imba'},new CompletionsProvider(bridge),'.',':', '"', '@','%','\\',"'",'=','<','#')
 	util.log('setting up symbol provider')
 	languages.registerDocumentSymbolProvider({language: 'imba1'},new DocumentSymbolProvider)
 
