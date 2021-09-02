@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.6
+* Fixed issues with auto-import completions
+* Improved css completions and hover information
+
 ## 3.0.5
 * Make completions work with latest vscode (1.59.0)
 * Make auto-imports work with latest TypeScript nightlies

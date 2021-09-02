@@ -88,6 +88,9 @@ export default class CompletionsProvider
 			let item = new ImbaCompletionItem(raw)
 			item.kind = Converters.convertKind(raw.kind)
 			
+			if typeof raw.kind == 'number'
+				item.kind = raw.kind
+			
 			# Dont allow fancy triggers before typing any additional characters
 			if context.triggerKind == 1 and !raw.action
 				item.commitCharacters = []

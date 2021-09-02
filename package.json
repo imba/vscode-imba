@@ -202,11 +202,11 @@
 	"dependencies": {
 		"@types/vscode": "^1.56.0",
 		"node-ipc": "^9.1.4",
-		"typescript-imba-plugin": "^1.0.11"
+		"typescript-imba-plugin": "^1.1.0"
 	},
 	"devDependencies": {
 		"chroma-js": "^2.1.0",
-		"imba": "^2.0.0-alpha.150",
+		"imba": "^2.0.0-alpha.166",
 		"js-yaml": "^3.14.0",
 		"plist": "^3.0.1",
 		"vscode": "^1.1.37"
@@ -217,6 +217,7 @@
 		"build": "imba build -S --node.external +vscode src/index.imba",
 		"prod:version": "lerna version",
 		"build-theme": "imba scripts/compile-theme.imba",
+		"prep": "npm install --save-dev imba@latest & npm install typescript-imba-plugin",
 		"test": "node server/test.js"
 	},
 	"__metadata": {
