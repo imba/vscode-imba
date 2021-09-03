@@ -5,6 +5,7 @@
 	"version": "3.0.6",
 	"publisher": "scrimba",
 	"main": "./dist/src/index.js",
+	"browser": "./dist/web/index.js",
 	"icon": "assets/imba.png",
 	"license": "MIT",
 	"author": "Sindre Aarsaether",
@@ -205,11 +206,17 @@
 		"typescript-imba-plugin": "^1.1.0"
 	},
 	"devDependencies": {
+		"os-browserify": "^0.3.0",
+		"util": "^0.12.4",
+		"process": "^0.11.10",
 		"chroma-js": "^2.1.0",
 		"imba": "^2.0.0-alpha.166",
 		"js-yaml": "^3.14.0",
+		"path-browserify": "^1.0.1",
 		"plist": "^3.0.1",
-		"vscode": "^1.1.37"
+		"vscode": "^1.1.37",
+		"webpack": "^5.51.2",
+		"webpack-cli": "^4.8.0"
 	},
 	"scripts": {
 		"dev:bootstrap": "lerna bootstrap",
@@ -218,11 +225,11 @@
 		"prod:version": "lerna version",
 		"build-theme": "imba scripts/compile-theme.imba",
 		"prep": "npm install --save-dev imba@latest & npm install typescript-imba-plugin",
-		"test": "node server/test.js"
-	},
-	"__metadata": {
-		"id": "c0926dfb-bf29-4689-849e-63ca645e2c1c",
-		"publisherDisplayName": "Scrimba",
-		"publisherId": "d9260c1d-7c6a-483e-ae32-9e6d2314dff0"
+		"test": "node server/test.js",
+		"vscode:prepublish": "npm run package-web",
+		"compile-web": "webpack --config ./build/web-extension.webpack.config.js",
+		"watch-web": "webpack --watch --config ./build/web-extension.webpack.config.js",
+		"package-web": "webpack --mode production --devtool hidden-source-map --config ./build/web-extension.webpack.config.js",
+		"test-web": "npx vscode-test-web --browserType=webkit --extensionDevelopmentPath=\"./\""
 	}
 }

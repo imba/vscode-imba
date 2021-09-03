@@ -11,3 +11,4 @@ tsplugin/dist
 document/dist
 tmp/
 *.vsix
+.vscode-test-web
