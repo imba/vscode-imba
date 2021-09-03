@@ -600,7 +600,7 @@ repository:
   css-selector:
     name: meta.selector.css
     begin: (?<=css\s)(?!{{cssPropertyKey}})
-    end: (\s*(?={{cssPropertyKey}})|\s*$)
+    end: (\s*(?={{cssPropertyKey}})|\s*$|(?=\s+\#\s))
     endCaptures:
       '0': {name: punctuation.separator.sel-properties.css}
     patterns:
@@ -609,7 +609,7 @@ repository:
   nested-css-selector:
     name: meta.selector.css
     begin: (^\t+)(?!{{cssPropertyKey}})
-    end: (\s*(?={{cssPropertyKey}})|\s*$)
+    end: (\s*(?={{cssPropertyKey}})|\s*$|(?=\s+\#\s))
     endCaptures:
       '0': {name: punctuation.separator.sel-properties.css}
     patterns:
