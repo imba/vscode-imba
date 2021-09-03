@@ -1,33 +1,45 @@
 // A launch configuration that launches the extension inside a new window
 {
-    "version": "0.1.0",
-    "configurations": [
-        {
-            "name": "Run test",
-            "type": "shell",
-            "command": "node ./server/test.js",
-            "group": "test",
-            "presentation": {
-                "reveal": "always",
-                "panel": "new"
-            }
-        },
-        
-        {
-            "name": "Attach to Server",
-			"type": "node",
-			"request": "attach",
-			"port": 6005,
-            "sourceMaps": true,
-            "protocol": "inspector",
-            "outFiles": ["${workspaceRoot}/server/**/*.js"]
-        },
-        {
-            "name": "Launch Extension",
-            "type": "extensionHost",
-            "request": "launch",
-            "runtimeExecutable": "${execPath}",
-            "args": ["--extensionDevelopmentPath=${workspaceRoot}" ]
-        }
-    ]
+  "version": "0.1.0",
+  "configurations": [
+    {
+      "name": "Run Web Extension in VS Code",
+      "type": "pwa-extensionHost",
+      "debugWebWorkerHost": true,
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--extensionDevelopmentKind=web"
+      ],
+      "outFiles": ["${workspaceFolder}/dist/web/**/*.js"],
+      "preLaunchTask": "npm: watch-web"
+    },
+    {
+      "name": "Run test",
+      "type": "shell",
+      "command": "node ./server/test.js",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+
+    {
+      "name": "Attach to Server",
+      "type": "node",
+      "request": "attach",
+      "port": 6005,
+      "sourceMaps": true,
+      "protocol": "inspector",
+      "outFiles": ["${workspaceRoot}/server/**/*.js"]
+    },
+    {
+      "name": "Launch Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": ["--extensionDevelopmentPath=${workspaceRoot}"]
+    }
+  ]
 }

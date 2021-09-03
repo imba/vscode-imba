@@ -1,4 +1,3 @@
-import { log } from 'node-ipc'
 import * as util from '../util'
 
 import { CompletionItemKind, CompletionList, CompletionItem, Range, TextEdit, MarkdownString, SnippetString, Command } from 'vscode'
