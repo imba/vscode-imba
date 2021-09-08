@@ -89,7 +89,7 @@ export def activate context
 		try
 			let edit = item.additionalTextEdits[0]
 			let line = doc.lineAt(edit.range.start.line).text
-			message = "ADDED {line}"
+			message = "Added: {line}"
 		
 		window.showWarningMessage(message)
 
