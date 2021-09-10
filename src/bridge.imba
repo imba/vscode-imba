@@ -3,7 +3,7 @@ import ipc from 'node-ipc'
 import * as util from './util'
 
 export default class Host
-	constructor api
+	constructor api, cb
 		self.id = "imba-ipc-{String(Math.random!)}"
 		self.api = api
 		self.reqs = 0
@@ -11,6 +11,7 @@ export default class Host
 		sent = 0
 		nextRequestRef = 1
 		pendingRequests = {}
+		cb = cb
 		
 		serve!
 		self
@@ -20,6 +21,9 @@ export default class Host
 		ipc.serve do
 			util.log('ipc serving on ' + id)
 			ipc.server.on('message') do(data,socket) handle(data,socket)
+			ipc.server.on('connect') do(socket)
+				util.log('server connected?')
+				cb(socket) if cb
 			emit('ready')
 		ipc.server.start!
 		

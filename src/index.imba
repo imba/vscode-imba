@@ -76,7 +76,11 @@ def configure items = {}
 	for own k,v of items
 		cfg.update(k,v)
 
-
+def sendConfiguration
+	let conf = workspace.getConfiguration('imba')
+	let raw = JSON.parse(JSON.stringify(conf))
+	util.log("sending configuration",raw)
+	bridge.call('setConfiguration',raw)
 
 export def activate context
 	let conf = workspace.getConfiguration('imba')
@@ -99,20 +103,27 @@ export def activate context
 		await tls.activate(context)
 		log("activated tls")
 		const tlsapi = try tls.exports.getAPI(0)
-		bridge = new Bridge(tlsapi)	
+		bridge = new Bridge(tlsapi)	do
+			sendConfiguration!
 		bridge.ping!
+		# bridge.call('setConfiguration',JSON.parse(JSON.stringify(conf)))
 
 		if conf.get('debugPort')
 			unless process.env.TSS_DEBUG
 				process.env['TSS_DEBUG'] = String(conf.get('debugPort'))
 				log("restarting ts server in debug mode {process.env['TSS_DEBUG']}")
 				try await commands.executeCommand("typescript.restartTsServer")
+					
+		# sendConfiguration!
+
 
 	languages.registerCompletionItemProvider({language: 'imba'},new CompletionsProvider(bridge),'.',':', '"', '@','%','\\',"'",'=','<','#')
 	util.log('setting up symbol provider')
 	languages.registerDocumentSymbolProvider({language: 'imba1'},new DocumentSymbolProvider)
 
 	workspace.getConfiguration(undefined,null)
+	
+	
 	
 	commands.registerCommand('imba.getProgramDiagnostics') do
 		yes
@@ -159,7 +170,11 @@ export def activate context
 		if util.isImba(path)
 			
 			bridge.call('onDidSaveTextDocument',util.toPath(e.uri))
-
+	
+	workspace.onDidChangeConfiguration do(e)
+		sendConfiguration!
+		
+	
 	window.onDidChangeTextEditorSelection do(e)
 		const doc = e.textEditor.document
 		const uri = doc.uri
