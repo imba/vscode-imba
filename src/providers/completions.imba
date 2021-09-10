@@ -44,8 +44,8 @@ export default class CompletionsProvider
 
 	def provideCompletionItems(doc, pos, token, context)
 		let file = util.toPath(doc)
-		util.log("provideCompletionItems!! {doc} {doc.fsPath} {doc.offsetAt(pos)} {file} {JSON.stringify(context)}")
-		
+		util.log("provideCompletionItems!! {doc} {doc.fsPath} {doc.offsetAt(pos)} {file} {JSON.stringify(context)}",pos)
+		let range = new Range(pos,pos)
 		if context.triggerKind != 2
 			#cache = {}
 		
@@ -66,6 +66,10 @@ export default class CompletionsProvider
 		let items = []
 		
 		for raw in res
+			
+			if raw.range
+				raw.range = new Range(doc.positionAt(raw.range[0]),doc.positionAt(raw.range[1]))
+			
 			if let te = raw.textEdit
 				let range = new Range doc.positionAt(te.start),doc.positionAt(te.start + te.length)
 				raw.textEdit = TextEdit.replace(range,te.newText)
