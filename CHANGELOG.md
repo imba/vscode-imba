@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.7
+* Added completions for css transitions & easing
+* Fixed style modifier completions
+* Added setting for toggling shorthand style properties in completions
+* Fixed highlighting comments at the end of selectors
+
 ## 3.0.6
 * Fixed issues with auto-import completions
 * Improved css completions and hover information
