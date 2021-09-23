@@ -2,7 +2,7 @@
 	"name": "vsimba",
 	"displayName": "Imba",
 	"description": "Language support for Imba",
-	"version": "3.0.7",
+	"version": "3.0.8",
 	"publisher": "scrimba",
 	"main": "./dist/src/index.js",
 	"icon": "assets/imba.png",
@@ -206,7 +206,7 @@
 	"dependencies": {
 		"@types/vscode": "^1.56.0",
 		"node-ipc": "^9.1.4",
-		"typescript-imba-plugin": "^1.1.1"
+		"typescript-imba-plugin": "^1.1.2"
 	},
 	"devDependencies": {
 		"chroma-js": "^2.1.0",

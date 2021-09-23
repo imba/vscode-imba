@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.0.8
+* Added completions for hotkey event
+* Added semantic highlighting for `do |var|` variables
+* Fixed relative import paths on mac
+* Fixed completions for virtual `e` variable in event handlers
+* Updated imba.d.ts
+
 ## 3.0.7
 * Added completions for css transitions & easing
 * Fixed style modifier completions

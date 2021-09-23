@@ -1950,9 +1950,9 @@
           </dict>
         </dict>
         <key>end</key>
-        <string>(?=[\.\[\&gt;\=])</string>
+        <string>(?=[\s\.\[\&gt;\=])</string>
         <key>contentName</key>
-        <string>entity.name.tag.event.imba</string>
+        <string>entity.other.attribute-name.imba</string>
       </dict>
       <key>tag-attr-value</key>
       <dict>

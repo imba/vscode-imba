@@ -806,8 +806,8 @@ repository:
     begin: ({{tagAttrIdentifier}})
     beginCaptures:
       '0': { name: entity.other.attribute-name.imba }
-    end: (?=[\.\[\>\=])
-    contentName: entity.name.tag.event.imba
+    end: (?=[\s\.\[\>\=])
+    contentName: entity.other.attribute-name.imba
 
   tag-attr-value:
     begin: (\=)
